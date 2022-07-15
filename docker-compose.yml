@@ -63,7 +63,7 @@ services:
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_DATABASE=${MARIADB_DATABASE_NAME}
     volumes:
       #      - ./docker/web/database:/docker-entrypoint-initdb.d
       - ./docker/mariadb:/etc/mysql/conf.d
