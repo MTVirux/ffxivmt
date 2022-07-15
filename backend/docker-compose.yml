@@ -1,0 +1,61 @@
+version: '3.8'
+services:
+  ffxiv_app:
+    container_name: ffxiv_app
+    build:
+      dockerfile: Dockerfile_app
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - APP_NAME=ffxivmerchanttools
+      - PRIMARY_DOCKER_PORT=80
+      - SECONDARY_DOCKER_PORT=8080
+      - PRIMARY_DOCKER_SSL_PORT=445
+      - SECONDARY_DOCKER_SSL_PORT=8445
+    volumes:
+      - .:/var/www/html/
+    networks:
+      - ffxiv_network
+    
+  pma:
+    image: "phpmyadmin/phpmyadmin"
+    container_name: ffxiv_pma
+    restart: "no"
+    environment:
+      - PMA_HOST=ffxiv_db
+    ports:
+      - 8586:80
+    depends_on:
+      - ffxiv_db
+    networks:
+      - ffxiv_network
+
+  ffxiv_db:
+    image: "mariadb"
+    build:
+      dockerfile: Dockerfile_mariadb
+    container_name: ffxiv_db
+    restart: "always"
+    environment:
+      - MARIADB_ROOT_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=password
+      - MARIADB_DATABASE=ffxiv_db
+    volumes:
+      #      - ./docker/web/database:/docker-entrypoint-initdb.d
+      - ./docker/mariadb:/etc/mysql/conf.d
+      - ffxiv_db_data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    networks:
+      - ffxiv_network
+
+
+volumes:
+  ffxiv_db_data:
+    external: true
+
+networks:
+  ffxiv_network:
+    driver: bridge
+    external: false

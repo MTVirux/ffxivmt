@@ -1,0 +1,15 @@
+
+#Private files
+private/mariadb/retainers.sql
+
+#logs & cache
+*/logs/log-*.php
+!*/logs/index.html
+*/cache/*
+!*/cache/index.html
+!*/cache/.htaccess
+
+#codeigniter 3
+application/logs/*
+!application/logs/index.html
+!application/logs/.htaccess
