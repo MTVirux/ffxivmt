@@ -1,0 +1,3 @@
+FROM mariadb:latest
+COPY ./backend/docker/mariadb/ /usr/local/bin/
+COPY ./backend/private/mariadb/ /usr/local/bin/
