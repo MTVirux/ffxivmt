@@ -2,7 +2,7 @@
 
 docker compose down
 
-docker image rm ffxivmerchanttools_ffxiv_app
+docker image rm ffmt_backend
 docker image rm mariadb
 
 docker volume rm ffmt_mariadb_data
