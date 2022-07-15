@@ -75,7 +75,7 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'ffxiv_db',
+	'hostname' => 'ffmt_mariadb',
 	'username' => 'root',
 	'password' => 'password',
 	'database' => 'ffxiv_db',
