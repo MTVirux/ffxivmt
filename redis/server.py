@@ -1,17 +1,6 @@
-from json import JSONDecoder, decoder
-from logging import exception
-from sqlite3 import Timestamp
-import sys
-import time
 import websocket
-import json
 import pprint
-import numpy
-from binance.enums import *
-from binance.client import Client
-import threading
 import bson
-import json_util
 
 
 UNIVERSALLIS_SOCKET = "wss://universalis.app/api/ws"
