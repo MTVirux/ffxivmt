@@ -1,6 +1,6 @@
 #TODO:
 Development:
-- Optimize build time for redis server
+- Multi-thread python websocket server
 
 
 Features:
