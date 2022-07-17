@@ -7,7 +7,7 @@
 # Pull base image.
 FROM mtvirux/redis-stack-server-python3.10:latest
 
-COPY ./redis /server
+COPY ./docker/redis /server
 
 #Install required python modules
 RUN pip3.10 install websocket && \
