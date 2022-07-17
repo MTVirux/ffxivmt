@@ -5,28 +5,9 @@
 #
 
 # Pull base image.
-FROM redis/redis-stack-server
+FROM mtvirux/redis-stack-server-python3.10:latest
 
 COPY ./redis /server
-#Python pre-reqs
-RUN apt update && apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev \
-libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev nano
-
-#Download Python 3.10.5 tar
-RUN wget https://www.python.org/ftp/python/3.10.5/Python-3.10.5.tgz
-
-#Extract Python 3.10.5 tar
-RUN tar -xf Python-3.10.5.tgz
-RUN rm -rf Python-3.10.5.tgz
-WORKDIR /Python-3.10.5
-RUN ./configure --enable-optimizations
-RUN make -j $(nproc)
-RUN make altinstall
-
-
-#Install pip3
-RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python3.10 get-pip.py
 
 #Install required python modules
 RUN pip3.10 install websocket && \
@@ -36,6 +17,5 @@ pip3.10 install pymongo && \
 pip3.10 install redis
 
 WORKDIR /server
-RUN /Python-3.10.5/python server.py
 
 EXPOSE 80
