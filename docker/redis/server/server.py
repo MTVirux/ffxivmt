@@ -4,10 +4,13 @@ import websocket
 import bson
 import redis
 import json
+import config
+import threading
+import listings_add
+import listings_remove
+import sales_add
+import sales_remove
 
-UNIVERSALLIS_SOCKET = "wss://universalis.app/api/ws"
-
-db = redis.Redis(host='localhost', port=6379, db=0)
 
 #ADD TO REDIS DB AS JSON
 def handle_add(hash, listing):
@@ -16,25 +19,27 @@ def handle_add(hash, listing):
     #Must have valid ID
     if(type(listingID) != str):
         return
+    if(listingID == "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"):
+        return
 
-    print("Add: ", listingID)
-    if(redis.Redis.hset(hash, listingID, listing) == 1):
+    #print("Add: ", listingID)
+    if(listing_db.hset(str(hash), str(listingID), str(listing)) == 1):
         print("Added " + listingID + " to " + hash)
     return
 
 
 #REMOVE FROM REDIS DB
-def handle_remove(hash, listing):
+def handle_remove(db, hash, listing):
     listingID = listing["listingID"]
     
     #Must have valid ID
     if(type(listingID) != str):
         return
-    if(listingID == "df05cb60221600bc3b26823e170b3cc8f9dcd5e7c7813676e3f3323c7d04384c"):
+    if(listingID == "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"):
         return
 
-    print("Remove: ", listingID)
-    if(db.hdel(hash, listingID) == 1):
+    #print("Remove: ", listingID)
+    if(listing_db.hdel(str(hash), str(listingID)) == 1):
         print("Removed " + listingID + " from " + hash)
     return
 
@@ -56,8 +61,9 @@ def on_message(wsapp, message):
     world = str(decoded_message['world'])
     item = str(decoded_message['item'])
     listings = (json.loads(json.dumps(decoded_message['listings'])))
+    world_name = str(config.WORLDS[int(world)])
+    hash = world_name+"_"+str(item)
 
-    hash = item + "_" + world
 
     if(not(world != "None" and item != "None" and world != "" and item != "")):
         return
@@ -86,15 +92,41 @@ def on_message(wsapp, message):
 
 
 def subscribe(wsapp):
-    print("Sending subscribe event")
-    wsapp.send(bson.encode({"event": "subscribe", "channel": "listings/add"}))
-    print("Sent subscribe event for add")
-    wsapp.send(bson.encode({"event": "subscribe", "channel": "listings/remove"}))
-    print("Sent subscribe event for remove")
+
+    wsapp.send(bson.encode({"event": "subscribe", "channel": "sales/add"}))
+    print("Sent subscribe event for sales/add")
+    wsapp.send(bson.encode({"event": "subscribe", "channel": "sales/remove"}))
+    print("Sent subscribe event for sales/remove")
 
 
 
 
-wsapp = websocket.WebSocketApp(
-    UNIVERSALLIS_SOCKET, on_open=subscribe, on_message=on_message)
-wsapp.run_forever()
+threads = []
+
+listing_add_thread              = threading.Thread(target=listings_add.start_listing_add);
+threads.append(listing_add_thread)
+
+listing_remove_thread           = threading.Thread(target=listings_remove.start_listing_remove);
+threads.append(listing_remove_thread)
+
+sales_add_thread               = threading.Thread(target=sales_add.start_sales_add);
+threads.append(sales_add_thread)
+
+#sales_remove_thread            = threading.Thread(target=sales_remove.start_sales_remove);
+#threads.append(sales_remove_thread)
+
+
+
+def start_threads(threads):
+    for x in threads:
+        try:
+            x.start()
+        except Exception as thread_error:
+            try:
+                logs.add_error("THREAD_ERROR: ", thread_error);
+            except Exception as log_error:
+                logs.add_error("LOG ERROR: ", log_error);
+
+
+start_threads(threads)
+print("ALL THREADS STARTED")
