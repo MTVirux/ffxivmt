@@ -74,7 +74,7 @@ services:
       - ffmt_internal
 
   ffmt_redis:
-    image: mtvirux/redis-stack-server-python3.10
+    image: redis/redis-stack
     build: 
       dockerfile: ${REDIS_DOCKERFILE}
     container_name: ${REDIS_CONTAINER_NAME}
@@ -83,6 +83,7 @@ services:
       - "${REDIS_HOST_PORT}:6379"
     volumes:
       - ffmt_redis_data:/data
+      - ./docker/redis/server:/server
     networks:
       - ffmt_internal
 
