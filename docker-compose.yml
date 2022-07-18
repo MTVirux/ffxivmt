@@ -101,23 +101,23 @@ services:
       - ffmt_internal
       - ffmt_external
 
-  ffxiv_redisinsight:
-    image: "redislabs/redisinsight:latest"
-    container_name: ${REDISINSIGHT_CONTAINER_NAME}
-    restart: "no"
-    environment:
-      - RIPORT=${REDISINSIGHT_HOST_PORT}
-      - RIHOST=${RIHOST}
-      - RILOGDIR=${RILOGDIR}
-    ports:
-      - ${REDISINSIGHT_HOST_PORT}:80
-    depends_on:
-      - ${REDIS_CONTAINER_NAME}
-    volumes:
-      - ffmt_redisinsight_data:/redisinsightdata
-    networks:
-      - ffmt_internal
-      - ffmt_external
+  #ffmt_redisinsight:
+  #  image: "redislabs/redisinsight:latest"
+  #  container_name: ${REDISINSIGHT_CONTAINER_NAME}
+  #  restart: "no"
+  #  environment:
+  #    - RIPORT=${REDISINSIGHT_HOST_PORT}
+  #    - RIHOST=${RIHOST}
+  #    - RILOGDIR=${RILOGDIR}
+  #  ports:
+  #    - ${REDISINSIGHT_HOST_PORT}:8001
+  #  depends_on:
+  #    - ${REDIS_CONTAINER_NAME}
+  #  volumes:
+  #    - ffmt_redisinsight_data:/db
+  #  networks:
+  #    - ffmt_internal
+  #    - ffmt_external
 
 #VOLUMES
 volumes:
