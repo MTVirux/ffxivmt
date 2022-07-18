@@ -1,6 +1,7 @@
 #TODO:
 Development:
 - Multi-thread python websocket server
+- Make custom image for redis-stack
 
 
 Features:
