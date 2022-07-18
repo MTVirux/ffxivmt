@@ -81,6 +81,7 @@ services:
     restart: "always"
     ports:
       - "${REDIS_HOST_PORT}:6379"
+      - "${REDISINSIGHT_HOST_PORT}:8001"
     volumes:
       - ffmt_redis_data:/data
       - ./docker/redis/server:/server
