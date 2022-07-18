@@ -84,6 +84,8 @@ services:
       - "${REDISINSIGHT_HOST_PORT}:8001"
     volumes:
       - ffmt_redis_data:/data
+      - ./docker/redis/usr/local/etc/redis:/usr/local/etc/redis
+      - ./docker/redis/usr/local/bin:/usr/local/bin
       - ./docker/redis/server:/server
     networks:
       - ffmt_internal
