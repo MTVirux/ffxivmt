@@ -1,0 +1,9 @@
+#
+# MTVirux Redis Dockerfile
+#
+#
+
+# Pull base image.
+FROM mtvirux/redis-stack-python3.10
+
+COPY ./docker/redis/server /server

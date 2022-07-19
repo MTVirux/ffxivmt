@@ -74,7 +74,7 @@ services:
       - ffmt_internal
 
   ffmt_redis:
-    image: redis/redis-stack
+    image: mtvirux/redis-stack-python3.10
     build: 
       dockerfile: ${REDIS_DOCKERFILE}
     container_name: ${REDIS_CONTAINER_NAME}
