@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.3'
 
 services:
 
@@ -33,6 +33,7 @@ services:
   ffmt_backend:
     container_name: ${BACKEND_CONTAINER_NAME}
     build:
+      context: .
       dockerfile: ${BACKEND_DOCKERFILE}
     image: ffmt_backend
     restart: "always"
@@ -57,6 +58,7 @@ services:
   ffmt_mariadb:
     image: ffmt_mariadb
     build:
+      context: .
       dockerfile: ${MARIADB_DOCKERFILE}
     container_name: ${MARIADB_CONTAINER_NAME}
     restart: "always"
@@ -76,6 +78,7 @@ services:
   ffmt_redis:
     image: mtvirux/redis-stack-python3.10
     build: 
+      context: .
       dockerfile: ${REDIS_DOCKERFILE}
     container_name: ${REDIS_CONTAINER_NAME}
     restart: "always"
