@@ -10,7 +10,11 @@ import listings_add
 import listings_remove
 import sales_add
 import sales_remove
+import os
+import sys
 
+#Comment the following line to enable print
+sys.stdout = open(os.devnull, 'w')
 
 #ADD TO REDIS DB AS JSON
 def handle_add(hash, listing):
