@@ -10,4 +10,5 @@ RUN rm -rf /var/www/html/docker
 RUN rm -rf docker-compose.yml
 RUN rm -rf Dockerfile
 RUN a2enmod rewrite
-CMD ["run_entrypoints.sh"]
+RUN chmod +x /usr/local/bin/run_entrypoints.sh
+CMD ["/usr/local/bin/run_entrypoints.sh"]
