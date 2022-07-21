@@ -61,9 +61,10 @@ class Retainer_model extends CI_Model {
 
 		$filter = strtolower($filter);
 
-		if(!is_null($filter)){
+		$worlds = [];
+		if(!is_null($filter) && !empty($filter)){
 			//Get distinct worlds
-			$worlds_raw = $this->db->select('world')->distinct()->from($this->table)->get()->result();
+			$worlds_raw = $this->db->select('name')->distinct()->from($this->table)->get()->result();
 			foreach($worlds_raw as $single_world){
 				$worlds[] = strtolower($single_world->world);
 			}
@@ -86,8 +87,6 @@ class Retainer_model extends CI_Model {
 				$names[] = strtolower($single_name->name);
 			}
 
-
-
 			if(in_array($filter, $worlds)){
 				$this->db->select('*')->from($this->table)->where('world', $filter);
 			}else if(in_array($filter, $characters)){
@@ -99,10 +98,11 @@ class Retainer_model extends CI_Model {
 			}else{
 				$this->db->select('*')->from($this->table)->like('world', $filter)->or_like('character', $filter)->or_like('server', $filter)->or_like('name', $filter);
 			}
-			$results = $this->db->get()->result();
+		}
+			$results = $this->db->get($this->table)->result();
 			$result_array_tree = $this->objectify_retainers($results);
 			return $result_array_tree;
-		}
+
 
 
 
