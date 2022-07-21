@@ -1,0 +1,7 @@
+docker/redis/server/__pycache__/config.cpython-310.pyc
+docker/redis/server/__pycache__/database.cpython-310.pyc
+docker/redis/server/__pycache__/listings_add.cpython-310.pyc
+docker/redis/server/__pycache__/listings_remove.cpython-310.pyc
+docker/redis/server/__pycache__/sales_add.cpython-310.pyc
+docker/redis/server/__pycache__/sales_remove.cpython-310.pyc
+docker/redis/server/nohup.out
