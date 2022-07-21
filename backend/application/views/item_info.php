@@ -9,14 +9,21 @@
         <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     </head>
 
-    <?php 
-        $retainers = array();
-        foreach ($retainer_array as $server){
-            foreach($server as $world){
-                foreach($world as $character){
-                    foreach($character as $retainer)
-                    {
-                        $retainers[] = $retainer;
+    <?php
+    $use_retainers = true; 
+    if(is_null($retainer_array) || empty($retainer_array)){
+        $use_retainers = false;
+    
+    }
+        if($use_retainers == true){
+            $retainers = array();
+            foreach ($retainer_array as $server){
+                foreach($server as $world){
+                    foreach($world as $character){
+                        foreach($character as $retainer)
+                        {
+                            $retainers[] = $retainer;
+                        }
                     }
                 }
             }
@@ -25,37 +32,27 @@
 
     <body>
         <div class="container">
+            <div class="row"><br></div>
             <div class="row">
-                <div class="row">
-                    <div class="col-lg-12">
-                            <h2><?=$item->name?></h2>
+                <?php $this->load->view('search')?>
+            </div>
+
+            <div class="row"><br></div>
+
+            <div class="accordion" id="accordionExample">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        <h2><?=$item->name?></h2>
+                    </button>
+                    </h2>
+                    <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                            <?php $this->load->view('item_info_table', true)?>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-lg-12">
-                    <table class="table">
-                        <thead>
-                            <?php foreach($item as $key=>$value){
-                            if($key != 'prices'){
-                                echo '<th>';
-                                echo $key;
-                                echo '</th>';
-                            }
-                        }?>
-                        </thead>
-                        <tr>
-                            <?php foreach($item as $key=>$value){
-                                if($key != 'prices'){
-                                    echo '<td>';
-                                    echo $value;
-                                    echo '</td>';
-                                }
-                            }?>
-                        </tr>
-                    </table>
-            </div> <!-- END COL -->
-                        </div>
             
             
                 <div class="row">
@@ -69,13 +66,16 @@
                             <th>Last Updated</th>
                             <th>Retainer</th>
                         </thead>
+                        
                         <?php foreach($item->prices->listings as $listing){?>
                             <?php 
-
-                            if(key_exists($listing->worldName, $retainer_array["Chaos"])){
-                                if (!in_array($listing->retainerName ,$retainer_array["Chaos"][$listing->worldName])){
-                                        continue;
-                                    }
+                            foreach($retainer_array as $datacenterName => $worldName){
+                                var_dump($retainer_array);die();
+                                if(key_exists($listing->worldName, $datacenterName)){
+                                    if (!in_array($listing->retainerName ,$retainer_array[$datacenterName][$listing->worldName])){
+                                            continue;
+                                        }
+                                }
                             }
                             ?>
                         <tr
@@ -99,38 +99,39 @@
                     ?>
 
                 </div>
-                
-                <div class="col-lg-6">
-                <table class="table">
-                        <thead>
-                            <th>Worldname</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Last Updated</th>
-                            <th>Retainer</th>
-                        </thead>
-                        <?php foreach($item->prices->listings as $listing){?>
-                            <?php 
-                                if (!in_array($listing->retainerName, $retainers)){
-                                    continue;
-                                }
-                            ?>
-                        <tr
-                            data-world = "<?=$listing->worldName?>"
-                            data-price = "<?=$listing->pricePerUnit?>"
-                            data-quantity = "<?=$listing->quantity?>"
-                            data-lastupdate = "<?=$listing->lastReviewTime?>"
-                            data-retainer =  "<?=$listing->retainerName?>"
-                            >
-                            <td><?=$listing->worldName?></td>
-                            <td><?=$listing->pricePerUnit?></td>
-                            <td><?=$listing->quantity?></td>
-                            <td><?=$listing->lastReviewTime?></td>
-                            <td><?=$listing->retainerName?></td>
-                        </tr>
-                        <?php }?>
-                    </table>
-                </div>
+                <?php if($use_retainers): ?>
+                    <div class="col-lg-6">
+                    <table class="table">
+                            <thead>
+                                <th>Worldname</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Last Updated</th>
+                                <th>Retainer</th>
+                            </thead>
+                            <?php foreach($item->prices->listings as $listing){?>
+                                <?php 
+                                    if (!in_array($listing->retainerName, $retainers)){
+                                        continue;
+                                    }
+                                ?>
+                            <tr
+                                data-world = "<?=$listing->worldName?>"
+                                data-price = "<?=$listing->pricePerUnit?>"
+                                data-quantity = "<?=$listing->quantity?>"
+                                data-lastupdate = "<?=$listing->lastReviewTime?>"
+                                data-retainer =  "<?=$listing->retainerName?>"
+                                >
+                                <td><?=$listing->worldName?></td>
+                                <td><?=$listing->pricePerUnit?></td>
+                                <td><?=$listing->quantity?></td>
+                                <td><?=$listing->lastReviewTime?></td>
+                                <td><?=$listing->retainerName?></td>
+                            </tr>
+                            <?php }?>
+                        </table>
+                    </div>
+                <?php endif ?>
             </div> <!--END ROW-->
         </div>
     </body>
