@@ -1,3 +1,30 @@
+CHAOS_WORLDS = {
+39:"Omega",
+71:"Moogle",
+80:"Cerberus",
+83:"Louisoix",
+85:"Spriggan",
+97:"Ragnarok",
+400:"Sagittarius",
+401:"Phantom",
+}
+
+LIGHT_WORLDS = {
+402:"Alpha",
+36:"Lich",
+66:"Odin",
+56:"Phoenix",
+403:"Raiden",
+67:"Shiva",
+33:"Twintania",
+42:"Zodiark",
+}
+
+WORLDS_TO_USE = {
+1:CHAOS_WORLDS, 
+2:LIGHT_WORLDS,
+}
+
 WORLDS = {
 21:"Ravana",
 22:"Bismarck",
@@ -111,7 +138,8 @@ WORLDS = {
 
 UNIVERSALLIS_URL = "wss://universalis.app/api/ws"
 
-BANNED_LISTING_IDS = ["None", "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"]
+BANNED_LISTING_IDS = ["None"
+"5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"]
 BANNED_SALE_BUYERS = [""]
 
 REDIS_HOST = "localhost"
