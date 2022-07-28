@@ -37,8 +37,13 @@ def on_message(ws_listing_add, message):
 
 
 def subscribe(ws_listing_add):
-    ws_listing_add.send(bson.encode({"event": "subscribe", "channel": "listings/add"}))
-    print("Sent subscribe event for listings/add")
+    for i in config.WORLDS_TO_USE:
+        for k in config.WORLDS_TO_USE[i]:
+            sub_list_value = config.WORLDS_TO_USE[i][k]
+            world_id = "{world=" + str(k) + "}"
+            print("listings/add" + world_id)
+            ws_listing_add.send(bson.encode({"event": "subscribe", "channel": "listings/add" + world_id}))
+            print("Sent subscribe event for listings/add on world " + sub_list_value + "(" + str(k) + ")")
 
 
 
