@@ -35,5 +35,6 @@ pip3.10 install bson && \
 pip3.10 install pymongo && \
 pip3.10 install redis
 
+CMD [ "/server/server.sh" ]
 
 EXPOSE 80
