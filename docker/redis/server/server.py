@@ -16,38 +16,6 @@ import sys
 #Comment the following line to enable print
 sys.stdout = open(os.devnull, 'w')
 
-#ADD TO REDIS DB AS JSON
-def handle_add(hash, listing):
-    listingID = listing["listingID"]
-    
-    #Must have valid ID
-    if(type(listingID) != str):
-        return
-    if(listingID == "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"):
-        return
-
-    #print("Add: ", listingID)
-    if(listing_db.hset(str(hash), str(listingID), str(listing)) == 1):
-        print("Added " + listingID + " to " + hash)
-    return
-
-
-#REMOVE FROM REDIS DB
-def handle_remove(db, hash, listing):
-    listingID = listing["listingID"]
-    
-    #Must have valid ID
-    if(type(listingID) != str):
-        return
-    if(listingID == "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"):
-        return
-
-    #print("Remove: ", listingID)
-    if(listing_db.hdel(str(hash), str(listingID)) == 1):
-        print("Removed " + listingID + " from " + hash)
-    return
-
-
 #/Item_world
 #/-----/World
 #/      /-------listingID
@@ -79,30 +47,6 @@ def on_message(wsapp, message):
         
         if(decoded_message['event'] == 'listings/add'):
             handle_add(hash, listing)
-
-    #print (json_listing[0])
-    #exit()
-    #print(json_listing)
-
-    #for i in json_listing:
-    #    print(i);exit()
-    #
-    #exit()
-    #for i in (decoded_message):
-    #    print(i , " : ", decoded_message[i])
-    #exit()
-    #redis.Redis.hset(decoded_message['item']+"_"+decoded_message['world'], "test", "test")
-
-
-
-def subscribe(wsapp):
-
-    wsapp.send(bson.encode({"event": "subscribe", "channel": "sales/add"}))
-    print("Sent subscribe event for sales/add")
-    wsapp.send(bson.encode({"event": "subscribe", "channel": "sales/remove"}))
-    print("Sent subscribe event for sales/remove")
-
-
 
 
 threads = []
