@@ -25,9 +25,10 @@ def on_message(ws_sales_add, message):
     decoded_message = (bson.decode(message))
     world = str(decoded_message['world'])
     item = str(decoded_message['item'])
+    world_name = str(config.WORLDS[int(world)])
 
     #Set hash and sales
-    hash = world + "_" + item
+    hash = world_name + "_" + item
     #Field is set later, so we don't need to set it here
     sales = (json.loads(json.dumps(decoded_message['sales'])))
 
