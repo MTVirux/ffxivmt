@@ -20,10 +20,7 @@ LIGHT_WORLDS = {
 42:"Zodiark",
 }
 
-WORLDS_TO_USE = {
-1:CHAOS_WORLDS, 
-2:LIGHT_WORLDS,
-}
+
 
 WORLDS = {
 21:"Ravana",
@@ -134,6 +131,11 @@ WORLDS = {
 1068:"黄金谷",
 1064:"月牙湾",
 1187:"雪松原"
+}
+
+WORLDS_TO_USE = {
+1:CHAOS_WORLDS, 
+2:LIGHT_WORLDS,
 }
 
 UNIVERSALLIS_URL = "wss://universalis.app/api/ws"
