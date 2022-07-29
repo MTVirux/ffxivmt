@@ -13,7 +13,7 @@ def handle_add_listing(hash, listing):
     #hdel(hash, field)
     
     if(database.DB_LISTING.hdel(str(hash), str(listing['listingID'])) == 1 ):
-        print("Removed listing " + listing['listingID'] + " from " + hash)
+        print("{0}{HDEL}Removed listing " + listing['listingID'] + " from " + hash)
     return
 
 

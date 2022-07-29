@@ -13,7 +13,7 @@ def handle_add_listing(hash, listing):
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
     if(database.DB_LISTING.hset(str(hash), str(listing['listingID']), str(listing)) == 1):
-        print("Added listing " + listing['listingID'] + " to " + hash)
+        print("{0}{HSET}Added listing " + listing['listingID'] + " to " + hash)
     return
 
 

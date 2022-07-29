@@ -16,7 +16,7 @@ def handle_add_sale(hash, value):
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
     if(database.DB_SALES.hset(str(hash), str(field), str(value)) == 1):
-        print("Added sale " + field + " to " + hash)
+        print("{1}{HSET}Added sale " + field + " to " + hash)
     return
 
 
