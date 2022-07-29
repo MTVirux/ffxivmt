@@ -24,11 +24,13 @@ def on_message(ws_listing_remove, message):
     world_name = str(config.WORLDS[int(world)])
     hash = world_name+"_"+str(item)
     listings = (json.loads(json.dumps(decoded_message['listings'])))
-
-    if(not(world != "None" and item != "None" and len(world) != 0 and len(item) != 0)):
+    if(world == "None" or item == "None" or len(world) == 0 or len(item) == 0):
         return
+
     
     for listing in listings:
+        if(type(listing['listingID']) != type(str)):
+            continue
         if(listing['listingID'] in config.BANNED_LISTING_IDS):
             continue
         handle_add_listing(hash, listing)
