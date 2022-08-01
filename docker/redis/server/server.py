@@ -57,7 +57,7 @@ threads.append(listing_add_thread)
 listing_remove_thread           = threading.Thread(target=listings_remove.start_listing_remove);
 threads.append(listing_remove_thread)
 
-sales_add_thread               = threading.Thread(target=sales_add.start_sales_add);
+sales_add_thread                = threading.Thread(target=sales_add.start_sales_add);
 threads.append(sales_add_thread)
 
 #sales_remove_thread            = threading.Thread(target=sales_remove.start_sales_remove);
