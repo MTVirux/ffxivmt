@@ -146,6 +146,7 @@ UNIVERSALLIS_URL = "wss://universalis.app/api/ws"
 
 ### BANNED IDs
 
+BANNED_LISTING_IDS = ["5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"]
 BANNED_SALE_BUYERS = [""]
 
 ### REDIS DB CONFIG
