@@ -1,3 +1,5 @@
+### WORLD CONFIG
+
 CHAOS_WORLDS = {
 39:"Omega",
 71:"Moogle",
@@ -138,15 +140,22 @@ WORLDS_TO_USE = {
 2:LIGHT_WORLDS,
 }
 
+### UNIVERSALLIS CONFIG
+
 UNIVERSALLIS_URL = "wss://universalis.app/api/ws"
 
-BANNED_LISTING_IDS = ["None"
-"5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"]
+### BANNED IDs
+
 BANNED_SALE_BUYERS = [""]
+
+### REDIS DB CONFIG
 
 REDIS_HOST = "localhost"
 
 REDIS_PORT = 6379
+
+
+#### REDIS DB INDEXES
 
 REDIS_LISTINGS_DB = 0
 
