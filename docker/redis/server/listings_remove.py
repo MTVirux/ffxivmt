@@ -7,7 +7,7 @@ import json
 import config
 import database
 
-def handle_add_listing(hash, listing):
+def handle_remove_listings(hash, listing):
 
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hdel(hash, field)
