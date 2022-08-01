@@ -11,7 +11,7 @@ import pprint
 def handle_add_sale(hash, value):
 
     #Field is a string concat so we set it beforehand
-    field = str(value['buyerName']) + "_" + str(value['timestamp'])
+    field = str(value['buyerName']).replace(" ", "_") + "_" + str(value['timestamp'])
 
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
