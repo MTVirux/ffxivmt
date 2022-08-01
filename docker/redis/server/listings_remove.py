@@ -29,7 +29,7 @@ def on_message(ws_listing_remove, message):
 
     
     for listing in listings:
-        if(type(listing['listingID']) != type(str)):
+        if(type(listing['listingID']) != type(" ")):
             continue
         if(listing['listingID'] in config.BANNED_LISTING_IDS):
             continue
