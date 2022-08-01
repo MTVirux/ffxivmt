@@ -155,6 +155,7 @@ REDIS_HOST = "localhost"
 
 REDIS_PORT = 6379
 
+HASH_FIELD_TTL = 604800 # 1 week TTL
 
 #### REDIS DB INDEXES
 

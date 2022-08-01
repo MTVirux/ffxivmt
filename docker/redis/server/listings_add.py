@@ -8,12 +8,17 @@ import json
 import config
 import database
 
+def set_field_expiry(hash, field, timestamp):
+    if(database.DB_LISTINGS_CLEAN.hset(str(timestamp), str(hash), str(field)) == 0):
+        print("ERROR: EXPIRY DATE NOT SET")
+
 def handle_add_listing(hash, listing):
     
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
     if(database.DB_LISTING.hset(str(hash), str(listing['listingID']), str(listing)) == 1):
         print("{0}{HSET}Added listing " + listing['listingID'] + " to " + hash)
+        set_field_expiry(hash, field, time.time())
     return
 
 

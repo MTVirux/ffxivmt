@@ -6,7 +6,12 @@ import redis
 import json
 import config
 import database
+import time
 import pprint
+
+def set_field_expiry(hash, field, timestamp):
+    if(database.DB_SALES_CLEAN.hset(str(timestamp), str(hash), str(field)) == 0):
+        print("ERROR: EXPIRY DATE NOT SET")
 
 def handle_add_sale(hash, value):
 
@@ -17,6 +22,7 @@ def handle_add_sale(hash, value):
     #hset(hash, field, value)
     if(database.DB_SALES.hset(str(hash), str(field), str(value)) == 1):
         print("{1}{HSET}Added sale " + field + " to " + hash)
+        set_field_expiry(str(hash), str(field), str(time.time()));
     return
 
 
