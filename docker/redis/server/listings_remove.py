@@ -33,7 +33,7 @@ def on_message(ws_listing_remove, message):
             continue
         if(listing['listingID'] in config.BANNED_LISTING_IDS):
             continue
-        handle_add_listing(hash, listing)
+        handle_remove_listings(hash, listing)
 
 
 def subscribe(ws_listing_remove):
