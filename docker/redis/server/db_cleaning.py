@@ -67,4 +67,4 @@ def start_cleaning():
         for x in cleaning_threads:
             x.join();
 
-        time.sleep(ttl_seconds)
+        time.sleep(config.HASH_FIELD_TTL)
