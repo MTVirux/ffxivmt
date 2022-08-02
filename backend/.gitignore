@@ -11,5 +11,7 @@ private/mariadb/retainers.sql
 
 #codeigniter 3
 application/logs/*
+application/vendor/*
 !application/logs/index.html
 !application/logs/.htaccess
+!application/vendor/index.htmls
