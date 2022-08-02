@@ -1,16 +1,52 @@
 from base64 import decode
 from posixpath import split
-import string
 import websocket
 import bson
 import redis
 import json
 import config
 import database
+import time
 
 def set_field_expiry(hash, field, timestamp):
-    if(database.DB_LISTINGS_CLEAN.hset(str(timestamp), str(hash), str(field)) == 0):
-        print("ERROR: EXPIRY DATE NOT SET")
+    if(database.DB_LISTINGS_CLEAN.hset(str(timestamp), str(hash), str(field)) == 1):
+        print("{"+ str(config.REDIS_LISTINGS_CLEANING_DB) + "}{HSET} Set expiry time for " + field + " in " + hash)
+
+def update_recent(hash, field, timestamp):
+    list_name = "recent_" + str(hash).split("_")[0]
+    list_entry = str(hash) + "/" + str(field)
+
+
+    #########################
+    #UPDATE WORLD RECENT LIST
+    #########################
+    if (int(database.DB_LISTING.lpush(list_name, list_entry)) > 0):
+        if(int(database.DB_LISTING.ltrim(list_name, 0, 1000)) > 0):
+            print("{"+ str(config.REDIS_LISTINGS_DB) + "}{HSET} Added " + list_entry + " to " + list_name)
+        else:
+            print("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{HSET} Could not trim " + list_name)
+    else:
+        print("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{HSET} Could not update " + list_name)
+
+    #######################################
+    #UPDATE DATACENTER RECENT LISTINGS LIST
+    #######################################
+    
+    ###################################
+    #UPDATE REGION RECENT LISTINGS LIST
+    ###################################
+
+    ###################################
+    #UPDATE GLOBAL RECENT LISTINGS LIST
+    ###################################
+    if(int(database.DB_LISTING.lpush("recent_listings", list_entry)) > 0):
+        if(int(database.DB_LISTING.ltrim("recent_listings", 0, 1000)) > 0):
+            print("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to recent_listings")
+        else:
+            print("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LTRIM} Could not trim recent_listings")
+    else:
+        print("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not update recent_listings")
+
 
 def handle_add_listing(hash, listing):
     
@@ -20,6 +56,7 @@ def handle_add_listing(hash, listing):
     if(database.DB_LISTING.hset(str(hash), str(field), str(listing)) == 1):
         print("{0}{HSET}Added listing " + field + " to " + hash)
         set_field_expiry(str(hash), str(field), time.time())
+        update_recent(hash, field, time.time())
     return
 
 

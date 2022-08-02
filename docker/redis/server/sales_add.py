@@ -7,11 +7,46 @@ import json
 import config
 import database
 import time
-import pprint
 
 def set_field_expiry(hash, field, timestamp):
     if(database.DB_SALES_CLEAN.hset(str(timestamp), str(hash), str(field)) == 0):
         print("ERROR: EXPIRY DATE NOT SET")
+
+def update_recent(hash, field, timestamp):
+    list_entry = str(hash) + "/" + str(field)
+
+
+    #########################
+    #UPDATE WORLD RECENT LIST
+    #########################
+    list_name = "recent_" + str(hash).split("_")[0]
+    if (int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
+        if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
+            print("{"+ str(config.REDIS_SALES_DB) + "}{HSET} Added " + list_entry + " to " + list_name)
+        else:
+            print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{HSET} Could not trim " + list_name)
+    else:
+        print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{HSET} Could not update " + list_name)
+
+    #######################################
+    #UPDATE DATACENTER RECENT SALES LIST
+    #######################################
+    
+    ###################################
+    #UPDATE REGION RECENT SALES LIST
+    ###################################
+
+    ###################################
+    #UPDATE GLOBAL RECENT SALES LIST
+    ###################################
+    list_name = "recent_sales"
+    if(int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
+        if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
+            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to " + list_name)
+        else:
+            print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LTRIM} Could not trim " + list_name)
+    else:
+        print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not update " + list_name)
 
 def handle_add_sale(hash, value):
 
@@ -23,6 +58,7 @@ def handle_add_sale(hash, value):
     if(database.DB_SALES.hset(str(hash), str(field), str(value)) == 1):
         print("{1}{HSET}Added sale " + field + " to " + hash)
         set_field_expiry(str(hash), str(field), str(time.time()));
+        update_recent(hash, field, time.time())
     return
 
 

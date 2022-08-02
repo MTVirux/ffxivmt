@@ -13,6 +13,8 @@ import sales_remove
 import db_cleaning
 import os
 import sys
+import time
+import database
 
 #Comment the following line to enable print
 sys.stdout = open(os.devnull, 'w')
