@@ -22,11 +22,11 @@ def update_recent(hash, field, timestamp):
     list_name = "recent_" + str(hash).split("_")[0]
     if (int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_SALES_DB) + "}{HSET} Added " + list_entry + " to " + list_name)
+            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to " + list_name)
         else:
-            print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{HSET} Could not trim " + list_name)
+            print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LTRIM} Could not trim " + list_name)
     else:
-        print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{HSET} Could not update " + list_name)
+        print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not update " + list_name)
 
     #######################################
     #UPDATE DATACENTER RECENT SALES LIST
