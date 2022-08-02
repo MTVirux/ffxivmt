@@ -54,8 +54,6 @@ class Redis_listings_model extends MY_Redis_model{
 
         $recent_items = $this->redis->lrange($list_name, 0, $limit);
 
-        var_dump($list_name, $world_name, $limit);die();
-
         if($recent_items){
             return array(
                 'success' => 'true',
