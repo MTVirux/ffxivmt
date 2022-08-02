@@ -39,7 +39,7 @@ class Redis_listings_model extends MY_Redis_model{
     public function recent_apiGet($world_id = null, $limit = null){
         
         if(is_null($limit)){
-            $limit = 10;
+            $limit = 1000;
         }
 
         if(is_null($world_id)){
