@@ -16,9 +16,10 @@ def handle_add_listing(hash, listing):
     
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
-    if(database.DB_LISTING.hset(str(hash), str(listing['listingID']), str(listing)) == 1):
-        print("{0}{HSET}Added listing " + listing['listingID'] + " to " + hash)
-        set_field_expiry(hash, field, time.time())
+    field = str(listing['listingID'])
+    if(database.DB_LISTING.hset(str(hash), str(field), str(listing)) == 1):
+        print("{0}{HSET}Added listing " + field + " to " + hash)
+        set_field_expiry(str(hash), str(field), time.time())
     return
 
 
