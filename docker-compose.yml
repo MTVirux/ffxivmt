@@ -4,8 +4,6 @@ services:
 
   #FRONTEND
 
-  # FRONTEND
-
   ffmt_frontend:
     container_name: ${FRONTEND_CONTAINER_NAME}
     image: node:18-alpine3.16
