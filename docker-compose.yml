@@ -6,24 +6,21 @@ services:
 
   # FRONTEND
 
-  #ffmt_frontend:
-  #  container_name: ${FRONTEND_CONTAINER_NAME}
-  #  build:
-  #    dockerfile: ${FRONTEND_DOCKERFILE}
-  #  restart: "always"
-  #  ports:
-  #    - "${FRONTEND_HOST_PORT}:80"
-  #  environment:
-  #    - APP_NAME=${APP_NAME}
-  #    - PRIMARY_DOCKER_PORT=${PRIMARY_DOCKER_PORT}
-  #    - SECONDARY_DOCKER_PORT=${SECONDARY_DOCKER_PORT}
-  #    - PRIMARY_DOCKER_SSL_PORT=${PRIMARY_DOCKER_SSL_PORT}
-  #    - SECONDARY_DOCKER_SSL_PORT=${SECONDARY_DOCKER_SSL_PORT}
-  #  volumes:
-  #    - ./backend:/var/www/html/
-  #  networks:
-  #    - ffmt_internal
-  #    - ffmt_external
+  ffmt_frontend:
+    container_name: ${FRONTEND_CONTAINER_NAME}
+    image: node:18-alpine3.16
+    build:
+      context: .
+      dockerfile: ${FRONTEND_DOCKERFILE}
+    restart: "always"
+    ports:
+      - "${FRONTEND_HOST_PORT}:80"
+    
+    volumes:
+      - ./frontend:/var/www/html/
+    networks:
+      - ffmt_internal
+      - ffmt_external
 
   
 
@@ -67,7 +64,6 @@ services:
       - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_DATABASE=${MARIADB_DATABASE_NAME}
     volumes:
-      #      - ./docker/web/database:/docker-entrypoint-initdb.d
       - ./docker/mariadb:/etc/mysql/conf.d
       - ffmt_mariadb_data:/var/lib/mysql
     ports:
