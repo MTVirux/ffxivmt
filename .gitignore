@@ -1,2 +1,3 @@
 docker/redis/server/__pycache__/*
+docker/redis/server/logs/*
 docker/redis/server/nohup.out
