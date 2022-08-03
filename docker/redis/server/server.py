@@ -27,29 +27,6 @@ sys.stdout = open(os.devnull, 'w')
 #/      /-------listingID
 #/      /       /----------[JSON_DATA]
 #/
-#/------/World
-#/      /-------listingID
-#/      /       /----------[JSON_DATA]
-
-def on_message(wsapp, message):
-    decoded_message = (bson.decode(message))
-    world = str(decoded_message['world'])
-    item = str(decoded_message['item'])
-    listings = (json.loads(json.dumps(decoded_message['listings'])))
-    world_name = str(config.WORLDS[int(world)])
-    hash = world_name+"_"+str(item)
-
-
-    if(not(world != "None" and item != "None" and world != "" and item != "")):
-        return
-    
-
-    for listing in listings:
-        if(decoded_message['event'] == 'listings/remove'):
-            handle_remove(hash, listing)
-        
-        if(decoded_message['event'] == 'listings/add'):
-            handle_add(hash, listing)
 
 
 threads = []
