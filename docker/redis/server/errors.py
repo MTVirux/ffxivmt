@@ -3,7 +3,7 @@ import traceback
 
 
 def log(message, print_stack = True):
-    print("ERROR_LOG: "("["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"]"))
+    print("ERROR_LOG: ["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"]")
     error_file = open("errors.log", "a")
     error_file.write("###########################################################################")
     error_file.write('\n')
@@ -19,8 +19,9 @@ def log(message, print_stack = True):
     error_file.write('\n\n\n')
     return
 
-def print(message):
-    print("ERROR_PRINT: "("["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"]"))
+def err_write(message):
+    print("ERROR_PRINT: [" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "]")
     error_file = open("errors.log", "a")
-    error_file.write(str(message) + '\n')
+    error_file.write(str(message))
+    error_file.write('\n')
     return
