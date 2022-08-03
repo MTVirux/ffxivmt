@@ -60,9 +60,9 @@ def start_threads(threads):
             x.start()
         except Exception as thread_error:
             try:
-                logs.add_error("THREAD_ERROR: ", thread_error);
+                errors.log("THREAD_ERROR: ", thread_error);
             except Exception as log_error:
-                logs.add_error("LOG ERROR: ", log_error);
+                errors.log("LOG ERROR: ", log_error);
 
 
 start_threads(threads)
