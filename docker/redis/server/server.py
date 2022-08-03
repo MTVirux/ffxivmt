@@ -50,8 +50,8 @@ threads.append(sales_add_thread)
 #sales_remove_thread            = threading.Thread(target=sales_remove.start_sales_remove);
 #threads.append(sales_remove_thread)
 
-db_cleaning_thread              = threading.Thread(target=db_cleaning.start_cleaning);
-threads.append(db_cleaning_thread)
+#db_cleaning_thread              = threading.Thread(target=db_cleaning.start_cleaning);
+#threads.append(db_cleaning_thread)
 
 
 def start_threads(threads):
