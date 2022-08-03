@@ -9,15 +9,10 @@ import threading
 import listings_add
 import listings_remove
 import sales_add
-import sales_remove
 import db_cleaning
-import os
-import sys
-import time
+import log
 import database
 
-#Comment the following line to enable print
-sys.stdout = open(os.devnull, 'w')
 
 #/Item_world/-----//
 #                  /listingID : {[JSON_DATA]}
@@ -59,11 +54,7 @@ def start_threads(threads):
         try:
             x.start()
         except Exception as thread_error:
-            try:
-                errors.log("THREAD_ERROR: ", thread_error);
-            except Exception as log_error:
-                errors.log("LOG ERROR: ", log_error);
-
+            log.error("THREAD FAILED TO START" + str(thread_error))
 
 start_threads(threads)
-print("ALL THREADS STARTED")
+log.debug("ALL THREADS STARTED")

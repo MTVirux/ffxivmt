@@ -4,6 +4,7 @@ import threading
 import database
 import datetime
 import time
+import log
 
 
 
@@ -22,7 +23,7 @@ def clean_listings():
             fields = database.DB_LISTINGS_CLEAN.hgetall(key)
             for k in fields:
                 clean_field = str(k).strip("b").strip("\'")
-                print("Removing: " + key + clean_field)
+                log.action("Removing: " + key + clean_field)
                 if(database.DB_LISTINGS_CLEAN.hdel(key, clean_field) == 1):
                     continue
     return
@@ -45,7 +46,7 @@ def clean_sales():
             fields = database.DB_SALES_CLEAN.hgetall(key)
             for k in fields:
                 clean_field = str(k).strip("b").strip("\'")
-                print("Removing: " + key + clean_field)
+                log.action("Removing: " + key + clean_field)
                 if(database.DB_SALES_CLEAN.hdel(key, clean_field) == 1):
                     continue
     return

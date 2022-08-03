@@ -8,24 +8,23 @@ import json
 import config
 import database
 import time
-import pprint
 from redis.commands.json.path import Path
-import errors
+import log
 ###########################
 #    ENTRY MANIPULATION   #
 ###########################
 
 def add_entry(hash, field, new_entry):
     if(database.DB_SALES.json().set(hash, Path.root_path(), new_entry) == 1):
-        print("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET}Added sale " + field + " to " + hash)
+        log.action("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET}Added sale " + field + " to " + hash)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET} Could not add " + hash + " to db")
+        log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET} Could not add " + hash + " to db")
 
 def update_entry(hash, field, updated_entry):
     if(database.DB_SALES.json().set(hash, Path.root_path(), updated_entry) == 1):
-        print("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Added sale " + field + " to " + hash)
+        log.action("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Added sale " + field + " to " + hash)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
+        log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
     
 
 ###########################
@@ -34,7 +33,7 @@ def update_entry(hash, field, updated_entry):
 
 def set_field_expiry(hash, field, timestamp):
     if(database.DB_SALES_CLEAN.hset(timestamp, hash, field) == 0):
-        errors.log("[ERROR]{"+ str(config.REDIS_SALES_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
+        log.error("[ERROR]{"+ str(config.REDIS_SALES_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
 
 ###########################
 #      RECORD LOGGING     #
@@ -48,11 +47,11 @@ def update_recent(hash, field):
     list_name = "recent_" + hash.split("_")[0]
     if (int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to sales " + list_name)
+            log.action("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to sales " + list_name)
         else:
-            errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not trim sales " + list_name)
+            log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not trim sales " + list_name)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not add sales " + list_entry + " to " + list_name)
+        log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not add sales " + list_entry + " to " + list_name)
 
     # UPDATE DATACENTER RECENT SALES LIST
     
@@ -63,11 +62,11 @@ def update_recent(hash, field):
     list_name = "recent_sales"
     if(int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to sales " + list_name)
+            log.action("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to sales " + list_name)
         else:
-            errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not trim sales " + list_name)
+            log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not trim sales " + list_name)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not add sales " + list_entry + " to " + list_name)
+        log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not add sales " + list_entry + " to " + list_name)
 
 
 
@@ -99,9 +98,9 @@ def subscribe(ws_sales_add):
         for k in config.WORLDS_TO_USE[i]:
             sub_list_value = config.WORLDS_TO_USE[i][k]
             world_id = "{world=" + str(k) + "}"
-            print("sales/add" + world_id)
+            log.action("sales/add" + world_id)
             ws_sales_add.send(bson.encode({"event": "subscribe", "channel": "sales/add" + world_id}))
-            print("Sent subscribe event for sales/add on world " + sub_list_value + "(" + str(k) + ")")
+            log.action("Sent subscribe event for sales/add on world " + sub_list_value + "(" + str(k) + ")")
 
 
 def start_sales_add():

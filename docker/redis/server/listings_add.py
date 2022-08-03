@@ -10,8 +10,7 @@ import config
 import database
 import time
 from redis.commands.json.path import Path
-import errors
-import pprint
+import log
 
 
 ###########################
@@ -20,16 +19,16 @@ import pprint
 
 def add_entry(hash, field, new_entry):
     if(database.DB_LISTINGS.json().set(hash, Path.root_path(), new_entry) == 1):
-        print("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET}Added listing " + field + " to " + hash)
+        log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET}Added listing " + field + " to " + hash)
         return
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET} Could not add " + hash + " to db")
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET} Could not add " + hash + " to db")
 
 def update_entry(hash, field, updated_entry):
     if(database.DB_LISTINGS.json().set(hash, Path.root_path(), updated_entry) == 1):
-        print("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Added listing " + field + " to " + hash)
+        log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Added listing " + field + " to " + hash)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
 
 ###########################
 #   VALIDATION FUNCTIONS  #
@@ -37,7 +36,7 @@ def update_entry(hash, field, updated_entry):
 
 def set_field_expiry(hash, field, timestamp):
     if(database.DB_LISTINGS_CLEAN.hset(timestamp, hash, field) == 0):
-        errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
 
 ###########################
 #      RECORD LOGGING     #
@@ -51,11 +50,11 @@ def update_recent(hash, field):
     list_name = "recent_" + hash.split("_")[0]
     if (int(database.DB_LISTINGS.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_LISTINGS.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to listings " + list_name)
+            log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to listings " + list_name)
         else:
-            errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not trim listings " + list_name)
+            log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not trim listings " + list_name)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not add " + list_entry + " to listings" + list_name)
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not add " + list_entry + " to listings" + list_name)
 
     # UPDATE DATACENTER RECENT LISTINGS LIST
 
@@ -66,11 +65,11 @@ def update_recent(hash, field):
     list_name = "recent_listings"
     if(int(database.DB_LISTINGS.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_LISTINGS.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to listings " + list_name)
+            log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to listings " + list_name)
         else:
-            errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not trim listings " + list_name)
+            log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not trim listings " + list_name)
     else:
-        errors.log("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not add listings " + list_entry + " to " + list_name)
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not add listings " + list_entry + " to " + list_name)
 
 
 ###########################
@@ -108,7 +107,6 @@ def handle_add_listing(hash, listing):
 
     
     db_entry = database.DB_LISTINGS.json().get(hash)
-    
     if(db_entry is None):
         add_entry(hash, field, listing_object)
     else:
@@ -148,9 +146,9 @@ def subscribe(ws_listing_add):
         for k in config.WORLDS_TO_USE[i]:
             sub_list_value = config.WORLDS_TO_USE[i][k]
             world_id = "{world=" + str(k) + "}"
-            print("listings/add" + world_id)
+            log.action("listings/add" + world_id)
             ws_listing_add.send(bson.encode({"event": "subscribe", "channel": "listings/add" + world_id}))
-            print("Sent subscribe event for listings/add on world " + sub_list_value + "(" + str(k) + ")")
+            log.action("Sent subscribe event for listings/add on world " + sub_list_value + "(" + str(k) + ")")
 
 
 
