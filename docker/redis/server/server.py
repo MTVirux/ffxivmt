@@ -1,10 +1,5 @@
 from base64 import decode
 from posixpath import split
-import websocket
-import bson
-import redis
-import json
-import config
 import threading
 import listings_add
 import listings_remove
