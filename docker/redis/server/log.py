@@ -1,14 +1,30 @@
 import datetime
+from pickle import FALSE
 import traceback
 import inspect
+import config
 
 
-def error(message, print_stack = True):
-    print("ERROR_PRINT: ["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"]")
-    caller_filename = str(inspect.stack()[1][0].f_code.co_filename)
+#########################################
+#                ERROR                  #
+#########################################
+
+def error(message = "None", print_stack = True):
+
+    caller_filename = str(inspect.stack()[1][0].f_code.co_filename).split("/")[-1].split(".")[0]
+    log_filename = "logs/error" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
-    error_file = open("logs/errors.log", "a")
 
+    if(config.PRINT_TO_SCREEN['ERROR'] == True):
+        if(print_stack == True):
+            print (traceback.print_stack())
+        print("[ERROR]["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))
+
+    if(config.PRINT_TO_LOG['ERROR'] == False):
+        return
+
+
+    error_file = open(log_filename, "a")
 
     error_file.write("###########################################################################")
     error_file.write('\n')
@@ -25,12 +41,24 @@ def error(message, print_stack = True):
 
     return
 
-def action(message):
-    print("ACTION_PRINT: [" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "]")
+#########################################
+#                ACTION                 #
+#########################################
+
+
+def action(message = "None"):
+
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
-    log_filename = "logs/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
-    print(log_filename);
+    log_filename = "logs/action" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
+
+    if(config.PRINT_TO_SCREEN['ACTION'] == True):
+        print("[ACTION]["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))
+
+    if(config.PRINT_TO_LOG['ACTION'] == False):
+        return
+
+
     log_file = open(log_filename, "a")
     log_file.write("["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"] - " + caller_filename) 
     log_file.write('\n')
@@ -43,7 +71,12 @@ def action(message):
     
     return
 
-def debug(message):
+
+#########################################
+#                DEBUG                  #
+#########################################
+
+def debug(message = "None"):
     print("DEBUG_PRINT: [" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "]")
     log_file = open("logs/debug.log", "a")
     if message is not None:
