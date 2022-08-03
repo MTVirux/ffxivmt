@@ -78,7 +78,6 @@ def update_recent(hash, field):
 ###########################
 
 def handle_add_listing(hash, listing):
-    print ("Adding listing")
     #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
     field = str(listing['listingID'])
