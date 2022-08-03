@@ -1,4 +1,5 @@
 from base64 import decode
+from importlib.resources import path
 from posixpath import split
 import websocket
 import bson
@@ -7,61 +8,73 @@ import json
 import config
 import database
 import time
+import pprint
+from redis.commands.json.path import Path
+import errors
+###########################
+#    ENTRY MANIPULATION   #
+###########################
+
+def add_entry(hash, field, new_entry):
+    if(database.DB_SALES.json().set(hash, Path.root_path(), new_entry) == 1):
+        print("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET}Added sale " + field + " to " + hash)
+    else:
+        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET} Could not add " + hash + " to db")
+
+def update_entry(hash, field, updated_entry):
+    if(database.DB_SALES.json().set(hash, Path.root_path(), updated_entry) == 1):
+        print("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Added sale " + field + " to " + hash)
+    else:
+        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
+    
+
+###########################
+#   VALIDATION FUNCTIONS  #
+###########################
 
 def set_field_expiry(hash, field, timestamp):
-    if(database.DB_SALES_CLEAN.hset(str(timestamp), str(hash), str(field)) == 0):
-        print("ERROR: EXPIRY DATE NOT SET")
+    if(database.DB_SALES_CLEAN.hset(timestamp, hash, field) == 0):
+        errors.log("[ERROR]{"+ str(config.REDIS_SALES_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
 
-def update_recent(hash, field, timestamp):
-    list_entry = str(hash) + "/" + str(field)
+###########################
+#      RECORD LOGGING     #
+###########################     
+
+def update_recent(hash, field):
+    list_entry = hash + "/" + field
 
 
-    #########################
-    #UPDATE WORLD RECENT LIST
-    #########################
-    list_name = "recent_" + str(hash).split("_")[0]
+    # UPDATE WORLD RECENT LIST
+    list_name = "recent_" + hash.split("_")[0]
     if (int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to " + list_name)
+            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to sales " + list_name)
         else:
-            print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LTRIM} Could not trim " + list_name)
+            errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not trim sales " + list_name)
     else:
-        print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not update " + list_name)
+        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not add sales " + list_entry + " to " + list_name)
 
-    #######################################
-    #UPDATE DATACENTER RECENT SALES LIST
-    #######################################
+    # UPDATE DATACENTER RECENT SALES LIST
     
-    ###################################
-    #UPDATE REGION RECENT SALES LIST
-    ###################################
+    
+    # UPDATE REGION RECENT SALES LIST
 
-    ###################################
-    #UPDATE GLOBAL RECENT SALES LIST
-    ###################################
+    # UPDATE GLOBAL RECENT SALES LIST
     list_name = "recent_sales"
     if(int(database.DB_SALES.lpush(list_name, list_entry)) > 0):
         if(int(database.DB_SALES.ltrim(list_name, 0, 1000)) > 0):
-            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to " + list_name)
+            print("{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Added " + list_entry + " to sales " + list_name)
         else:
-            print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LTRIM} Could not trim " + list_name)
+            errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not trim sales " + list_name)
     else:
-        print("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not update " + list_name)
-
-def handle_add_sale(hash, value):
-
-    #Field is a string concat so we set it beforehand
-    field = str(value['buyerName']).replace(" ", "_") + "_" + str(value['timestamp'])
-
-    #Commit to db (1 = SUCESS, 0 = FAIL)
-    #hset(hash, field, value)
-    if(database.DB_SALES.hset(str(hash), str(field), str(value)) == 1):
-        print("{1}{HSET}Added sale " + field + " to " + hash)
-        set_field_expiry(str(hash), str(field), str(time.time()));
-        update_recent(hash, field, time.time())
-    return
+        errors.log("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{LPUSH} Could not add sales " + list_entry + " to " + list_name)
 
 
+
+
+###########################
+#   WEBSOCKET FUNCTIONS   #
+###########################
 def on_message(ws_sales_add, message):
     #prepare vars
     decoded_message = (bson.decode(message))
@@ -70,15 +83,14 @@ def on_message(ws_sales_add, message):
     world_name = str(config.WORLDS[int(world)])
 
     #Set hash and sales
-    hash = world_name + "_" + item
-    #Field is set later, so we don't need to set it here
+    hash = str(world_name + "_" + item)
     sales = (json.loads(json.dumps(decoded_message['sales'])))
-
-
 
     for sale in sales:
         if (sale['buyerName'] in config.BANNED_SALE_BUYERS):
             continue
+        sale['worldID'] = world
+        sale['worldName'] = world_name
         handle_add_sale(hash, sale)
 
 
@@ -97,3 +109,41 @@ def start_sales_add():
         config.UNIVERSALLIS_URL, on_open=subscribe, on_message=on_message)
     ws_sales_add.run_forever()
 
+
+###########################
+#       MAIN FUNCTION     #
+###########################
+
+def handle_add_sale(hash, value):
+
+    #Field is a string concat so we set it beforehand
+    field = str(value['buyerName']).replace(" ", "_") + "_" + str(value['timestamp'])
+
+    sale_object = {
+        field : {
+            "buyerName":        str(value['buyerName']),
+            "hq":               bool(value['hq']),
+            "onMannequin":      bool(value['onMannequin']),
+            "pricePerUnit":     float(value['pricePerUnit']),
+            "quantity":         int(value['quantity']),
+            "timestamp":        float(value['timestamp']),
+            "total":            float(value['total']),
+            "worldID":          int(value['worldID']),
+            "worldName":        str(value['worldName']),
+        }
+    }
+
+    #Commit to db (1 = SUCESS, 0 = FAIL)
+    #hset(hash, field, value)
+    db_entry = database.DB_SALES.json().get(hash)
+    
+    if(db_entry is None):
+        add_entry(hash, field, sale_object)
+    else:
+        updated_entry = db_entry
+        updated_entry.update(sale_object)
+        update_entry(hash, field, updated_entry)
+
+    set_field_expiry(hash, field, timestamp = str(time.time()))
+    update_recent(hash, field)
+    return
