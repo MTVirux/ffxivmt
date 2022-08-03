@@ -19,14 +19,21 @@ import database
 #Comment the following line to enable print
 sys.stdout = open(os.devnull, 'w')
 
-#/Item_world
-#/-----/World
-#/      /-------listingID
-#/      /       /----------[JSON_DATA]
-#/      /    
-#/      /-------listingID
-#/      /       /----------[JSON_DATA]
-#/
+#/Item_world/-----//
+#                  /listingID : {[JSON_DATA]}
+#                  /
+#                  /listingID : {[JSON_DATA]}
+#                  /
+#                  /listingID : {[JSON_DATA]}
+#                  /
+#                  /listingID : {[JSON_DATA]}
+#
+#
+#/Item_world/-----//
+#                  /listingID : {[JSON_DATA]}
+#                  /
+#                  /listingID : {[JSON_DATA]}
+# 
 
 
 threads = []
