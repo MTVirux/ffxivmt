@@ -2,9 +2,7 @@
 
 docker compose down
 
-docker image rm ffmt_backend
-docker image rm mariadb
-docker image rm mtvirux/redis-stack-server-python3.10
+docker images -a -q | % { docker image rm $_ -f }
 
 docker volume rm ffmt_mariadb_data
 docker volume rm ffmt_redis_data
