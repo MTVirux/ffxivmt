@@ -11,7 +11,7 @@ import config
 def error(message = "None", print_stack = True):
 
     caller_filename = str(inspect.stack()[1][0].f_code.co_filename).split("/")[-1].split(".")[0]
-    log_filename = "logs/error" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
+    log_filename = "logs/error/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
 
     if(config.PRINT_TO_SCREEN['ERROR'] == True):
@@ -48,7 +48,7 @@ def error(message = "None", print_stack = True):
 def action(message = "None"):
 
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
-    log_filename = "logs/action" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
+    log_filename = "logs/action/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
 
     if(config.PRINT_TO_SCREEN['ACTION'] == True):
