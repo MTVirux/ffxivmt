@@ -1,5 +1,7 @@
 #!/bin/bash
 ENV=0;
+BAT_IN_SCRIPTS=0;
+SH_IN_SCRIPTS=0;
 
 for file in ./scripts/*; do
     if [ -d "$file" ]; 
@@ -9,19 +11,15 @@ for file in ./scripts/*; do
     then
         if [[ $file == *.bat ]]
         then
-            echo "Swapping to bat scripts"
-            ENV=1
-            break
-        elif true;
+                BAT_IN_SCRIPTS=1;
+        elif [[ $file == *.sh ]];
         then
-            echo "Swapping to sh scripts"
-            ENV=2
-            break
+                SH_IN_SCRIPTS=1;
         fi
     fi
 done
 
-if [ $ENV = 1 ];
+if [ $BAT_IN_SCRIPTS = 1 ] && [ $SH_IN_SCRIPTS = 0 ];
 then 
         for bat_script in ./scripts/*; do
                 if [ -f "$bat_script" ] && [[ $bat_script == *.bat ]];
@@ -38,10 +36,9 @@ then
                 fi
         done
         echo "Swapped to Windows .bat scripts"
-elif [ $ENV = 2 ];
+elif [ $BAT_IN_SCRIPTS = 0 ] && [ $SH_IN_SCRIPTS = 1 ];
 then
         for shell_script in ./scripts/*; do
-            echo "${shell_script}" 
                 if [ -f "$shell_script" ] && [[ $shell_script == *.sh ]];
                 then
                         
@@ -53,8 +50,20 @@ then
                         
                         echo "Swapping ./scripts/${filename}.sh with ./${filename}.bat"
                 fi
-                echo "Swapped to Linux .sh scripts"
         done
-else
-        echo "Could not determine environments. Please check you ./scripts/ folder"
+        echo "Swapped to BASH scripts"
+elif [ $BAT_IN_SCRIPTS = 1 ] && [ $SH_IN_SCRIPTS = 1 ];
+then
+        for shell_script in ./scripts/*; do
+                if [ -f "$shell_script" ] && [[ $shell_script == *.sh ]];
+                then
+                        
+                        file_no_path=${shell_script##*/}
+                        filename=${file_no_path%%.*}
+                        
+                        mv ./scripts/"${filename}".sh .                        
+                fi
+        done
+        echo "Swapping ./scripts/${filename}.sh with ./${filename}.bat"
+        echo "Moved BASH scripts to ."
 fi
