@@ -2,6 +2,8 @@
 
 docker compose down
 
+docker volume rm $(docker volume ls -q)
+
 docker images -a -q | % { docker image rm $_ -f }
 
 docker volume rm ffmt_mariadb_data
