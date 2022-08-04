@@ -3,3 +3,5 @@ docker/redis/server/logs/*.log
 docker/redis/server/logs/action/*.log
 docker/redis/server/logs/error/*.log
 docker/redis/server/nohup.out
+
+*.rdb
