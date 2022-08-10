@@ -3,5 +3,10 @@ docker/redis/server/logs/*.log
 docker/redis/server/logs/action/*.log
 docker/redis/server/logs/error/*.log
 docker/redis/server/nohup.out
+clear_docker_cache.sh
+clear_docker_cache.bat
+/*.bat
+/*.sh
+/scripts/*
 
 *.rdb
