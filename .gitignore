@@ -5,6 +5,5 @@ docker/redis/server/logs/error/*.log
 docker/redis/server/nohup.out
 /*.bat
 /*.sh
-scripts/*
 
 *.rdb
