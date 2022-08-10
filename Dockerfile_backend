@@ -10,6 +10,15 @@ RUN rm -rf /var/www/html/.git
 RUN rm -rf /var/www/html/docker
 RUN rm -rf docker-compose.yml
 RUN rm -rf Dockerfile
+RUN chmod 755 /etc/apache2/ssl
+RUN chmod 710 /etc/apache2/ssl/private
+RUN chown -R root:root /etc/apache2/ssl/
+RUN chown -R root:ssl-cert /etc/apache2/ssl/private/
+RUN chmod 644 /etc/apache2/ssl/*.crt
+RUN chmod 640 /etc/apache2/ssl/private/*.key
+RUN a2ensite mtvirux_app.conf
+RUN a2ensite mtvirux_app_ssl.conf
 RUN a2enmod rewrite
+RUN a2enmod ssl
 RUN chmod +x /usr/local/bin/run_entrypoints.sh
 CMD ["/usr/local/bin/run_entrypoints.sh"]
