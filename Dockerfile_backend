@@ -5,6 +5,9 @@ RUN rm -rf /var/www/html/index.html
 WORKDIR /etc/apache2/
 COPY ./docker/backend/ /
 COPY ./backend/ /var/www/html/
+WORKDIR /var/www/html/application
+RUN rm -rf /var/www/html/vendor
+RUN composer install
 WORKDIR /var/www/html/
 RUN rm -rf /var/www/html/.git
 RUN rm -rf /var/www/html/docker
