@@ -77,11 +77,14 @@ services:
       dockerfile: ${REDIS_DOCKERFILE}
     container_name: ${REDIS_CONTAINER_NAME}
     restart: "always"
+    environment:
+      - REDIS_CONFFILE=/server/redis/config/redis-stack.conf
+      - REDIS_DATA_DIR=/server/persistent_data
+
     ports:
       - "${REDIS_HOST_PORT}:6379"
       - "${REDISINSIGHT_HOST_PORT}:8001"
     volumes:
-      - ffmt_redis_data:/data
       - ./docker/redis/usr/local/etc/redis:/usr/local/etc/redis
       - ./docker/redis/usr/local/bin:/usr/local/bin
       - ./docker/redis/server:/server
