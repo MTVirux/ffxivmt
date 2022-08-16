@@ -4,6 +4,7 @@ while true; do
     available=$(free -m | head -2 | tail -1 | awk '{print $4}')
     date = $(echo `date +"%Y%m%d%H%M%S"`)
     if [ "$threshold" -ge "$available" ]; then
+        redis-cli config set dbfilename $(echo `date +"%Y%m%d%H%M%S"`).rdb
         redis-cli save
         redis-cli flushall
         mv /rdump/dump.rdb /server/presistent_dumps/$date.rdb
