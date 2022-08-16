@@ -18,7 +18,8 @@ class MY_Redis_Model extends CI_Model{
         if($this->redis->ping()){
             return $this->redis;
         }else{
-            return false;
+            $this->redis = false;
+            return $this->redis;
         }
     }
 }
