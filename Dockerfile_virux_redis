@@ -9,7 +9,6 @@ FROM mtvirux/redis-stack-python3.10
 COPY ./docker/redis/ /
 
 RUN chmod +x /entrypoint.sh
-RUN chmod +x /custom_entrypoint.sh
 RUN chmod +x /usr/local/bin/startup.sh
 RUN chmod +x /usr/local/bin/redis_memory_cleaner.sh
 
