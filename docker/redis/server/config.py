@@ -1,3 +1,5 @@
+import os
+
 ### WORLD CONFIG
 
 CHAOS_WORLDS = {
