@@ -1,8 +1,9 @@
 #!/bin/bash
 
-/custom_entrypoint.sh &
+/entrypoint.sh &
 
-redis-cli config set dir /server/persistent_data
+mkdir -p ${REDIS_DATA_DIR}
+redis-cli config set dir ${REDIS_DATA_DIR}
 redis-cli config set dbfilename $(echo `date +"%Y%m%d%H%M%S"`).rdb
 
 # Start the first process
