@@ -31,14 +31,6 @@ def update_entry(hash, field, updated_entry):
         log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
 
 ###########################
-#   VALIDATION FUNCTIONS  #
-###########################
-
-def set_field_expiry(hash, field, timestamp):
-    if(database.DB_LISTINGS_CLEAN.hset(timestamp, hash, field) == 0):
-        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
-
-###########################
 #      RECORD LOGGING     #
 ###########################     
 
@@ -115,7 +107,6 @@ def handle_add_listing(hash, listing):
         updated_entry.update(listing_object)
         update_entry(hash, field, updated_entry)
     
-    set_field_expiry(str(hash), str(field), time.time())
     update_recent(hash, field)
     return
 

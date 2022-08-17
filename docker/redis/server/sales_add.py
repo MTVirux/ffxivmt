@@ -25,15 +25,6 @@ def update_entry(hash, field, updated_entry):
         log.action("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Added sale " + field + " to " + hash)
     else:
         log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
-    
-
-###########################
-#   VALIDATION FUNCTIONS  #
-###########################
-
-def set_field_expiry(hash, field, timestamp):
-    if(database.DB_SALES_CLEAN.hset(timestamp, hash, field) == 0):
-        log.error("[ERROR]{"+ str(config.REDIS_SALES_CLEANING_DB) + "}{HSET} Could not set field expiry for " + hash)
 
 ###########################
 #      RECORD LOGGING     #
@@ -143,6 +134,5 @@ def handle_add_sale(hash, value):
         updated_entry.update(sale_object)
         update_entry(hash, field, updated_entry)
 
-    set_field_expiry(hash, field, timestamp = str(time.time()))
     update_recent(hash, field)
     return
