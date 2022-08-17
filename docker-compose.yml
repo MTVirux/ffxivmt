@@ -78,7 +78,7 @@ services:
     container_name: ${REDIS_CONTAINER_NAME}
     restart: "always"
     environment:
-      - REDIS_CONFFILE=/server/redis/config/redis-stack.conf
+      - REDIS_CONF_FILE=/server/redis-config/redis-stack.conf
       - REDIS_DATA_DIR=/server/persistent_data
 
     ports:
