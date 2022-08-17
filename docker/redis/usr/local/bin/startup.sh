@@ -5,6 +5,10 @@
 mkdir -p ${REDIS_DATA_DIR}
 redis-cli config set dir ${REDIS_DATA_DIR}
 redis-cli config set dbfilename $(echo `date +"%Y%m%d%H%M%S"`).rdb
+redis-cli select 0
+redis-cli set sales ${REDIS_SALES_DB}
+redis-cli set listings ${REDIS_LISTINGS_DB}
+redis-cli set recent ${REDIS_RECENT_DB}
 
 # Start the first process
 /Python-3.10.5/python /server/server.py &
