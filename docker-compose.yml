@@ -92,6 +92,10 @@ services:
       - ./docker/redis/server:/server
     networks:
       - ffmt_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
 
 # DATABASE MANAGEMENT
   ffmt_pma:
