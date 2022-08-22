@@ -12,7 +12,7 @@ redis-cli set listings ${REDIS_LISTINGS_DB}
 redis-cli set recent ${REDIS_RECENT_DB}
 
 # Start the first process
-/Python-3.10.5/python /server/server.py &
+/server/server.sh &
   
 # Start the second process
 /usr/local/bin/redis_memory_cleaner.sh &
