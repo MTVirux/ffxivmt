@@ -21,6 +21,3 @@ redis-cli set recent ${REDIS_RECENT_DB}
 while true;do
     sleep 60
 done
-  
-# Exit with status of process that exited first
-exit $?
