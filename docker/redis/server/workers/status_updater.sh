@@ -26,5 +26,7 @@ fi
 if [ -f "/server/logs/redis_memory_cleaner.log" ]; then
     tail -n $NUMBER_OF_LINES "/server/logs/redis_memory_cleaner.log" > /server/logs/status/redis_memory_cleaner.status
 fi
+
+sleep ${REDIS_STATUS_UPDATER_INTERVAL}
     
 done
