@@ -59,14 +59,12 @@ def action(message = "None"):
 
 
     log_file = open(log_filename, "a")
+    log_file.write('\n')
+    log_file.write('\n')
     log_file.write("["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"] - " + caller_filename) 
     log_file.write('\n')
     if message is not None:
         log_file.write(message)
-    log_file.write('\n')
-    log_file.write("###########################################################################")
-    log_file.write('\n')
-    log_file.write('\n')
     
     return
 
