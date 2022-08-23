@@ -11,9 +11,11 @@ redis-cli set sales ${REDIS_SALES_DB}
 redis-cli set listings ${REDIS_LISTINGS_DB}
 redis-cli set recent ${REDIS_RECENT_DB}
 
-# Start the first process
-/server/server.sh &
+# Start server process
+/server/workers/run_server.sh &
   
+# Start memory cleaner process
+/server/workers/mem_monitor.sh &
 # Start the second process
 /usr/local/bin/redis_memory_cleaner.sh &
   
