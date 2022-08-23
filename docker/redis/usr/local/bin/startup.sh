@@ -16,8 +16,9 @@ redis-cli set recent ${REDIS_RECENT_DB}
   
 # Start memory cleaner process
 /server/workers/mem_monitor.sh &
-# Start the second process
-/usr/local/bin/redis_memory_cleaner.sh &
+
+# Start status updater process
+/server/workers/status_updater.sh 2 &
   
 # Wait for any process to exit
 while true;do
