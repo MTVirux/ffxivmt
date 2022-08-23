@@ -6,5 +6,3 @@ while true;do
 	file=`cat /server/logs/action/sales_add_2022-08-17.log`
 	redis-cli set $DATE "$file"
 done
-
-
