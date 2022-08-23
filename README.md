@@ -1,7 +1,6 @@
 #TODO:
 Development:
-- Multi-thread python websocket server
-- Make custom image for redis-stack
+- [REDIS] Separate logs froms status in python code
 
 
 Features:
