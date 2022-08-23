@@ -106,7 +106,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: ${REDIS_MEMORY_LIMIT}
 
 # DATABASE MANAGEMENT
   ffmt_pma:
