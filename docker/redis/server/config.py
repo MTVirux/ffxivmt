@@ -151,9 +151,9 @@ PRINT_TO_LOG = {
 }
 
 PRINT_TO_SCREEN = {
-"DEBUG":True,
+"DEBUG":False,
 "ERROR":True,
-"ACTION":True,
+"ACTION":False,
 }
 
 ### UNIVERSALLIS CONFIG
