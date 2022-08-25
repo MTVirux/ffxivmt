@@ -3,6 +3,7 @@ docker/redis/server/logs/*.log
 docker/redis/server/logs/action/*.log
 docker/redis/server/logs/error/*.log
 docker/redis/server/logs/status/*.status
+docker/redis/server/logs/system/*.log
 docker/redis/server/nohup.out
 docker/redis/server/persistent_data/*.aof
 docker/redis/server/persistent_data/*.rdb
