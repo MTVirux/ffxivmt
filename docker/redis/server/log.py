@@ -24,12 +24,7 @@ def error(message = "None", print_stack = True):
 
 
     error_file = open(log_filename, "a")
-
-    error_file.write("###########################################################################")
-    error_file.write('\n')
     error_file.write("["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"] - " + caller_filename)
-    error_file.write('\n')
-    error_file.write("###########################################################################")
     error_file.write('\n')
     if(print_stack == True):
         traceback.print_stack(file=error_file)
@@ -59,12 +54,9 @@ def action(message = "None"):
 
 
     log_file = open(log_filename, "a")
-    log_file.write('\n')
-    log_file.write('\n')
-    log_file.write("["+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"] - " + caller_filename) 
-    log_file.write('\n')
     if message is not None:
-        log_file.write(message)
+        log_file.write("["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message)) 
+        log_file.write('\n')
     
     return
 
@@ -76,6 +68,6 @@ def action(message = "None"):
 def debug(message = "None"):
     log_file = open(config.LOGS_DIR+"debug.log", "a")
     if message is not None:
-        log_file.write('\n')
         log_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - " + str(message))
-    return
+        log_file.write('\n')
+        return
