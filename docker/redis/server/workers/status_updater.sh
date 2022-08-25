@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-    NUMBER_OF_ACTION_LINE=1
+    NUMBER_OF_ACTION_LINES=1
 else
     NUMBER_OF_ACTION_LINES=$1
 fi
