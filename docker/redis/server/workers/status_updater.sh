@@ -68,43 +68,60 @@ while true; do
     for file in ${ACTION_FILES_TO_TRACK[@]}; do
         if [ -f $file ]; then
             #get just the name of the file
-            file_name=$(basename $file)
+            FILE_NAME=$(basename $file)
+            #file name without extension
+            FILE_NAME_NO_EXTENSION=${FILE_NAME%.*}
+            FILE_NAME_NO_EXTENSION=${FILE_NAME_NO_EXTENSION: -10}
+            FILE_NAME_NO_EXTENSION=$(echo $FILE_NAME_NO_EXTENSION | sed 's/[^a-zA-Z0-9]//g')
             #replace .log extension in file name with .status extension
-            status_file_name=${file_name%.log}.status
-            LAST_ACTION_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/action/$file_name)
-            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name)
+            STATUS_FILE_NAME=${FILE_NAME%.log}.status
+            STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            LAST_ACTION_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/action/$FILE_NAME)
+            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ "$LAST_ACTION_LINE" != "$LAST_STATUS_LINE" ]; then
-                echo "$LAST_ACTION_LINE" >> ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name
-                echo ["$status_file_name"]"$LAST_ACTION_LINE" >> $ACTION_STATUS_FILE
+                tail -n $NUMBER_OF_ACTION_LINES ${REDIS_SERVER_LOGS_DIR}/action/$FILE_NAME > $STATUS_FILE
+                ACTION_OUTPUT_ARRAY[$FILE_NAME_NO_EXTENSION]=$(tail -n $NUMBER_OF_ACTION_LINES "${REDIS_SERVER_LOGS_DIR}/action/$FILE_NAME")
+
             fi            
+        fi
+    done
+
+        for file in ${DEBUG_FILES_TO_TRACK[@]}; do
+        if [ -f $file ]; then
+            #get just the name of the file
+            FILE_NAME=$(basename $file)
+            #file name without extension
+            FILE_NAME_NO_EXTENSION=${FILE_NAME%.*}
+            FILE_NAME_NO_EXTENSION=${FILE_NAME_NO_EXTENSION: -10}
+            FILE_NAME_NO_EXTENSION=$(echo $FILE_NAME_NO_EXTENSION | sed 's/[^a-zA-Z0-9]//g')
+            #replace .log extension in file name with .status extension
+            STATUS_FILE_NAME=${FILE_NAME%.log}.status
+            STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            LAST_DEBUG_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/$FILE_NAME)
+            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
+            if [ ["$STATUS_FILE_NAME"]"$LAST_DEBUG_LINE" != "$LAST_STATUS_LINE" ]; then
+                tail -n $NUMBER_OF_DEBUG_LINES ${REDIS_SERVER_LOGS_DIR}/$FILE_NAME > $STATUS_FILE
+                DEBUG_OUTPUT_ARRAY["$FILE_NAME_NO_EXTENSION"]=$(tail -n $NUMBER_OF_DEBUG_LINES "${REDIS_SERVER_LOGS_DIR}/$FILE_NAME")
+            fi
         fi
     done
 
     for file in ${ERROR_FILES_TO_TRACK[@]}; do
         if [ -f $file ]; then
             #get just the name of the file
-            file_name=$(basename $file)
+            FILE_NAME=$(basename $file)
+            #file name without extension
+            FILE_NAME_NO_EXTENSION=${FILE_NAME%.*}
+            FILE_NAME_NO_EXTENSION=${FILE_NAME_NO_EXTENSION: -10}
+            FILE_NAME_NO_EXTENSION=$(echo $FILE_NAME_NO_EXTENSION | sed 's/[^a-zA-Z0-9]//g')
             #replace .log extension in file name with .status extension
-            status_file_name=${file_name%.log}.status
-            LAST_ERROR_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/error/$file_name)
-            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name)
+            STATUS_FILE_NAME=${FILE_NAME%.log}.status
+            STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            LAST_ERROR_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/error/$FILE_NAME)
+            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ "$LAST_ERROR_LINE" != "$LAST_STATUS_LINE" ]; then
-                echo "$LAST_ERROR_LINE" >> ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name
-                echo ["$status_file_name"]"$LAST_ERROR_LINE" >> $ERROR_STATUS_FILE
-            fi
-        fi
-    done
-
-    for file in ${DEBUG_FILES_TO_TRACK[@]}; do
-        if [ -f $file ]; then
-            #get just the name of the file
-            file_name=$(basename $file)
-            #replace .log extension in file name with .status extension
-            status_file_name=${file_name%.log}.status
-            LAST_DEBUG_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/$file_name)
-            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name)
-            if [ ["$status_file_name"]"$LAST_DEBUG_LINE" != "$LAST_STATUS_LINE" ]; then
-                echo ["$status_file_name"]"$LAST_DEBUG_LINE" >> ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name
+                tail -n $NUMBER_OF_ERROR_LINES ${REDIS_SERVER_LOGS_DIR}/error/$FILE_NAME > $STATUS_FILE
+                ERROR_OUTPUT_ARRAY["$FILE_NAME_NO_EXTENSION"]=$(tail -n $NUMBER_OF_ERROR_LINES "${REDIS_SERVER_LOGS_DIR}/error/$FILE_NAME")
             fi
         fi
     done
@@ -112,17 +129,51 @@ while true; do
     for file in ${OTHER_FILES_TO_TRACK[@]}; do
         if [ -f $file ]; then
             #get just the name of the file
-            file_name=$(basename $file)
+            FILE_NAME=$(basename $file)
+            #file name without extension
+            FILE_NAME_NO_EXTENSION=${FILE_NAME%.*}
+            FILE_NAME_NO_EXTENSION=${FILE_NAME_NO_EXTENSION: -10}
+            FILE_NAME_NO_EXTENSION=$(echo $FILE_NAME_NO_EXTENSION | sed 's/[^a-zA-Z0-9]//g')
             #replace .log extension in file name with .status extension
-            status_file_name=${file_name%.log}.status
-            LAST_OTHER_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/$file_name)
-            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name)
+            STATUS_FILE_NAME=${FILE_NAME%.log}.status
+            STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+
+            LAST_OTHER_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/$FILE_NAME)
+            LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ "$LAST_OTHER_LINE" != "$LAST_STATUS_LINE" ]; then
-                echo "$LAST_OTHER_LINE" >> ${REDIS_SERVER_LOGS_DIR}/status/$status_file_name
-                echo ["$status_file_name"]"$LAST_OTHER_LINE" >> $OTHER_STATUS_FILE
+                tail -n $NUMBER_OF_OTHER_LINES ${REDIS_SERVER_LOGS_DIR}/$FILE_NAME > $STATUS_FILE
+                OTHER_OUTPUT_ARRAY["$FILE_NAME_NO_EXTENSION"]=$(tail -n $NUMBER_OF_OTHER_LINES "${REDIS_SERVER_LOGS_DIR}/$FILE_NAME")
             fi
         fi
     done
+
+
+    > $ACTION_STATUS_FILE
+    > $ERROR_STATUS_FILE
+    > $DEBUG_STATUS_FILE
+    > $OTHER_STATUS_FILE
+
+    #for each entry in ACTION_OUTPUT_ARRAY, write the entry to the ACTION_STATUS_FILE
+    for key in "${!ACTION_OUTPUT_ARRAY[@]}"; do
+        echo "${ACTION_OUTPUT_ARRAY[$key]}" >> $ACTION_STATUS_FILE
+    done
+
+    #for each entry in ERROR_OUTPUT_ARRAY, write the entry to the ERROR_STATUS_FILE
+    for key in "${!ERROR_OUTPUT_ARRAY[@]}"; do
+        echo "${ERROR_OUTPUT_ARRAY[$key]}" >> $ERROR_STATUS_FILE
+    done
+
+    #for each entry in DEBUG_OUTPUT_ARRAY, write the entry to the DEBUG_STATUS_FILE
+    for key in "${!DEBUG_OUTPUT_ARRAY[@]}"; do
+        echo "${DEBUG_OUTPUT_ARRAY[$key]}" >> $DEBUG_STATUS_FILE
+    done
+
+    #for each entry in OTHER_OUTPUT_ARRAY, write the entry to the OTHER_STATUS_FILE
+    for key in "${!OTHER_OUTPUT_ARRAY[@]}"; do
+        echo "${OTHER_OUTPUT_ARRAY[$key]}" >> $OTHER_STATUS_FILE
+    done
+
+
 
     sleep ${REDIS_STATUS_UPDATER_INTERVAL}
 
