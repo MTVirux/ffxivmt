@@ -171,5 +171,4 @@ def handle_add_sale(hash, value):
         updated_entry.update(sale_object)
         update_entry(hash, field, updated_entry)
 
-    update_recent(hash, field)
     return
