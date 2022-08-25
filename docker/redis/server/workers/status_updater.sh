@@ -25,10 +25,11 @@ else
 fi
 
 
-SALES_ADD_LOG_FILE=/server/logs/action/$(ls /server/logs/action -1|grep sales_add|tail -n 1)
-SALES_ADD_ERROR_LOG_FILE=/server/logs/error/$(ls /server/logs/error -1|grep sales_add|tail -n 1)
-SERVER_DEBUG_LOG_FILE=/server/logs/$(ls /server/logs -1|grep debug|tail -n 1)
-MEMORY_CLEANER_LOG_FILE=/server/logs/$(ls /server/logs -1|grep redis_memory_cleaner|tail -n 1)
+SALES_ADD_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/action/$(ls ${REDIS_SERVER_LOGS_DIR}/action -1|grep sales_add|tail -n 1)
+SALES_ADD_ERROR_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/error/$(ls ${REDIS_SERVER_LOGS_DIR}/error -1|grep sales_add|tail -n 1)
+SERVER_DEBUG_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/$(ls ${REDIS_SERVER_LOGS_DIR} -1|grep debug|tail -n 1)
+MEMORY_CLEANER_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/system/$(ls ${REDIS_SERVER_LOGS_DIR}/system -1|grep redis_memory_cleaner|tail -n 1)
+CPU_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/system/$(ls ${REDIS_SERVER_LOGS_DIR}/system -1|grep cpu|tail -n 1)
 
 touch ${REDIS_SERVER_LOGS_DIR}/status/action.status
 touch ${REDIS_SERVER_LOGS_DIR}/status/error.status
