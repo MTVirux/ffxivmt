@@ -11,7 +11,7 @@ import config
 def error(message = "None", print_stack = True):
 
     caller_filename = str(inspect.stack()[1][0].f_code.co_filename).split("/")[-1].split(".")[0]
-    log_filename = "logs/error/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
+    log_filename = config.LOGS_DIR+"error/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
 
     if(config.PRINT_TO_SCREEN['ERROR'] == True):
@@ -48,7 +48,7 @@ def error(message = "None", print_stack = True):
 def action(message = "None"):
 
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
-    log_filename = "logs/action/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
+    log_filename = config.LOGS_DIR+"action/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
 
     if(config.PRINT_TO_SCREEN['ACTION'] == True):
@@ -74,9 +74,8 @@ def action(message = "None"):
 #########################################
 
 def debug(message = "None"):
-    print("DEBUG_PRINT: [" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "]")
-    log_file = open("logs/debug.log", "a")
+    log_file = open(config.LOGS_DIR+"debug.log", "a")
     if message is not None:
-        log_file.write(datetime.datetime.now().strftime("%Y-%m-%d") + " - " + str(message))
-    log_file.write('\n')
+        log_file.write('\n')
+        log_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - " + str(message))
     return
