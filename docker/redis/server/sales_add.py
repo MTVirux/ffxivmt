@@ -89,7 +89,7 @@ def on_message(ws_sales_add, message):
     decoded_message = (bson.decode(message))
     world = str(decoded_message['world'])
     item = str(decoded_message['item'])
-    world_name = str(config.WORLDS[int(world)])
+    world_name = str(config.WORLDS[int(world)]["name"])
 
     #Set hash and sales
     hash = str(world_name + "_" + item)
@@ -105,13 +105,31 @@ def on_message(ws_sales_add, message):
 
 
 def subscribe(ws_sales_add):
-    for i in config.WORLDS_TO_USE:
-        for k in config.WORLDS_TO_USE[i]:
-            sub_list_value = config.WORLDS_TO_USE[i][k]
-            world_id = "{world=" + str(k) + "}"
-            log.action("sales/add" + world_id)
-            ws_sales_add.send(bson.encode({"event": "subscribe", "channel": "sales/add" + world_id}))
-            log.action("Sent subscribe event for sales/add on world " + sub_list_value + "(" + str(k) + ")")
+    world_ids_to_use = []
+
+    for world in config.WORLDS:
+        for world_to_use in config.WORLDS_TO_USE:
+            if(config.WORLDS[world]["name"] == config.WORLDS_TO_USE[world_to_use]):
+                world_ids_to_use.append(world)
+
+    for world in config.WORLDS:
+        for dc_to_use in config.DCS_TO_USE:
+            if(config.WORLDS[world]["datacenter"] == config.DCS_TO_USE[dc_to_use]):
+                world_ids_to_use.append(world)
+
+    for world in config.WORLDS:
+        for region_to_use in config.REGIONS_TO_USE:
+            if(config.WORLDS[world]["region"] == config.REGIONS_TO_USE[region_to_use]):
+                world_ids_to_use.append(world)
+
+    for world_id in world_ids_to_use:
+        world_subscribe(ws_sales_add, config.WORLDS[world_id]["name"], str(world_id))
+
+
+def world_subscribe(ws_sales_add, world_name, world_id):
+    ws_sales_add.send(bson.encode({"event": "subscribe", "channel": "sales/add{world=" + str(world_id)+"}"}))
+    log.action("Sent subscribe event for sales/add on world " + world_name)
+
 
 
 def start_sales_add():
@@ -143,7 +161,6 @@ def handle_add_sale(hash, value):
         }
     }
 
-    #Commit to db (1 = SUCESS, 0 = FAIL)
     #hset(hash, field, value)
     db_entry = database.DB_SALES.json().get(hash)
     
