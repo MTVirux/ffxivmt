@@ -11,9 +11,6 @@
 # Start memory cleaner process
 /server/workers/mem_monitor.sh &
 
-# Start status updater process
-/server/workers/status_updater.sh 2 &
-  
 # Wait for any process to exit
 while true;do
     sleep 60
