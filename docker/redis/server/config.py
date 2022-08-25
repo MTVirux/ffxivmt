@@ -125,7 +125,9 @@ REGIONS_TO_USE = {
 
 #LOGGING
 
-PRINT_TO_LOG = {
+LOGS_DIR = "/server/logs/"
+
+PRINT_TO_LOG = { 
 "DEBUG":True,
 "ERROR":True,
 "ACTION":True,
