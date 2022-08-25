@@ -130,7 +130,7 @@ LOGS_DIR = "/server/logs/"
 PRINT_TO_LOG = { 
 "DEBUG":True,
 "ERROR":True,
-"ACTION":True,
+"ACTION":False,
 }
 
 PRINT_TO_SCREEN = {
