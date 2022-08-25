@@ -6,6 +6,8 @@
 # Pull base image.
 FROM mtvirux/redis-stack-python3.10
 
+RUN apt-get -y install bc
+
 COPY ./docker/redis/ /
 
 RUN chmod +x /entrypoint.sh
