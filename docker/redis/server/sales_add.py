@@ -165,7 +165,7 @@ def handle_add_sale(hash, value):
     db_entry = database.DB_SALES.json().get(hash)
     
     if(db_entry is None):
-        add_entry(hash, field, sale_object)
+        add_entry_result = add_entry(hash, field, sale_object)
     else:
         updated_entry = db_entry
         updated_entry.update(sale_object)
