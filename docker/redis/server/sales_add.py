@@ -128,7 +128,7 @@ def subscribe(ws_sales_add):
 
 def world_subscribe(ws_sales_add, world_name, world_id):
     ws_sales_add.send(bson.encode({"event": "subscribe", "channel": "sales/add{world=" + str(world_id)+"}"}))
-    log.action("Sent subscribe event for sales/add on world " + world_name)
+    log.debug("Subscribed to sales/add on world " + world_name)
 
 
 
