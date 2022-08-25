@@ -4,7 +4,6 @@ import threading
 import listings_add
 import listings_remove
 import sales_add
-import db_cleaning
 import log
 import database
 
