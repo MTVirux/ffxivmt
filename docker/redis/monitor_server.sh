@@ -2,4 +2,34 @@
 
 # watch files in /server/logs/status
 
-watch -n 0.1 -t tail -n 1 "/server/logs/status/sales*" "/server/logs/status/list*" "/server/logs/status/red*"
+if [ -z "$1" ]; then
+    NUMBER_OF_ACTION_LINES=3
+else
+    NUMBER_OF_ACTION_LINES=$1
+fi
+
+if [ -z "$2" ]; then
+    NUMBER_OF_DEBUG_LINES=5
+else
+    NUMBER_OF_DEBUG_LINES=$2
+fi
+
+if [ -z "$3" ]; then
+    NUMBER_OF_ERROR_LINES=5
+else
+    NUMBER_OF_ERROR_LINES=$3
+fi
+
+if [ -z "$4" ]; then
+    NUMBER_OF_OTHER_LINES=1
+else
+    NUMBER_OF_OTHER_LINES=$4
+fi
+
+
+watch -t -c -n $(bc -l <<< "${REDIS_STATUS_UPDATER_INTERVAL} / 2") \
+"tail -n 5" \
+"/server/logs/status/action.status" \
+"/server/logs/status/error.status" \
+"/server/logs/status/debug.status" \
+"/server/logs/status/other.status"
