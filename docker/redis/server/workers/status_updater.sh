@@ -1,19 +1,19 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-    NUMBER_OF_ACTION_LINES=1
+    NUMBER_OF_ACTION_LINES=10
 else
     NUMBER_OF_ACTION_LINES=$1
 fi
 
 if [ -z "$2" ]; then
-    NUMBER_OF_DEBUG_LINES=1
+    NUMBER_OF_DEBUG_LINES=10
 else
     NUMBER_OF_DEBUG_LINES=$2
 fi
 
 if [ -z "$3" ]; then
-    NUMBER_OF_ERROR_LINES=1
+    NUMBER_OF_ERROR_LINES=10
 else
     NUMBER_OF_ERROR_LINES=$3
 fi
