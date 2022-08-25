@@ -26,10 +26,13 @@ else
     NUMBER_OF_OTHER_LINES=$4
 fi
 
+/server/workers/status_updater.sh $NUMBER_OF_ACTION_LINES $NUMBER_OF_DEBUG_LINES $NUMBER_OF_ERROR_LINES $NUMBER_OF_OTHER_LINES &
 
 watch -t -c -n $(bc -l <<< "${REDIS_STATUS_UPDATER_INTERVAL} / 2") \
-"tail -n 5" \
+"tail -n 999" \
 "/server/logs/status/action.status" \
-"/server/logs/status/error.status" \
 "/server/logs/status/debug.status" \
+"/server/logs/status/error.status" \
 "/server/logs/status/other.status"
+
+kill $! 2>/dev/null
