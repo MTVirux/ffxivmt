@@ -28,6 +28,23 @@ def update_entry(hash, field, updated_entry):
     else:
         log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
 
+def update_timeseries(item, field):
+
+    world_id_int = int(field['worldID'])
+    field["datacenter"] = config.WORLDS[world_id_int]["datacenter"]
+    field["region"] = config.WORLDS[world_id_int]["region"]
+    field["worldName"] = config.WORLDS[world_id_int]["name"]
+    world_hash = str(field['worldName'] + "_" + str(item))
+    dc_hash = str(field['datacenter']   + "_" + str(item))
+    region_hash = str(field['region']   + "_" + str(item))
+    global_hash = str("global")         + "_" + str(item)
+    timestamp = field['timestamp']
+    value = field['total']
+    if(database.DB_TIMESERIES.ts().add(str(world_hash), str(timestamp), float(value)) == int(timestamp)):
+        log.action("{"+ str(config.REDIS_TIMESERIES_DB) + "}{TS_ADD} Added " + str(world_hash) + "->" + str(value) + " @ " + str(timestamp))
+    else:
+        log.error("[ERROR]{"+ str(config.REDIS_TIMESERIES_DB) + "}{TS_ADD} Could not add " + str(world_hash) + "->" + str(value) + " @ " + str(timestamp))
+
 ###########################
 #      RECORD LOGGING     #
 ###########################     
@@ -84,6 +101,7 @@ def on_message(ws_sales_add, message):
         sale['worldID'] = world
         sale['worldName'] = world_name
         handle_add_sale(hash, sale)
+        update_timeseries(item, sale)
 
 
 def subscribe(ws_sales_add):
