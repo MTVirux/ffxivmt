@@ -92,9 +92,9 @@ services:
       - REDIS_MEMORY_CLEANER_THRESHOLD_PERCENTAGE=${REDIS_MEMORY_CLEANER_THRESHOLD_PERCENTAGE}
       - REDIS_MEMORY_CLEANER_THRESHOLD_SIZE=${REDIS_MEMORY_CLEANER_THRESHOLD_SIZE}
 
+      - REDIS_INDEX_DB=${REDIS_INDEX_DB}
       - REDIS_SALES_DB=${REDIS_SALES_DB}
-      - REDIS_LISTINGS_DB=${REDIS_LISTINGS_DB}
-      - REDIS_RECENT_DB=${REDIS_RECENT_DB}
+      - REDIS_TIMESERIES_DB=${REDIS_TIMESERIES_DB}
 
       - REDIS_STATUS_UPDATER_INTERVAL=${REDIS_STATUS_UPDATER_INTERVAL}
     ports:
@@ -104,6 +104,7 @@ services:
       - ./docker/redis/usr/local/etc/redis:/usr/local/etc/redis
       - ./docker/redis/usr/local/bin:/usr/local/bin
       - ./docker/redis/server:/server
+      - ./docker/redis/monitor_server.sh:/monitor_server.sh
     networks:
       - ffmt_internal
     deploy:
