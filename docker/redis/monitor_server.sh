@@ -26,6 +26,8 @@ else
     NUMBER_OF_OTHER_LINES=$4
 fi
 
+/server/workers/cpu_monitor.sh &
+
 /server/workers/status_updater.sh $NUMBER_OF_ACTION_LINES $NUMBER_OF_DEBUG_LINES $NUMBER_OF_ERROR_LINES $NUMBER_OF_OTHER_LINES &
 
 watch -t -c -n $(bc -l <<< "${REDIS_STATUS_UPDATER_INTERVAL} / 2") \
