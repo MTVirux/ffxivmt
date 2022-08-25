@@ -17,8 +17,10 @@ import log
 def add_entry(hash, field, new_entry):
     if(database.DB_SALES.json().set(hash, Path.root_path(), new_entry) == 1):
         log.action("{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET}Added sale " + field + " to " + hash)
+        return True
     else:
         log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET} Could not add " + hash + " to db")
+        return False
 
 def update_entry(hash, field, updated_entry):
     if(database.DB_SALES.json().set(hash, Path.root_path(), updated_entry) == 1):
