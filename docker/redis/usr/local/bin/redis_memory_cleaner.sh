@@ -36,6 +36,6 @@ while true; do
         echo $MESSAGE >> /server/logs/redis_memory_cleaner.log
         echo $MESSAGE > /server/logs/status/redis_memory_cleaner.status
     fi
-    echo "[" $(date) "]" "Current memory usage is: $MEMORY_USAGE_IN_MEGABYTES MB/ $MEMORY_LIMIT_IN_MEGABYTES MB ( $MEMORY_LEFT_TO_HIT_THRESHOLD MB left to hit threshold of $THRESHOLD MB)" >> /server/logs/redis_memory_cleaner.log
+    echo "Current memory usage is: $MEMORY_USAGE_IN_MEGABYTES MB/ $MEMORY_LIMIT_IN_MEGABYTES MB ( $MEMORY_LEFT_TO_HIT_THRESHOLD MB left to hit threshold of $THRESHOLD MB)" > /server/logs/redis_memory_cleaner.status
     sleep ${REDIS_MEMORY_CLEANER_INTERVAL}
 done
