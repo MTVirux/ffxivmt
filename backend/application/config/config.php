@@ -35,7 +35,7 @@ $config['base_url'] = 'http://'.(!empty($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_
 | variable so that it is blank.
 |
 */
-$config['index_page'] = 'index.php';
+$config['index_page'] = '';
 
 /*
 |--------------------------------------------------------------------------
