@@ -7,11 +7,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  *  REDIS CONNECTION CONFIGURATION
  * 
  */
-$config['redis_sentinels'] = array(
+$config['redis_hosts'] = array(
     'ffmt_redis'=> array(
                         'scheme'    =>  'tcp',
                         'host'      =>  'ffmt_redis',
-                        'port'      =>  '6379',
+                        'port'      =>  6379,
                         )
 );
 $config['redis_port'] = 6379;
