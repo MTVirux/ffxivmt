@@ -7,6 +7,8 @@ class UpdateDB extends CI_Controller {
 		parent::__construct();
 		$this->load->model('Item_model', 'Items');
 		$this->load->helper('url');
+		ini_set('max_execution_time', 3000);
+		ini_set('memory_limit','512M');
 
 		
 	}
@@ -21,20 +23,20 @@ class UpdateDB extends CI_Controller {
 
 		$meta_headers = array_shift($csv);
 		$columns = array_shift($csv);
-		$data_type = array_shift($csv);
+		#$data_type = array_shift($csv);
+
+		$this->Items->prep_for_update();
+		echo "Prepped for update<br>";
 
 		echo '<table>';
 		 
-
-		$this->echo_headers($meta_headers, $columns, $data_type);
-
-		$last_item_id = $this->Items->get_last_item()[0]->id;
+		//assign last index of $csv to last_item_id
+		$last_item_id = $csv[count($csv) - 1][0];
 
 		echo 'last_item_id: ' . $last_item_id . '<br>';
-
 		$i = 0;
 		foreach($csv as $item){
-			if($i >= $last_item_id){
+			if($i <= $last_item_id){
 				$organized_item = array(
 					"id" => $item[0],
 					"name" => $item[10],
@@ -57,11 +59,7 @@ class UpdateDB extends CI_Controller {
 					"materiaSlotCount" => $item[87],
 					"advancedMelding" => $item[88]
 				);
-				if($i == $last_item_id){
-					$this->Items->update($organized_item);
-				}else{
 					$this->Items->add($organized_item);
-				}
 			}
 			$i = $i +1;
 		}
