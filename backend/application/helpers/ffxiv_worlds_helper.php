@@ -9,12 +9,12 @@ function get_world_name($world_id){
 
 }
 
-function get_world_id($world_id){
+function get_world_id($world_name){
     $this->load->config('worlds');
     $worlds = $this->config->item('ffxiv_worlds');
 
     foreach ($worlds as $key => $value){
-        if($value == $world_id){
+        if($value["name"] == $world_name){
             return $key;
         }
     }
