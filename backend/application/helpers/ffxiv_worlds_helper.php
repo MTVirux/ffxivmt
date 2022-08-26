@@ -20,16 +20,14 @@ function get_world_id($world_name){
     }
 }
 
-
-function get_item_name($item_id){
-    $this->load->config('worlds');
-    //Curl to get item name
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://xivapi.com/item/".$item_id."?columns=Name");
-    $result = curl_exec($ch);
-    $result = json_decode($result, true);
-    curl_close($ch);
-    return $result['name'];
+function get_worlds_in_dc($dc_name, $world_data){
+    $worlds_in_dc = array();
+    foreach ($world_data as $key => $value){
+        if($value["datacenter"] == $dc_name){
+            $worlds_in_dc[] = $value["name"];
+        }
+    }
+    return $worlds_in_dc;
 }
 
 
