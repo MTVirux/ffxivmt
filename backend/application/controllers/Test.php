@@ -12,7 +12,7 @@ class Test extends CI_Controller {
 
 	public function index($world_name)
 	{
-		$this->Redis_ts->get_world_scores();
+		$this->load->view("test/usage");
 	}
 
 	public function world_scores($world_name="Spriggan"){
