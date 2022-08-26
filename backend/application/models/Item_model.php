@@ -74,8 +74,9 @@ class Item_model extends CI_Model {
 		}else{
 			echo 'Missing Param: id';
 		}
+		$this->db->limit(1);
 
-		return $this->db->select('*')->from('items')->where('id', $id)->get()->result();
+		return $this->db->select('*')->from('items')->where('id', $id)->get()->result()[0];
 	}
 
 	public function get_last_item(){
