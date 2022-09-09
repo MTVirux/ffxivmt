@@ -10,5 +10,5 @@ docker/redis/server/persistent_data/*.rdb
 /docker/portainer/*
 /*.bat
 /*.sh
-
+*.db
 *.rdb
