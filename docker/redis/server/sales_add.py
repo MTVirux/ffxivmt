@@ -38,7 +38,7 @@ def update_timeseries(item, field):
     dc_hash = str(field['datacenter']   + "_" + str(item))
     region_hash = str(field['region']   + "_" + str(item))
     global_hash = str("global")         + "_" + str(item)
-    timestamp = field['timestamp']
+    timestamp = database.DB_TIMESERIES.time()[0]
     value = field['total']
     if(database.DB_TIMESERIES.ts().add(str(world_hash), str(timestamp), float(value)) == int(timestamp)):
         log.action("{"+ str(config.REDIS_TIMESERIES_DB) + "}{TS_ADD} Added " + str(world_hash) + "->" + str(value) + " @ " + str(timestamp))
