@@ -6,7 +6,7 @@
 # Pull base image.
 FROM mtvirux/redis-stack-python3.10
 
-RUN apt-get -y install bc sysstat
+RUN apt-get -y install bc sysstat netcat
 
 COPY ./docker/redis/ /
 
