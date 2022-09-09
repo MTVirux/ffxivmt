@@ -30,8 +30,20 @@ fi
 
 /server/workers/status_updater.sh $NUMBER_OF_ACTION_LINES $NUMBER_OF_DEBUG_LINES $NUMBER_OF_ERROR_LINES $NUMBER_OF_OTHER_LINES &
 
-watch -t -c -n $(bc -l <<< "${REDIS_STATUS_UPDATER_INTERVAL} / 2") \
-"tail -n 999" \
+#Get highest of all params
+MAX_NUMBER_OF_LINES=$NUMBER_OF_ACTION_LINES
+if [ $NUMBER_OF_DEBUG_LINES -gt $MAX_NUMBER_OF_LINES ]; then
+    MAX_NUMBER_OF_LINES=$NUMBER_OF_DEBUG_LINES
+fi
+if [ $NUMBER_OF_ERROR_LINES -gt $MAX_NUMBER_OF_LINES ]; then
+    MAX_NUMBER_OF_LINES=$NUMBER_OF_ERROR_LINES
+fi
+if [ $NUMBER_OF_OTHER_LINES -gt $MAX_NUMBER_OF_LINES ]; then
+    MAX_NUMBER_OF_LINES=$NUMBER_OF_OTHER_LINES
+fi
+
+watch -t -c -n $(bc -l <<< "${REDIS_STATUS_UPDATER_INTERVAL}") \
+"tail -n $MAX_NUMBER_OF_LINES" \
 "/server/logs/status/action.status" \
 "/server/logs/status/debug.status" \
 "/server/logs/status/error.status" \
