@@ -11,30 +11,23 @@ class Redis_timeseries_model extends MY_Redis_model{
         $this->redis->select($this->config->item('redis_timeseries_db'));
     }
 
-    function test(){
-        $unix_timestamp_24h_ago = time() - (24 * 60 * 60);
-        $unix_timestamp_now = time();
-        $result = $this->redis->executeRaw(['TS.RANGE', 'Spriggan_2156', 0, 99999999999999]);
-        $result = $this->redis->executeRaw(['TS.RANGE', 'Spriggan_2156', $unix_timestamp_24h_ago, $unix_timestamp_now]);
-        pretty_dump($result);
-        pretty_dump($unix_timestamp_24h_ago);
-        pretty_dump($unix_timestamp_now);
-        //get unix timestamp 24h ago
-
-        pretty_dump();
-    }
-
     public function get_by_key($key, $minutes = 60){
         $unix_to = time();
         $unix_from = time() - ($minutes * 60);
         $result = $this->redis->executeRaw(['TS.RANGE', 'Spriggan_2156', $unix_from, $unix_to]);
     }
 
-    public function get_world_scores($world_name){
+    public function get_world_scores($world_name, $start_time = null, $end_time = null){
         $this->load->model('Item_model', 'Item');
         $start = time();
         $result = $this->redis->executeRaw(['KEYS', '*']);
         $i = 0;
+
+        if (is_null($start_time))
+            $start_time = time() - (60*60*24*7); // 1 week back
+
+        if (is_null($end_time))
+            $end_time = time(); // now
 
         foreach($result as $key=>$value){
             $profits = 0;
@@ -48,7 +41,7 @@ class Redis_timeseries_model extends MY_Redis_model{
             }
             $name = $this->Item->get($item_id)->name;
             
-            $sales = $this->redis->executeRaw(['TS.RANGE', $value, 0, 99999999999999]);
+            $sales = $this->redis->executeRaw(['TS.RANGE', $value, $start_time, $end_time]);
 
             foreach($sales as $sale){
                 $number_of_sales++;
