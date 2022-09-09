@@ -59,6 +59,8 @@ class Redis_timeseries_model extends MY_Redis_model{
             if(empty($item->name) || is_null($item->name)){
                 pretty_dump($item);die();
             }
+            $final_results[$name]['id'] = $item_id;
+            $final_results[$name]['volume'] = $number_of_sales;
             $final_results[$name]['score'] = $profits * $number_of_sales;
             $final_results[$name]['world'] = $world;
         }
@@ -121,9 +123,9 @@ class Redis_timeseries_model extends MY_Redis_model{
             if(isset($final_results[$name])){
                 $final_results[$name]['score'] = $final_results[$name]['score'] + $profits * $number_of_sales;
                 $final_results[$name]['world_data_used'] = $final_results[$name]['world_data_used'] .= ', '.$world;
+                    $final_results[$name]['volume'] = $final_results[$name]['volume'] + $number_of_sales;
             }else{
-                $final_results[$name]['score'] = $profits * $number_of_sales;
-                $final_results[$name]['world_data_used'] = $world;
+                    $final_results[$name]['volume'] = $number_of_sales;
             }
 
         }
