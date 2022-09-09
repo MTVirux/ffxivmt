@@ -73,7 +73,19 @@ class Redis_timeseries_model extends MY_Redis_model{
         
     }
 
-    public function get_dc_scores($dc_name){
+    public function get_dc_scores($dc_name, $start_time = null, $end_time = null){
+
+        $redis_time = intval($this->redis->executeRaw(['TIME'])[0]);
+        $earliest_timestamp = 0;
+        $total_number_of_sales = 0;
+
+        if(is_null($start_time))
+            $start_time = $redis_time - (60*60*24*7); // 1 day back
+
+        if(is_null($end_time))
+            $end_time = $redis_time; // now
+
+
         $this->load->model('Item_model', 'Item');
         $start = time();
         $result = $this->redis->executeRaw(['KEYS', '*']);
@@ -83,6 +95,7 @@ class Redis_timeseries_model extends MY_Redis_model{
         $final_results = array();
         $result = array();
         $worlds_in_dc = get_worlds_in_dc($dc_name, $this->config->item('ffxiv_worlds'));
+        $total_sales = 0;
 
 
         foreach($worlds_in_dc as $world_in_dc){
@@ -95,6 +108,7 @@ class Redis_timeseries_model extends MY_Redis_model{
             //Score is the profit * number of sales
             $profits = 0;
             $number_of_sales = 0;
+            $current_entry_score = 0;
 
             //Get values for indexing
             //pretty_dump($value);
@@ -107,34 +121,41 @@ class Redis_timeseries_model extends MY_Redis_model{
             }
 
             $name = $this->Item->get($item_id)->name;
+        
+            $sales = $this->redis->executeRaw(['TS.RANGE', $value, $start_time, $end_time]);
             
-            $sales = $this->redis->executeRaw(['TS.RANGE', $value, 0, 99999999999999]);
 
             foreach($sales as $sale){
+                $total_sales++;
                 $number_of_sales++;
+                if($earliest_timestamp == 0 || $sale[0] < $earliest_timestamp){
+                    $earliest_timestamp = $sale[0];
+                }
                 $profits += $sale[1]->getPayload();
+                $current_entry_score = $profits * $number_of_sales;
             }
 
             $item = $this->Item->get($item_id);
             if(empty($item->name) || is_null($item->name)){
-                pretty_dump($item);die();
+                pretty_dump($item);
             }
 
-            if(isset($final_results[$name])){
-                $final_results[$name]['score'] = $final_results[$name]['score'] + $profits * $number_of_sales;
-                $final_results[$name]['world_data_used'] = $final_results[$name]['world_data_used'] .= ', '.$world;
+            if($current_entry_score > 0){
+                if(isset($final_results[$name])){
+                    $final_results[$name]['score'] = $final_results[$name]['score'] + $current_entry_score;
+                    $final_results[$name]['world_data_used'] = $final_results[$name]['world_data_used'] .= ', '.$world;
                     $final_results[$name]['volume'] = $final_results[$name]['volume'] + $number_of_sales;
-            }else{
+                }else{
+                    $final_results[$name]['id'] = intval($item_id);
                     $final_results[$name]['volume'] = $number_of_sales;
+                    $final_results[$name]['score'] = $current_entry_score;
+                    $final_results[$name]['world_data_used'] = $world;
+                }
             }
-
         }
-
-
         $end = time();
         arsort($final_results);
-        pretty_dump($final_results);
-        pretty_dump($end - $start);
-        
+        return $final_results;
+    
     }
 }
