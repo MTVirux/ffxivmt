@@ -110,6 +110,12 @@ class Item_model extends CI_Model {
 		return $this->db->get()->result();
 	}
 
+	public function get_all_ids(){
+		$this->db->select('id');
+		$this->db->from('items');
+		return $this->db->get()->result();
+	}
+
 	public function get_recipe($item_id){
 		$this->db->select('craftingRecipe');
 		$this->db->from('items');
