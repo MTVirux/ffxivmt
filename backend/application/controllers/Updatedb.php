@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class UpdateDB extends CI_Controller {
+class Updatedb extends CI_Controller {
 
 	public function __construct(){
 		parent::__construct();
@@ -10,10 +10,9 @@ class UpdateDB extends CI_Controller {
 		ini_set('max_execution_time', 3000);
 		ini_set('memory_limit','512M');
 
-		
 	}
 
-	public function index()
+	public function no()
 	{
 		echo base_url('resources/item_dump.csv');
 
@@ -67,6 +66,37 @@ class UpdateDB extends CI_Controller {
 		echo '</table>';
 		echo 'DONE';
 
+		$this->update_craft_recipes_from_garland_db();
+	}
+
+	public function update_craft_recipes_from_garland_db(){
+
+		$all_ids = $this->Items->get_all_ids();
+		$ids_to_request = array();
+		$actually_updated_items = array();
+
+		foreach($all_ids as $id){
+			$ids_to_request[] = $id->id;
+			if(count($ids_to_request) == 100 || $id->id == 39000){
+				$json = file_get_contents('https://www.garlandtools.org/db/doc/item/en/3/' . implode(',', $ids_to_request). '.json');
+				$json_decoded = json_decode($json, true);
+				$ids_to_request = array();
+				foreach($json_decoded as $item){
+					if(isset($item["obj"]["item"]["craft"])){
+						$craftingComplexity = array();
+						$current_item = $this->Items->get($item["id"]);
+						$current_item->craftingRecipe = json_encode($item["obj"]["item"]["craft"]);
+						foreach($item["obj"]["item"]["craft"] as $key=>$recipe){
+							$craftingComplexity[$key] = json_encode($recipe["complexity"]);
+						};
+						$current_item->craftingComplexity = json_encode($craftingComplexity);
+						$new_item = $this->Items->update($current_item);
+						$actually_updated_items[] = array("id" => $new_item["id"], "craft" => $new_item["craftingRecipe"], "complexity" => $new_item["craftingComplexity"]);
+					}
+				}
+			}
+		}
+		pretty_dump($actually_updated_items);
 	}
 
 	function get_price($id){
