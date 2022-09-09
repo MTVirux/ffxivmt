@@ -2,7 +2,10 @@
 
 /entrypoint.sh &
 
-#Prep redis DB
+#Wait until redis is up and done loading
+while ! redis-cli ping | grep -q 'PONG'; do
+  sleep 1
+done
 /server/redis-config/prep.sh
 
 # Start server process
