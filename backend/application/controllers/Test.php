@@ -10,26 +10,44 @@ class Test extends CI_Controller {
 		
 	}
 
-	public function index($world_name)
+	public function index()
 	{
 		$this->load->view("test/usage");
 	}
 
-	public function world_scores($world_name="Spriggan"){
+	public function world_scores($world_name="Spriggan", $start_time = null, $end_time = null){
+
+		if($start_time == null)
+			$start_time = time() - (60*60*24*7); // 1 day back
+		
+		if($end_time == null)
+			$end_time = time(); // now
+
 		if(!empty($_GET['world_name']))
 			$world_name = $_GET['world_name'];
 		
-		$this->Redis_ts->get_world_scores($world_name);
+		$world_scores = $this->Redis_ts->get_world_scores($world_name);
+		return $world_scores;
 	}
 
-	public function dc_scores($dc_name="Chaos"){
+	public function dc_scores($dc_name="Chaos", $start_time = null, $end_time = null){
+
+		if($start_time == null)
+			$start_time = time() - (60*60*24*7); // 1 day back
+		
+		if($end_time == null)
+			$end_time = time(); // now
+
 		if(!empty($_GET['dc_name']))
 			$dc_name = $_GET['dc_name'];
 		
-		$this->Redis_ts->get_dc_scores($dc_name);
+		$dc_scores = $this->Redis_ts->get_dc_scores($dc_name, $start_time, $end_time);
+
+		pretty_dump($dc_scores);
+		return $dc_scores;
 	}
 
-	public function search_item(){
-        var_dump($_POST);
-    }
+	public function test() {
+		$this->Redis_ts->test();
+	}
 }
