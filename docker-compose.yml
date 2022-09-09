@@ -129,6 +129,21 @@ services:
       - ffmt_internal
       - ffmt_external
 
+  #SYSTEM MANAGEMENT
+  ffmt_portainer:
+    image: portainer/portainer-ce
+    container_name: ${PORTAINER_CONTAINER_NAME}
+    restart: "no"
+    ports:
+      - ${PORTAINER_HOST_PORT}:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/portainer/data:/data
+    networks:
+      - ffmt_internal
+      - ffmt_external
+
+
   #ffmt_redisinsight:
   #  image: "redislabs/redisinsight:latest"
   #  container_name: ${REDISINSIGHT_CONTAINER_NAME}
