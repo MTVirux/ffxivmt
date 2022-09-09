@@ -168,11 +168,8 @@ volumes:
   ffmt_mariadb_data:
     external: true
 
-  ffmt_redis_data:
-    external: true
-  
-  ffmt_redisinsight_data:
-    external: true
+  #ffmt_redis_data:
+  #  external: true
 
 
 #NETWORKS
