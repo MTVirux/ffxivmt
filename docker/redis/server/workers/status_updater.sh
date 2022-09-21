@@ -77,6 +77,10 @@ while true; do
             #replace .log extension in file name with .status extension
             STATUS_FILE_NAME=${FILE_NAME%.log}.status
             STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            if [ ! -f $STATUS_FILE ]; then
+                touch $STATUS_FILE
+                STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            fi
             LAST_ACTION_LINE=$(tail -n 1 $file)
             LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ "$LAST_ACTION_LINE" != "$LAST_STATUS_LINE" ]; then
@@ -98,6 +102,10 @@ while true; do
             #replace .log extension in file name with .status extension
             STATUS_FILE_NAME=${FILE_NAME%.log}.status
             STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            if [ ! -f $STATUS_FILE ]; then
+                touch $STATUS_FILE
+                STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            fi
             LAST_DEBUG_LINE=$(tail -n 1 $file)
             LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ ["$STATUS_FILE_NAME"]"$LAST_DEBUG_LINE" != "$LAST_STATUS_LINE" ]; then
@@ -119,6 +127,10 @@ while true; do
             #replace .log extension in file name with .status extension
             STATUS_FILE_NAME=${FILE_NAME%.log}.status
             STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            if [ ! -f $STATUS_FILE ]; then
+                touch $STATUS_FILE
+                STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
+            fi
             LAST_ERROR_LINE=$(tail -n 1 $file)
             LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ "$LAST_ERROR_LINE" != "$LAST_STATUS_LINE" ]; then
