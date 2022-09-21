@@ -150,28 +150,26 @@ while true; do
         fi
     done
 
-
-    > $ACTION_STATUS_FILE
-    > $ERROR_STATUS_FILE
-    > $DEBUG_STATUS_FILE
-    > $OTHER_STATUS_FILE
-
     #for each entry in ACTION_OUTPUT_ARRAY, write the entry to the ACTION_STATUS_FILE
+    > $ACTION_STATUS_FILE
     for key in "${!ACTION_OUTPUT_ARRAY[@]}"; do
         echo "${ACTION_OUTPUT_ARRAY[$key]}" >> $ACTION_STATUS_FILE
     done
 
     #for each entry in ERROR_OUTPUT_ARRAY, write the entry to the ERROR_STATUS_FILE
+    > $ERROR_STATUS_FILE
     for key in "${!ERROR_OUTPUT_ARRAY[@]}"; do
         echo "${ERROR_OUTPUT_ARRAY[$key]}" >> $ERROR_STATUS_FILE
     done
 
     #for each entry in DEBUG_OUTPUT_ARRAY, write the entry to the DEBUG_STATUS_FILE
+    > $DEBUG_STATUS_FILE
     for key in "${!DEBUG_OUTPUT_ARRAY[@]}"; do
         echo "${DEBUG_OUTPUT_ARRAY[$key]}" >> $DEBUG_STATUS_FILE
     done
 
     #for each entry in OTHER_OUTPUT_ARRAY, write the entry to the OTHER_STATUS_FILE
+    > $OTHER_STATUS_FILE
     for key in "${!OTHER_OUTPUT_ARRAY[@]}"; do
         echo "${OTHER_OUTPUT_ARRAY[$key]}" >> $OTHER_STATUS_FILE
     done
