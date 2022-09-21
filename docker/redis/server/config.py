@@ -127,12 +127,15 @@ REGIONS_TO_USE = {
 
 LOGS_DIR = "/server/logs/"
 
+#Should server print to logs
 PRINT_TO_LOG = { 
 "DEBUG":True,
 "ERROR":True,
 "ACTION":False,
 }
 
+
+#Should server print to console
 PRINT_TO_SCREEN = {
 "DEBUG":False,
 "ERROR":True,
