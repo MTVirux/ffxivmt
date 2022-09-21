@@ -25,9 +25,12 @@ else
     NUMBER_OF_OTHER_LINES=$4
 fi
 
-/server/workers/cpu_monitor.sh &
-
 /server/workers/status_updater.sh $NUMBER_OF_ACTION_LINES $NUMBER_OF_DEBUG_LINES $NUMBER_OF_ERROR_LINES $NUMBER_OF_OTHER_LINES &
+ID1=$!
+/server/workers/cpu_monitor.sh &
+ID2=$!
+/server/workers/redis_monitor.sh &
+ID3=$!
 
 #Get highest of all params
 MAX_NUMBER_OF_LINES=$NUMBER_OF_ACTION_LINES
@@ -48,4 +51,8 @@ watch -t -c -n $(bc -l <<< "${REDIS_STATUS_UPDATER_INTERVAL}") \
 "/server/logs/status/error.status" \
 "/server/logs/status/other.status"
 
-kill $! 2>/dev/null
+pkill -P $ID1
+pkill -P $ID2
+pkill -P $ID3
+pkill -P $$
+
