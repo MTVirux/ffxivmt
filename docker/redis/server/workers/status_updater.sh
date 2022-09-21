@@ -142,10 +142,8 @@ while true; do
             STATUS_FILE=${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME
             LAST_OTHER_LINE=$(tail -n 1 $file)
             LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
-            if [ "$LAST_OTHER_LINE" != "$LAST_STATUS_LINE" ]; then
                 tail -n $NUMBER_OF_OTHER_LINES ${REDIS_SERVER_LOGS_DIR}/system/$FILE_NAME > $STATUS_FILE
                 OTHER_OUTPUT_ARRAY[$ITERATOR]=$(tail -n $NUMBER_OF_OTHER_LINES "$file")
-            fi
             ITERATOR=$((ITERATOR+1))
         fi
     done
