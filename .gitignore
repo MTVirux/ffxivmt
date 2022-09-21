@@ -12,3 +12,6 @@ docker/portainer/
 /*.sh
 *.db
 *.rdb
+*.aof
+*.log
+*.status
