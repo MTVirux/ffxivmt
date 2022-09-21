@@ -6,6 +6,9 @@
 # Pull base image.
 FROM mtvirux/redis-stack-python3.10
 
+
+RUN pip3.10 install prettytable
+
 RUN apt-get -y install bc sysstat netcat
 
 COPY ./docker/redis/ /
