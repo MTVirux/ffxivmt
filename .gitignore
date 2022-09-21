@@ -7,7 +7,7 @@ docker/redis/server/logs/system/*.log
 docker/redis/server/nohup.out
 docker/redis/server/persistent_data/*.aof
 docker/redis/server/persistent_data/*.rdb
-docker/portainer/*
+docker/portainer/
 /*.bat
 /*.sh
 *.db
