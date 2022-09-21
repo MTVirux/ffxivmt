@@ -9,6 +9,8 @@ docker/redis/server/persistent_data/*.aof
 docker/redis/server/persistent_data/*.rdb
 docker/redis/server/redis-monitor-server/__pycache__/*
 docker/portainer/
+docker/vue_app/node_modules/*
+docker/react_app/node_modules/*
 /*.bat
 /*.sh
 *.db
