@@ -194,5 +194,5 @@ while true; do
 
 done
 
-
+pkill -P $$
 
