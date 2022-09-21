@@ -134,6 +134,13 @@ PRINT_TO_LOG = {
 "ACTION":False,
 }
 
+#Line limit on each type of log
+LIMIT_LOGS = {
+"DEBUG":0,
+"ERROR":0,
+"ACTION":0,
+}
+
 
 #Should server print to console
 PRINT_TO_SCREEN = {
