@@ -3,7 +3,7 @@
 # watch files in /server/logs/status
 
 if [ -z "$1" ]; then
-    NUMBER_OF_ACTION_LINES=3
+    NUMBER_OF_ACTION_LINES=15
 else
     NUMBER_OF_ACTION_LINES=$1
 fi
@@ -13,7 +13,6 @@ if [ -z "$2" ]; then
 else
     NUMBER_OF_DEBUG_LINES=$2
 fi
-
 if [ -z "$3" ]; then
     NUMBER_OF_ERROR_LINES=5
 else
@@ -21,7 +20,7 @@ else
 fi
 
 if [ -z "$4" ]; then
-    NUMBER_OF_OTHER_LINES=1
+    NUMBER_OF_OTHER_LINES=99
 else
     NUMBER_OF_OTHER_LINES=$4
 fi
