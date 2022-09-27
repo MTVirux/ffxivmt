@@ -97,9 +97,9 @@ RUN apk add --no-cache --virtual .build-deps-yarn curl gnupg tar \
 
 RUN apk add --update nodejs npm yarn bash nano
 COPY /docker/frontend/docker-entrypoint.sh /usr/local/bin/
-# COPY /docker/frontend/custom-entrypoint.sh /usr/local/bin/
 
-ENV PS1='$(whoami)@ffmt_frontend:$(pwd)'
+ENV PS1='$(whoami)@ffmt_frontend:$(pwd): '
+
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 # CMD ["/usr/local/bin/custom-entrypoint.sh"]
