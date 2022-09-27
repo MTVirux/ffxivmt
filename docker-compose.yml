@@ -31,7 +31,7 @@ services:
       - "${FRONTEND_HOST_PORT}:8080"
     
     volumes:
-      - ./docker/vue_app:/var/www/html/
+      - ./docker/vue_app:/vue_app
     networks:
       - ffmt_internal
       - ffmt_external
