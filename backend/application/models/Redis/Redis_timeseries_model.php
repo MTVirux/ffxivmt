@@ -14,6 +14,32 @@ class Redis_timeseries_model extends MY_Redis_model{
         $this->craft_complexity_weight = $this->config->item('craft_complexity_weight');
     }
 
+
+    private function get_times(){
+        return array_reverse(
+            array(
+                '5min' => time() - (5 * 60),
+                '15min' => time() - (15 * 60),
+                '30min' => time() - (30 * 60),
+                '1h' => time() - (60 * 60),
+                '2h' => time() - (60 * 60 * 2),
+                '6h' => time() - (60 * 60 * 6),
+                '12h' => time() - (60 * 60 * 12),
+                '1d' => time() - (60 * 60 * 24),
+                '2d' => time() - (60 * 60 * 24 * 2),
+                '5d' => time() - (60 * 60 * 24 * 5),
+                '1w' => time() - (60 * 60 * 24 * 7),
+                '2w' => time() - (60 * 60 * 24 * 14),
+                '1mo' => time() - (60 * 60 * 24 * 30),
+                '2mo' => time() - (60 * 60 * 24 * 60),
+                '6mo' => time() - (60 * 60 * 24 * 180),
+                'patch' => time() - (60 * 60 * 24 * 120),
+                '1y' => time() - (60 * 60 * 24 * 365),
+                'expansion' => time() - (60 * 60 * 24 * 365 * 4),
+                'alltime' => 0
+            )
+        );
+    }
     }
 
     public function get_by_key($key, $minutes = 60){
