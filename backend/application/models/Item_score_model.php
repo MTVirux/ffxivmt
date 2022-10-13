@@ -13,19 +13,20 @@ class Item_score_model extends CI_Model {
         return $this->db->insert($this->table , $item);
     }
 
-    public function remove($id = null){
-        if(!empty($id)){
-
-            $this->id = $id;
-
-        }else if(!empty($_POST['id'])){
-
-            $this->id = $_POST['id'];
-        }else{
-            echo 'Missing Param: id';
+    public function remove($item_id = null, $world = null){
+        
+        if(empty($item_id)){
+            echo 'No item id provided';
         }
 
-        return $this->db->delete('entries', $this);
+        $this->db->where('item_id', $item_id);
+
+        if(!is_null($world)){
+            $this->db->where('world', $world);
+        }
+
+        return $this->db->delete($this->table);
+
     }
 
     public function get($id = null){
