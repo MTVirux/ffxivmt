@@ -53,11 +53,15 @@ class Test extends CI_Controller {
 		pretty_dump($craftable_items);
 	}
 
-		if($start_time == null)
-			$start_time = time() - (60*60*24*7); // 1 day back
-		
-		if($end_time == null)
-			$end_time = time(); // now
+	public function worlds_to_use(){
+		return (get_worlds_to_use(	
+										$this->config->item('worlds_to_use'), 
+										$this->config->item('dcs_to_use'), 
+										$this->config->item('regions_to_use'), 
+										$this->config->item('ffxiv_worlds')
+									)
+								);
+	}
 
 		if(!empty($_GET['dc_name']))
 			$dc_name = $_GET['dc_name'];
