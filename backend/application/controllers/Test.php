@@ -41,6 +41,10 @@ class Test extends CI_Controller {
 		return false;
 		
 	}
+
+	public function update_item_scores(){
+		set_time_limit(600);
+		$this->Redis_ts->global_item_score_update();
 	}
 
 	public function dc_scores($dc_name="Chaos", $start_time = null, $end_time = null){
