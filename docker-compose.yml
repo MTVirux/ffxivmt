@@ -127,6 +127,9 @@ services:
       - ./docker/redis/usr/local/bin:/usr/local/bin
       - ./docker/redis/server:/server
       - ./docker/redis/monitor_server.sh:/monitor_server.sh
+      #- ./docker/redis/server/redis-config/redis-stack.conf:/redis-stack.conf
+      - ./docker/redis/server/redis-config/redis-custom-stack.conf:/redis-stack.conf
+      - ./docker/redis/data/:/data
     networks:
       - ffmt_internal
     deploy:
