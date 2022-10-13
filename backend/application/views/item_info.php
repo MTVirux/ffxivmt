@@ -70,7 +70,6 @@
                         <?php foreach($item->prices->listings as $listing){?>
                             <?php 
                             foreach($retainer_array as $datacenterName => $worldName){
-                                var_dump($retainer_array);die();
                                 if(key_exists($listing->worldName, $datacenterName)){
                                     if (!in_array($listing->retainerName ,$retainer_array[$datacenterName][$listing->worldName])){
                                             continue;
