@@ -42,7 +42,6 @@ threads.append(sales_add_thread)
 #db_cleaning_thread              = threading.Thread(target=db_cleaning.start_cleaning);
 #threads.append(db_cleaning_thread)
 
-
 def start_threads(threads):
     for x in threads:
         try:
@@ -50,5 +49,15 @@ def start_threads(threads):
         except Exception as thread_error:
             log.error("THREAD FAILED TO START" + str(thread_error))
 
+def join_threads(threads):
+    for x in threads:
+        try:
+            x.join()
+        except Exception as thread_error:
+            log.error("THREAD FAILED TO JOIN" + str(thread_error))
+
 start_threads(threads)
 log.debug("ALL THREADS STARTED")
+
+join_threads(threads)
+log.debug("ALL THREADS JOINED")
