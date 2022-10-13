@@ -10,6 +10,8 @@ import database
 import time
 from redis.commands.json.path import Path
 import log
+import external
+
 ###########################
 #    ENTRY MANIPULATION   #
 ###########################
@@ -94,6 +96,7 @@ def on_message(ws_sales_add, message):
     #Set hash and sales
     hash = str(world_name + "_" + item)
     sales = (json.loads(json.dumps(decoded_message['sales'])))
+    external.warn_backend_to_update_item(hash)
 
     for sale in sales:
         if (sale['buyerName'] in config.BANNED_SALE_BUYERS):
