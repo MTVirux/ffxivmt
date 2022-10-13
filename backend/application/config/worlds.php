@@ -1,6 +1,10 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+$config['dcs_to_use'] = array('Chaos', 'Light');
+$config['worlds_to_use'] = array();
+$config['regions_to_use'] = array();
+
 $config['ffxiv_worlds'] = array(
                                 "21"      =>array(  "name" => "Ravana",
                                                     "datacenter" => "DC_NOT_SET",
