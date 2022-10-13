@@ -182,27 +182,33 @@ class Redis_timeseries_model extends MY_Redis_model{
 
     }
 
-            $item = $this->Item->get($item_id);
-            if(empty($item->name) || is_null($item->name)){
-                pretty_dump($item);
-            }
 
-            if($current_entry_score > 0){
-                if(isset($final_results[$name])){
-                    $final_results[$name]['score'] = $final_results[$name]['score'] + $current_entry_score;
-                    $final_results[$name]['world_data_used'] = $final_results[$name]['world_data_used'] .= ', '.$world;
-                    $final_results[$name]['volume'] = $final_results[$name]['volume'] + $number_of_sales;
+    public function transpose_sales_to_ts(){
+        $this->redis->select(1);
+        $keys = $this->redis->keys('*');
+        $total_keys = count($keys);
+        $transposed_key_count = 1;
+        //pretty_dump($keys);
+        echo 'Transposing...';
+
+        foreach($keys as $key){
+            $this->redis->select(1);
+            $key_result = json_decode($this->redis->executeRaw(['JSON.GET', $key]));
+            $this->redis->select(2);
+            foreach($key_result as $result){
+                logger('DEBUG', '['.$transposed_key_count.' / '.$total_keys.'] Transposing ['.$key.'] -> '.$result->timestamp.' -> '.$result->total);
+                $this->redis->select(2);
+                if($this->redis->executeRaw(['TS.ADD', $key, intval($result->timestamp), floatval($result->total)])){
+                    logger('DEBUG', '['.$transposed_key_count.' / '.$total_keys.'] Transposed ['.$key.'] -> '.$result->timestamp.' -> '.$result->total . ' Successfully');
                 }else{
-                    $final_results[$name]['id'] = intval($item_id);
-                    $final_results[$name]['volume'] = $number_of_sales;
-                    $final_results[$name]['score'] = $current_entry_score;
-                    $final_results[$name]['world_data_used'] = $world;
+                    logger('ERROR', 'Failed to Transpose ['.$key.'] -> '.$result->timestamp.' -> '.$result->total);
+                    pretty_dump('Failed to Transpose ['.$key.'] -> '.$result->timestamp.' -> '.$result->total);die();
                 }
             }
+            $this->redis->select(1);
+            $transposed_key_count = $transposed_key_count + 1;
         }
-        $end = time();
-        arsort($final_results);
-        return $final_results;
-    
+        pretty_dump('Transposed:' . $transposed_key_count . ' / ' . $total_keys . ' keys');
     }
+    
 }
