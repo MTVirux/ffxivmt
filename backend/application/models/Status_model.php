@@ -38,7 +38,6 @@ class Status_model extends MY_Redis_Model{
 
         $query_results = $this->db->query('Select TABLE_NAME as name from information_schema.TABLES WHERE TABLE_SCHEMA = "ffxiv_db"')->result();
         echo '<pre>'; 
-        //var_dump($query_results);die();
 
         foreach($query_results as $result){
             $row_count = $this->db->query('select count(*) as row_count from ffxiv_db.'.$result->name)->result()[0]->row_count;
