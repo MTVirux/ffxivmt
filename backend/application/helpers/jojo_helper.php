@@ -8,3 +8,28 @@ function pretty_dump($var = null){
     var_dump($var);
     echo '</pre>';
 }
+
+function logger($channel, $message, $custom_file = null){
+
+    if(!in_array($channel, config_item('custom_log_channels')) && !in_array('ALL', config_item('custom_log_channels'))){
+        return;
+    }
+    
+    //open or create file in log folder
+    if(is_null($custom_file)){
+        
+        $file = fopen(APPPATH . 'logs/' . 'log' . '-' . date('Y-m-d') .'.log', 'a');
+
+    }else{
+        $file = fopen(APPPATH . 'logs/' . $custom_file . '-' . date('Y-m-d') .'.log', 'a');
+    }
+    
+    //write message to file
+    fwrite($file, $channel . ' - ' . date('Y-m-d H:i:s') . ' - ' . $message . PHP_EOL);
+
+    //close file
+    fclose($file);
+    
+    return true;
+
+}
