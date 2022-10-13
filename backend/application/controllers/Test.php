@@ -67,16 +67,43 @@ class Test extends CI_Controller {
 		set_time_limit(600);
 		$this->Redis_ts->transpose_sales_to_ts();
 	}
-		if(!empty($_GET['dc_name']))
-			$dc_name = $_GET['dc_name'];
-		
-		$dc_scores = $this->Redis_ts->get_dc_scores($dc_name, $start_time, $end_time);
 
-		pretty_dump($dc_scores);
-		return $dc_scores;
-	}
+	public function get_table($world, $craft = null, $limit = null, $page = null){
 
-	public function test() {
-		$this->Redis_ts->test();
+		if(is_null($limit)) $limit = 50;
+		if(is_null($page)) $page = 0;
+
+		$this->load->model('Views_model', 'Views');
+		$this->load->library('table');
+
+		if(!empty($world)){
+			$world = ucfirst($world);
+		}else{
+			echo 'No world name provided';
+			return;
+		}
+
+		if(!empty($craft)){
+			$table_name = $world . '_Craft_Daily';
+		}else{
+			$table_name = $world . '_Daily';
+		}
+
+
+		$results = ($this->Views->get($table_name, $limit, $page));
+
+		if(!empty($results) && !is_null($results) && count($results) > 0){
+			$this->table->set_heading(array_keys((array)$results[0]));
+			$this->table->set_template(array('table_open' => '<table class="table table-striped table-bordered table-hover">'));
+			foreach($results as $row){
+				$this->table->add_row(array_values((array)$row));
+			}
+
+			//add bootstrap
+			$data['data'] = $this->table->generate();
+			$this->load->view('basic_bootstrap', $data);
+		}
+
+		return;
 	}
 }
