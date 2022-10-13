@@ -15,19 +15,32 @@ class Test extends CI_Controller {
 		$this->load->view("test/usage");
 	}
 
-	public function world_scores($world_name="Spriggan", $start_time = null, $end_time = null){
+	public function python_update(){
+		if(empty($_POST['item_id']) || is_null($_POST['item_id'])){
+			echo "No item_id provided";
+			return;
+		}
+		if(empty($_POST['world_name']) || is_null($_POST['world_name'])){
+			echo "No world name provided";
+			return;
+		}
 
-		if($start_time == null)
-			$start_time = time() - (60*60*24*7); // 1 day back
-		
-		if($end_time == null)
-			$end_time = time(); // now
+		$item_id = $_POST['item_id'];
+		$world = $_POST['world_name'];
 
-		if(!empty($_GET['world_name']))
-			$world_name = $_GET['world_name'];
+		//logger('PYTHON_UPDATE', "Python update for item " . $item_id . " on world " . $world, 'python_update');
+		$this->load->config('worlds');
+		$worlds_to_use = $this->worlds_to_use();
+
+		//Check if we're tracking the world
+		if(in_array($world, $worlds_to_use)){
+			$this->Redis_ts->calc_item_score($item_id, $world);
+			echo $world.'_'.$item_id. ' updated successfully';
+			return true;
+		}
+		return false;
 		
-		$world_scores = $this->Redis_ts->get_world_scores($world_name);
-		return $world_scores;
+	}
 	}
 
 	public function dc_scores($dc_name="Chaos", $start_time = null, $end_time = null){
