@@ -9,7 +9,7 @@ class Universallis extends BaseController
 {
     public function get_item($id){
         $items = file_get_contents('https://universalis.app/api/tax-rates');
-        var_dump();die();
+        pretty_dump();die();
         return $item;
     }
 }

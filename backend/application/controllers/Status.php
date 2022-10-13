@@ -22,7 +22,7 @@ class Status extends CI_Controller {
 
         $data['Redis'] = $this->Status_model->get_redis();
 
-        var_dump($data);die();
+        pretty_dump($data);die();
         
         //$this->load->view('status', $data);
         return true;
