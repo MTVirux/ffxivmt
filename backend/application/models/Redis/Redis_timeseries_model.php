@@ -99,6 +99,16 @@ class Redis_timeseries_model extends MY_Redis_model{
         $redis_item_keys_count = count($redis_item_keys);
 
         logger('ITEM_SCORE', '['. $item_id .'] -> # of keys: ' . $redis_item_keys_count); 
+        if($redis_item_keys_count == 0){
+            if(!is_null($world)){
+                logger('REMOVE_DUE_TO_NO_KEYS', 'Removing due to no keys: ' . $item_id . ' -*');
+
+                $this->Item_score->remove($item_id, $world);
+            }else{
+                logger('REMOVE_DUE_TO_NO_KEYS', 'Removing due to no keys: ' . $item_id . ' - ' . $world);
+                $this->Item_score->remove($item_id);
+            }
+        }
 
         foreach($redis_item_keys as $redis_item_key){
             

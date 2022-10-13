@@ -89,7 +89,26 @@ class Test extends CI_Controller {
 		}
 
 
-		$results = ($this->Views->get($table_name, $limit, $page));
+		do{
+
+			$current_results = ($this->Views->get($table_name, $limit, $page));
+			$current_results_ids = array_column($current_results, 'item_id');
+
+			//update the item score for each of the results
+			foreach($current_results as $current_result){
+				//if timestamp shows updated_at is older than 30 minutes, update the score
+				if(strtotime($current_result['updated_at']) < (time() - 60*5)){
+					pretty_dump("Update score for " . $current_result['item_id']);
+					$this->Redis_ts->calc_item_score($current_result['item_id'], $world);
+				}
+			}
+
+			$updated_results = ($this->Views->get($table_name, $limit, $page));
+			$updated_results_ids = array_column($updated_results, 'item_id');
+
+		}while($current_results_ids != $updated_results_ids);
+
+		$results = $updated_results;
 
 		if(!empty($results) && !is_null($results) && count($results) > 0){
 			$this->table->set_heading(array_keys((array)$results[0]));
