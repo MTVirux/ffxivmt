@@ -63,6 +63,10 @@ class Test extends CI_Controller {
 								);
 	}
 
+	public function transpose_sales_to_ts(){
+		set_time_limit(600);
+		$this->Redis_ts->transpose_sales_to_ts();
+	}
 		if(!empty($_GET['dc_name']))
 			$dc_name = $_GET['dc_name'];
 		
