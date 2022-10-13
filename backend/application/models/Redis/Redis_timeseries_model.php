@@ -40,6 +40,10 @@ class Redis_timeseries_model extends MY_Redis_model{
             )
         );
     }
+
+    public function get_all_keys(){
+        $keys = $this->redis->keys('*');
+        return $keys;
     }
 
     public function get_by_key($key, $minutes = 60){
