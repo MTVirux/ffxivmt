@@ -123,5 +123,57 @@ class Item_model extends CI_Model {
 		return $this->db->get()->result()[0]->craftingRecipe;
 	}
 
+	public function get_item_name($item_id){
+		$this->db->select('name');
+		$this->db->from('items');
+		$this->db->where('id', $item_id);
+		return $this->db->get()->result()[0]->name;
+	}
+
+	public function get_craftable_items(){
+		$this->db->select('*');
+		$this->db->from('items');
+		$this->db->where('craftingRecipe is NOT NULL');
+		$this->db->order_by('id', 'DESC');
+		$craftable_items = $this->db->get()->result();
+		return $craftable_items;
+	}
+
+	public function get_craft_complexity($item_id , $hq = true){
+		$this->db->select('craftingComplexity, canBeHQ');
+		$this->db->from('items');
+		$this->db->where('id', $item_id);
+		$result = $this->db->get()->result()[0];
+		if(!is_null($result->craftingComplexity)){
+			$complexity = json_decode(json_decode($result->craftingComplexity)[0]);
+			if($result->canBeHQ == 1){
+				return $complexity->hq;
+			}else{
+				return $complexity->nq;
+			}
+		}
+	}
+
+	public function get_craftable_items_ids(){
+		$this->db->select('*');
+		$this->db->from('items');
+		$this->db->where('craftingRecipe is NOT NULL');
+		$this->db->order_by('id', 'DESC');
+		$craftable_items = $this->db->get()->result();
+
+		foreach($craftable_items as $craftable_item){
+			$craftable_item_ids[] = intval($craftable_item->id);
+		}
+
+		foreach($craftable_items as $craftable_item){
+			if(empty($craftable_item->craftingRecipe)){
+				pretty_dump('Recipe is empty for item: ');
+				pretty_dump($this->get($craftable_item));die();
+			}
+		}
+
+		return $craftable_item_ids;
+	}
+
 }
 ?>
