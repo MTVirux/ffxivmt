@@ -47,7 +47,11 @@ class Test extends CI_Controller {
 		$this->Redis_ts->global_item_score_update();
 	}
 
-	public function dc_scores($dc_name="Chaos", $start_time = null, $end_time = null){
+	public function test_craft() {
+		$this->load->model('Item_model', 'Item');
+		$craftable_items = $this->Item->get_craftable_items();
+		pretty_dump($craftable_items);
+	}
 
 		if($start_time == null)
 			$start_time = time() - (60*60*24*7); // 1 day back
