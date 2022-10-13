@@ -52,116 +52,135 @@ class Redis_timeseries_model extends MY_Redis_model{
         $result = $this->redis->executeRaw(['TS.RANGE', 'Spriggan_2156', $unix_from, $unix_to]);
     }
 
-    public function get_world_scores($world_name, $start_time = null, $end_time = null){
-        $this->load->model('Item_model', 'Item');
-        $start = time();
-        $result = $this->redis->executeRaw(['KEYS', '*']);
-        $i = 0;
+    public function global_item_score_update(){
+        //Load configs
+        $worlds = $this->config->item('ffxiv_worlds');
+        $datacenters = $this->config->item('ffxiv_datacenters');
+        //Load craftable items
+        $craftable_items_ids = $this->Item->get_craftable_items_ids();
 
-        if (is_null($start_time))
-            $start_time = time() - (60*60*24*7); // 1 week back
 
-        if (is_null($end_time))
-            $end_time = time(); // now
-
-        foreach($result as $key=>$value){
-            $profits = 0;
-            $number_of_sales = 0;
-            //Get value after the underscore
-            $key_parts = explode('_', $value);
-            $world = $key_parts[0];
-            $item_id = $key_parts[1];
-            if(strpos($value, $world_name) === false){
-                continue;
-            }
-            $name = $this->Item->get($item_id)->name;
-            
-            $sales = $this->redis->executeRaw(['TS.RANGE', $value, $start_time, $end_time]);
-
-            foreach($sales as $sale){
-                $number_of_sales++;
-                $profits += $sale[1]->getPayload();
+        //Update item scores
+        foreach( $craftable_items_ids as $item_id){
+            if(is_null($this->Item->get($item_id)->craftingRecipe)){
+                pretty_dump($this->Item->get($item_id)->craftingRecipe);
             }
 
-            $item = $this->Item->get($item_id);
-            if(empty($item->name) || is_null($item->name)){
-                pretty_dump($item);die();
-            }
-            $final_results[$name]['id'] = $item_id;
-            $final_results[$name]['volume'] = $number_of_sales;
-            $final_results[$name]['score'] = $profits * $number_of_sales;
-            $final_results[$name]['world'] = $world;
+            $this->calc_item_score($item_id);
         }
-
-
-        $end = time();
-        arsort($final_results);
-        pretty_dump($final_results);
-        pretty_dump($end - $start);
-        
+        return true;
     }
 
-    public function get_dc_scores($dc_name, $start_time = null, $end_time = null){
+    public function calc_item_score($item_id, $world = null, $unix_to = null, $unix_from = null){
 
-        $redis_time = intval($this->redis->executeRaw(['TIME'])[0]);
-        $earliest_timestamp = 0;
-        $total_number_of_sales = 0;
+        //If NULL set to now
+        if(is_null($unix_to)){
+            $unix_to = time();
+        }
 
-        if(is_null($start_time))
-            $start_time = $redis_time - (60*60*24*7); // 1 day back
+        //If NULL set to 1 day ago
+        if(is_null($unix_from)){
+            $unix_from = time() - (60 * 60 * 24);
+        }
 
-        if(is_null($end_time))
-            $end_time = $redis_time; // now
-
-
-        $this->load->model('Item_model', 'Item');
-        $start = time();
-        $result = $this->redis->executeRaw(['KEYS', '*']);
-        $i = 0;
-
-        //Prepare final results array
-        $final_results = array();
-        $result = array();
-        $worlds_in_dc = get_worlds_in_dc($dc_name, $this->config->item('ffxiv_worlds'));
-        $total_sales = 0;
-
-
-        foreach($worlds_in_dc as $world_in_dc){
-            foreach($this->redis->executeRaw(['KEYS', "*".$world_in_dc."*"]) as $entry){
-                array_push($result, $entry);
-            }
+        //If null set to all worlds
+        if(is_null($world)){
+            $redis_item_keys = $this->redis->keys('*_'.$item_id);
+        }else{
+            $redis_item_keys = $this->redis->keys($world.'_'.$item_id);
         }
         
-        foreach($result as $key=>$value){
-            //Score is the profit * number of sales
-            $profits = 0;
-            $number_of_sales = 0;
-            $current_entry_score = 0;
+        $worlds_to_use = get_worlds_to_use( $this->config->item('worlds_to_use'), 
+                                            $this->config->item('dcs_to_use'), 
+                                            $this->config->item('regions_to_use'), 
+                                            $this->config->item('ffxiv_worlds')
+                                        );
 
-            //Get values for indexing
-            //pretty_dump($value);
-            $key_parts = explode('_', $value);
-            $world = $key_parts[0];
-            $item_id = $key_parts[1];
+        $redis_item_keys_count = count($redis_item_keys);
 
-            if(in_array($world, $worlds_in_dc) === false){
-                continue;
-            }
+        logger('ITEM_SCORE', '['. $item_id .'] -> # of keys: ' . $redis_item_keys_count); 
 
-            $name = $this->Item->get($item_id)->name;
-        
-            $sales = $this->redis->executeRaw(['TS.RANGE', $value, $start_time, $end_time]);
+        foreach($redis_item_keys as $redis_item_key){
             
+            $split_key = explode('_', $redis_item_key);
+            
+            $world = $split_key[0];
 
-            foreach($sales as $sale){
-                $total_sales++;
-                $number_of_sales++;
-                if($earliest_timestamp == 0 || $sale[0] < $earliest_timestamp){
-                    $earliest_timestamp = $sale[0];
+            if(in_array($world, $worlds_to_use)){
+                $dc = get_world_dc($world, $this->config->item('ffxiv_worlds'));
+                $region = get_world_region($world, $this->config->item('ffxiv_worlds'));
+                $redis_entry = $this->redis->executeRaw(['TS.GET', $redis_item_key]);
+                logger('REDIS_RECORD', 'Record found for '. $item_id . ' @ ' . date('Y-m-d H:i:s', $redis_entry[0]), 'redis_time_keeper');
+
+                $item_score_entry['item_id'] = $item_id;
+                $item_score_entry['world'] = $world;
+                $item_score_entry['datacenter'] = $dc;
+                $item_score_entry['region'] = $region;
+                $item_score_entry['name'] = $this->Item->get($item_id)->name;
+                $item_score_entry['craftComplexityWeightUsed'] = $this->config->item('craft_complexity_weight');
+                $item_score_entry['updated_at'] = date('Y-m-d H:i:s');
+                $item_score_entry['latest_sale'] = date('Y-m-d H:i:s' ,$redis_entry[0]);
+                $item_score_entry['craft'] = boolval(is_null($this->Item->get($item_id)->craftingRecipe)) ? 0 : 1;
+                $total_price = 0;
+                         
+
+                foreach($this->get_times() as $col => $unix_from){
+                    $total_price = 0;
+                    $item_score_entry[$col] = $this->redis->executeRaw(['TS.RANGE', $redis_item_key, $unix_from, $unix_to]);
+                    //logger('INFO', '['. $item_id .']['.$col.']['.$item_score_entry['world'].'] - ['.$item_score_entry['name'].'] -> # of hits: ' . count($item_score_entry[$col]));          
+                    if(count($item_score_entry[$col]) == 0){
+                        $item_score_entry[$col] = 0;
+                        //logger('INFO', '['. $item_id .']['.$col.']['.$item_score_entry['world'].'] - ['.$item_score_entry['name'].'] -> Setting to 0 and skipping to next time period');
+
+                    }else{
+
+                        foreach($item_score_entry[$col] as $entry){
+                            $total_price += $entry[1]->getPayload();
+                        }
+
+                        $item_score_entry[$col] = $total_price;
+                        //logger('ITEM_SCORE_2', '['. $item_id .']['.$col.']['.$item_score_entry['world'].'] - ['.$item_score_entry['name'].'] -> ' . $item_score_entry[$col]);
+
+                    }
+
                 }
-                $profits += $sale[1]->getPayload();
-                $current_entry_score = $profits * $number_of_sales;
+
+                $this->Item_score->update($item_score_entry);
+                unset($item_score_entry);
+                unset($total_price);
             }
+        }
+        //return $score;
+    }
+
+    //Calculate item score
+    function calculate_item_score($item_id , $total_price){
+    
+
+        //Load craft complexity values
+        $craft_complexity_weight = $this->config->item('craft_complexity_weight');
+        $craft_complexity = $this->Item->get_craft_complexity($item_id);
+
+        //Load Item model
+        $this->load->model('Item_model', 'Item');
+
+
+
+        if($craft_complexity_weight == 0 || $craft_complexity == 0 || is_null($craft_complexity)){
+            logger('ERROR', "[$item_id: ".$item_id."]Error on craft_complexity_weight(".$craft_complexity_weight.") or craft_complexity(".$craft_complexity.") during calculation of item score");
+            logger('ERROR', $total_price);
+            die();
+
+        } else {
+
+            $total_score = $total_price;
+        }
+
+        //Actually calculate the score
+
+        return $total_score;
+
+    }
 
             $item = $this->Item->get($item_id);
             if(empty($item->name) || is_null($item->name)){
