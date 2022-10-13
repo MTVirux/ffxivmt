@@ -9,6 +9,11 @@ class Redis_timeseries_model extends MY_Redis_model{
         parent::__construct();
         $this->load->helper('ffxiv_worlds');
         $this->redis->select($this->config->item('redis_timeseries_db'));
+        $this->load->model('Item_model', 'Item');
+        $this->load->model('Item_score_model', 'Item_score');
+        $this->craft_complexity_weight = $this->config->item('craft_complexity_weight');
+    }
+
     }
 
     public function get_by_key($key, $minutes = 60){
