@@ -64,7 +64,7 @@ $config['ffxiv_worlds'] = array(
                                                 ),
                                 "39"      =>array(  "name" => "Omega",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "40"      =>array(  "name" => "Jenova",
                                                     "datacenter" => "DC_NOT_SET",
@@ -75,8 +75,8 @@ $config['ffxiv_worlds'] = array(
                                                     "region"=>"REGION_NOT_SET"
                                                 ),
                                 "42"      =>array(  "name" => "Zodiark",
-                                                    "datacenter" => "DC_NOT_SET",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "datacenter" => "Light",
+                                                    "region"=>"Europe"
                                                 ),
                                 "43"      =>array(  "name" => "Alexander",
                                                     "datacenter" => "DC_NOT_SET",
@@ -192,7 +192,7 @@ $config['ffxiv_worlds'] = array(
                                                 ),
                                 "71"      =>array(  "name" => "Moogle",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "72"      =>array(  "name" => "Tonberry",
                                                     "datacenter" => "DC_NOT_SET",
@@ -228,7 +228,7 @@ $config['ffxiv_worlds'] = array(
                                                 ),
                                 "80"      =>array(  "name" => "Cerberus",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "81"      =>array(  "name" => "Goblin",
                                                     "datacenter" => "DC_NOT_SET",
@@ -240,11 +240,11 @@ $config['ffxiv_worlds'] = array(
                                                 ),
                                 "83"      =>array(  "name" => "Louisoix",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "85"      =>array(  "name" => "Spriggan",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "86"      =>array(  "name" => "Sephirot",
                                                     "datacenter" => "DC_NOT_SET",
@@ -288,7 +288,7 @@ $config['ffxiv_worlds'] = array(
                                                 ),
                                 "97"      =>array(  "name" => "Ragnarok",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "98"      =>array(  "name" => "Ridill",
                                                     "datacenter" => "DC_NOT_SET",
@@ -300,19 +300,19 @@ $config['ffxiv_worlds'] = array(
                                                 ),
                                 "400"     =>array(  "name" => "Sagittarius",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "401"     =>array(  "name" => "Phantom",
                                                     "datacenter" => "Chaos",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "402"     =>array(  "name" => "Alpha",
                                                     "datacenter" => "Light",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "403"     =>array(  "name" => "Raiden",
                                                     "datacenter" => "Light",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "region"=>"Europe"
                                                 ),
                                 "1167"    =>array(  "name" => "红玉海",
                                                     "datacenter" => "DC_NOT_SET",
