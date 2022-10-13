@@ -8,7 +8,7 @@ FROM mtvirux/redis-stack-python3.10
 
 RUN cp /Python-3.10.5/python /usr/local/bin/
 
-RUN pip3.10 install prettytable
+RUN pip3.10 install prettytable requests
 
 RUN apt-get -y install bc sysstat netcat
 
