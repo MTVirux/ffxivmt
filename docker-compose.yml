@@ -20,21 +20,21 @@ services:
   #    - ffmt_internal
   #    - ffmt_external
 
-  ffmt_vue:
-    container_name: ffmt_vue
-    image: node:18-alpine3.16
-    build:
-      context: .
-      dockerfile: ${FRONTEND_DOCKERFILE}
-    restart: "always"
-    ports:
-      - "${FRONTEND_HOST_PORT}:8080"
-    
-    volumes:
-      - ./docker/vue_app:/vue_app
-    networks:
-      - ffmt_internal
-      - ffmt_external
+  #ffmt_vue:
+  #  container_name: ffmt_vue
+  #  image: node:18-alpine3.16
+  #  build:
+  #    context: .
+  #    dockerfile: ${FRONTEND_DOCKERFILE}
+  #  restart: "always"
+  #  ports:
+  #    - "${FRONTEND_HOST_PORT}:8080"
+  #  
+  #  volumes:
+  #    - ./docker/vue_app:/vue_app
+  #  networks:
+  #    - ffmt_internal
+  #    - ffmt_external
   
 
 
