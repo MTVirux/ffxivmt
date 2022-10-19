@@ -92,14 +92,15 @@ class Test extends CI_Controller {
 
 		do{
 
+			$refresh_grace_period_seconds = 60*5; # 5 minutes
+
 			$current_results = ($this->Views->get($table_name, $limit, $page));
 			$current_results_ids = array_column($current_results, 'item_id');
 
 			//update the item score for each of the results
 			foreach($current_results as $current_result){
 				//if timestamp shows updated_at is older than 30 minutes, update the score
-				if(strtotime($current_result['updated_at']) < (time() - 60*5)){
-					pretty_dump("Update score for " . $current_result['item_id']);
+				if(strtotime($current_result['updated_at']) < (time() - $refresh_grace_period_seconds)){
 					$this->Redis_ts->calc_item_score($current_result['item_id'], $world);
 				}
 			}
