@@ -129,7 +129,7 @@ LOGS_DIR = "/server/logs/"
 
 #Should server print to logs
 PRINT_TO_LOG = { 
-"DEBUG":True,
+"DEBUG":False,
 "ERROR":True,
 "ACTION":False,
 }
