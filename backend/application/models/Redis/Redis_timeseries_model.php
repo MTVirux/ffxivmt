@@ -160,7 +160,7 @@ class Redis_timeseries_model extends MY_Redis_model{
                 unset($total_price);
             }
         }
-        //return $score;
+        return $this->Item_score->get($item_id);
     }
 
     //Calculate item score
