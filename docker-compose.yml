@@ -146,6 +146,7 @@ services:
     restart: "no"
     environment:
       - PMA_HOST=${MARIADB_CONTAINER_NAME}
+      - UPLOAD_LIMIT=300M
     ports:
       - ${PMA_HOST_PORT}:80
     depends_on:
