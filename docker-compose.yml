@@ -138,60 +138,6 @@ services:
         limits:
           memory: ${REDIS_MEMORY_LIMIT}
 
-  #ffmt_redis:
-  #  image: mtvirux/redis-stack-python3.10
-  #  build: 
-  #    context: .
-  #    dockerfile: ${REDIS_DOCKERFILE}
-  #  container_name: ${REDIS_CONTAINER_NAME}
-  #  restart: "always"
-  #  environment:
-#
-  #    - REDIS_CONFIG_FILE=${REDIS_CONFIG_FILE}
-  #    - REDIS_DATA_DIR=${REDIS_DATA_DIR}
-  #    - REDIS_SERVER_LOGS_DIR=${REDIS_SERVER_LOGS_DIR}
-#
-  #    - REDIS_SERVER_RESTART_DELAY=${REDIS_SERVER_RESTART_DELAY}
-  #    - REDIS_MEMORY_CLEANER_RESTART_DELAY=${REDIS_MEMORY_CLEANER_RESTART_DELAY}
-#
-  #    - REDIS_MEMORY_CLEANER_INTERVAL=${REDIS_MEMORY_CLEANER_INTERVAL}
-  #    - REDIS_MEMORY_CLEANER_TRIGGER_TYPE=${REDIS_MEMORY_CLEANER_TRIGGER_TYPE}
-#
-  #    - REDIS_MEMORY_CLEANER_THRESHOLD_PERCENTAGE=${REDIS_MEMORY_CLEANER_THRESHOLD_PERCENTAGE}
-  #    - REDIS_MEMORY_CLEANER_THRESHOLD_SIZE=${REDIS_MEMORY_CLEANER_THRESHOLD_SIZE}
-#
-  #    - REDIS_INDEX_DB=${REDIS_INDEX_DB}
-  #    - REDIS_SALES_DB=${REDIS_SALES_DB}
-  #    - REDIS_TIMESERIES_DB=${REDIS_TIMESERIES_DB}
-#
-  #    - REDIS_STATUS_UPDATER_INTERVAL=${REDIS_STATUS_UPDATER_INTERVAL}
-#
-  #    - REDIS_CPU_LOG_FILE=${REDIS_CPU_LOG_FILE}
-  #    - REDIS_STATS_LOG_FILE=${REDIS_STATS_LOG_FILE}
-#
-  #    - BACKEND_HOST=${BACKEND_CONTAINER_NAME}
-#
-  #    - REDISTIMESERIES_ARGS=${REDISTIMESERIES_ARGS}
-#
-  #  ports:
-  #    - "${REDIS_HOST_PORT}:6379"
-  #    - "${REDISINSIGHT_HOST_PORT}:8001"
-  #    
-  #  volumes:
-  #    - ./docker/redis/usr/local/etc/redis:/usr/local/etc/redis
-  #    - ./docker/redis/usr/local/bin:/usr/local/bin
-  #    - ./docker/redis/server:/server
-  #    - ./docker/redis/monitor_server.sh:/monitor_server.sh
-  #    #- ./docker/redis/server/redis-config/redis-stack.conf:/redis-stack.conf
-  #    - ./docker/redis/server/redis-config/redis-custom-stack.conf:/redis-stack.conf
-  #    - ./docker/redis/data/:/data
-  #  networks:
-  #    - ffmt_internal
-  #  deploy:
-  #    resources:
-  #      limits:
-  #        memory: ${REDIS_MEMORY_LIMIT}
-
 # DATABASE MANAGEMENT
   ffmt_pma:
     image: "phpmyadmin/phpmyadmin"
