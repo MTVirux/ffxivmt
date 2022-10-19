@@ -126,4 +126,13 @@ class Test extends CI_Controller {
 
 		return;
 	}
+
+	public function force_update($item_id){
+		if(empty($item_id)){
+			echo "No item_id provided";
+			return;
+		}
+
+		pretty_dump($this->Redis_ts->calc_item_score($item_id));
+	}
 }
