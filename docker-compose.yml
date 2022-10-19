@@ -86,6 +86,7 @@ services:
       - ffmt_internal
 
   ffmt_redis:
+    image: mtvirux/redis-stack-python:R702rc3-p3.10.5
     build: 
       context: .
       dockerfile: ${REDIS_DOCKERFILE}
