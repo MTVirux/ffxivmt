@@ -23,6 +23,7 @@ class Test extends CI_Controller {
 			echo "No world name provided";
 			return;
 		}
+		logger("PYTHON_UPDATE", "item_id: ".$_POST['item_id']." world_name: ".$_POST['world_name']);
 
 		$item_id = $_POST['item_id'];
 		$world = $_POST['world_name'];
