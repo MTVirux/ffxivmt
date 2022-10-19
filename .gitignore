@@ -5,8 +5,6 @@ docker/redis/server/logs/error/*.log
 docker/redis/server/logs/status/*.status
 docker/redis/server/logs/system/*.log
 docker/redis/server/nohup.out
-docker/redis/server/persistent_data/*.aof
-docker/redis/server/persistent_data/*.rdb
 docker/redis/server/redis-monitor-server/__pycache__/*
 docker/portainer/
 docker/vue_app/node_modules/*
@@ -16,5 +14,6 @@ docker/react_app/node_modules/*
 *.db
 *.rdb
 *.aof
+*.aof.manifest
 *.log
 *.status
