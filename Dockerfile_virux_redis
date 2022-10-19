@@ -4,27 +4,9 @@
 #
 
 # Pull base image.
-FROM mtvirux/redis-stack-python3.10
-
-RUN cp /Python-3.10.5/python /usr/local/bin/
-
-RUN pip3.10 install prettytable requests
-
-RUN apt-get -y install bc sysstat netcat
+FROM mtvirux/redis-stack-python:R702rc3-p3.10.5
 
 COPY ./docker/redis/ /
-
-RUN chmod +x /entrypoint.sh
-
-RUN chmod +x /usr/local/bin/startup.sh
-RUN chmod +x /usr/local/bin/redis_memory_cleaner.sh
-
-RUN chmod +x /server/workers/mem_monitor.sh
-RUN chmod +x /server/workers/run_server.sh
-RUN chmod +x /server/workers/redis_monitor.sh
-RUN chmod +x /server/workers/status_updater.sh
-
-RUN chmod +x /monitor_server.sh
 
 WORKDIR /server
 
