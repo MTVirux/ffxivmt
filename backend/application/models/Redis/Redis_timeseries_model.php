@@ -1,6 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-require APPPATH.'core/MY_Redis_Model.php';
+include_once APPPATH.'core/MY_Redis_Model.php';
 
 
 class Redis_timeseries_model extends MY_Redis_model{
@@ -197,7 +197,7 @@ class Redis_timeseries_model extends MY_Redis_model{
         $this->redis->select(1);
         $keys = $this->redis->keys('*');
         $total_keys = count($keys);
-        $transposed_key_count = 1;
+        $transposed_key_count = 0;
         //pretty_dump($keys);
         echo 'Transposing...';
 

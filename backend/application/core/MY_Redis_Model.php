@@ -1,6 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-require APPPATH.'vendor/predis/predis/autoload.php';
+include_once APPPATH.'vendor/predis/predis/autoload.php';
 
 class MY_Redis_Model extends CI_Model{
 

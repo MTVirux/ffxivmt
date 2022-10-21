@@ -1,9 +1,9 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-require APPPATH.'core/MY_Redis_Model.php';
+include_once APPPATH.'core/MY_Redis_Model.php';
 
 
-class Redis_sales_model extends MY_Redis_model{
+class Redis_sales_model extends MY_Redis_Model{
     
     function __construct() {
         parent::__construct();
@@ -37,5 +37,51 @@ class Redis_sales_model extends MY_Redis_model{
         }
         pretty_dump("Results:");
         pretty_dump($results);
+    }
+
+    public function get_sales_entries(){
+
+        $keys = $this->redis->keys('Spriggan_*');
+        $from_time = time() - (60 * 60 * 24);
+        $to_time = time();
+        $final = [];
+
+        foreach($keys as $key){
+            
+            $results = json_decode($this->redis->executeRaw(['JSON.GET', $key]));
+            foreach($results as $result){
+                if($result->timestamp > $from_time && $result->timestamp < $to_time){
+                    if(!array_key_exists($key, $final)){
+                        $final[$key] = 0;
+                    }
+                        $final[$key] = $final[$key] + 1;    
+                }
+            }
+
+        }
+        pretty_dump($final);
+    }
+
+    public function get_sales_volumes(){
+
+        $keys = $this->redis->keys('Spriggan_*');
+        $from_time = time() - (60 * 60 * 24);
+        $to_time = time();
+        $final = [];
+
+        foreach($keys as $key){
+            
+            $results = json_decode($this->redis->executeRaw(['JSON.GET', $key]));
+            foreach($results as $result){
+                    if(!array_key_exists($key, $final)){
+                        $final[$key] = 0;
+                    }
+                    
+                    $final[$key] = $final[$key] + $result->quantity;    
+            }
+        }
+
+    pretty_dump($final);
+
     }
 }

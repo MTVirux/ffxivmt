@@ -25,4 +25,16 @@ class Test2 extends CI_Controller {
 		$buyer_name = str_replace('_', ' ', $buyer_name);
 		$this->Redis_sales->search_buyer($buyer_name);
 	}
+
+	public function get_sales_entries(){
+		$this->Redis_sales->get_sales_entries();
+	}
+
+	public function get_sales_volume(){
+		$this->Redis_sales->get_sales_volume();
+	}
+
+	public function get_sales_volumes(){
+		$this->Redis_sales->get_sales_volumes();
+	}
 }
