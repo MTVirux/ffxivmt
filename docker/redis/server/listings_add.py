@@ -1,8 +1,11 @@
 from array import array
 from base64 import decode
 from importlib.resources import path
+from json import encoder
 from posixpath import split
 import string
+from types import NoneType
+from uuid import uuid4
 import websocket
 import bson
 import json
@@ -11,10 +14,11 @@ import database
 import time
 from redis.commands.json.path import Path
 import log
-
+import external
+import pprint
 
 ###########################
-#    ENTRY MANIPULATION   #
+#   ENTRY FUNCTIONS   #
 ###########################
 
 def add_entry(hash, field, new_entry):
@@ -24,127 +28,107 @@ def add_entry(hash, field, new_entry):
     else:
         log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET} Could not add " + hash + " to db")
 
-def update_entry(hash, field, updated_entry):
-    if(database.DB_LISTINGS.json().set(hash, Path.root_path(), updated_entry) == 1):
-        log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Added listing " + field + " to " + hash)
+def remove_entry(hash):
+    if(database.DB_LISTINGS.json().delete(hash) == 1):
+        log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_DEL}Deleted listings for key " + hash)
+        return
     else:
-        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_DEL} Could not delete " + hash + " from db")
 
 ###########################
-#      RECORD LOGGING     #
-###########################     
+#   WEBSOCKET FUNCTIONS   #
+###########################
+def on_message(ws_listings_add, message):
+    #prepare vars
+    decoded_message = (bson.decode(message))
+    world = str(decoded_message['world'])
+    item = str(decoded_message['item'])
+    world_name = str(config.WORLDS[int(world)]["name"])
 
-def update_recent(hash, field):
-    list_entry = hash + "/" + field
-
-
-    # UPDATE WORLD RECENT LIST
-    list_name = "recent_" + hash.split("_")[0]
-    if (int(database.DB_LISTINGS.lpush(list_name, list_entry)) > 0):
-        if(int(database.DB_LISTINGS.ltrim(list_name, 0, 1000)) > 0):
-            log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to listings " + list_name)
-        else:
-            log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not trim listings " + list_name)
-    else:
-        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not add " + list_entry + " to listings" + list_name)
-
-    # UPDATE DATACENTER RECENT LISTINGS LIST
+    #Set hash and listings
+    hash = str(world_name + "_" + item)
+    listings = (json.loads(json.dumps(decoded_message['listings'])))
 
 
-    # UPDATE REGION RECENT LISTINGS LIST
+    if(database.DB_LISTINGS.json().get(hash) != None):
+        remove_entry(hash)
 
-    # UPDATE GLOBAL RECENT LISTINGS LIST
-    list_name = "recent_listings"
-    if(int(database.DB_LISTINGS.lpush(list_name, list_entry)) > 0):
-        if(int(database.DB_LISTINGS.ltrim(list_name, 0, 1000)) > 0):
-            log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Added " + list_entry + " to listings " + list_name)
-        else:
-            log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not trim listings " + list_name)
-    else:
-        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{LPUSH} Could not add listings " + list_entry + " to " + list_name)
+    for listing in listings:
+        listing['worldID'] = world
+        listing['worldName'] = world_name
+        handle_add_listing(hash, listing)
+
+
+
+def subscribe(ws_listings_add):
+    world_ids_to_use = []
+
+    for world in config.WORLDS:
+        for world_to_use in config.WORLDS_TO_USE:
+            if(config.WORLDS[world]["name"] == config.WORLDS_TO_USE[world_to_use]):
+                world_ids_to_use.append(world)
+
+    for world in config.WORLDS:
+        for dc_to_use in config.DCS_TO_USE:
+            if(config.WORLDS[world]["datacenter"] == config.DCS_TO_USE[dc_to_use]):
+                world_ids_to_use.append(world)
+
+    for world in config.WORLDS:
+        for region_to_use in config.REGIONS_TO_USE:
+            if(config.WORLDS[world]["region"] == config.REGIONS_TO_USE[region_to_use]):
+                world_ids_to_use.append(world)
+
+    for world_id in world_ids_to_use:
+        world_subscribe(ws_listings_add, config.WORLDS[world_id]["name"], str(world_id))
+
+
+def world_subscribe(ws_listings_add, world_name, world_id):
+    ws_listings_add.send(bson.encode({"event": "subscribe", "channel": "listings/add{world=" + str(world_id)+"}"}))
+    log.debug("Subscribed to listings/add on world " + world_name)
+
+
+
+def start_listing_add():
+    ws_listings_add = websocket.WebSocketApp(
+        config.UNIVERSALLIS_URL, on_open=subscribe, on_message=on_message)
+    ws_listings_add.run_forever()
 
 
 ###########################
 #       MAIN FUNCTION     #
 ###########################
 
-def handle_add_listing(hash, listing):
-    #Commit to db (1 = SUCESS, 0 = FAIL)
-    #hset(hash, field, value)
-    field = str(listing['listingID'])
-    world_name = str(hash.split('_')[0])
+def handle_add_listing(hash, value):
+
+    #Field is a string concat so we set it beforehand
+    field = str(value['retainerName']).replace(" ", "_") + "_" + uuid4().hex;
 
     listing_object = {
         field : {
-                'creatorID'         : str(listing['creatorID']),
-                'creatorName'       : str(listing['creatorName']),
-                'hq'                : bool(listing['hq']),
-                'isCrafted'         : bool(listing['isCrafted']),
-                'lastReviewTime'    : float(listing['lastReviewTime']),
-                'listingID'         : str(listing['listingID']),
-                'materia'           : (listing['materia']),
-                'onMannequin'       : bool(listing['onMannequin']),
-                'pricePerUnit'      : float(listing['pricePerUnit']),
-                'quantity'          : int(listing['quantity']),
-                'retainerCity'      : int(listing['retainerCity']),
-                'retainerID'        : str(listing['retainerID']),
-                'retainerName'      : str(listing['retainerName']),
-                'sellerID'          : str(listing['sellerID']),
-                'stainID'           : int(listing['stainID']),
-                'total'             : float(listing['total']),
-                'worldID'           : int(listing['worldID']),
-                'worldName'         : str(listing['worldName']),
+                    'creatorID':            str             (value['creatorID']),
+                    'creatorName':          str             (value['creatorName']),
+                    'hq':                   str             (value['hq']),
+                    'isCrafted':            bool            (value['isCrafted']),
+                    'lastReviewTime':       float           (value['lastReviewTime']),
+                    'listingID':            str             (value['listingID']),
+                    'materia':              json.dumps      (value['materia']),
+                    'onMannequin':          bool            (value['onMannequin']),
+                    'pricePerUnit':         float           (value['pricePerUnit']),
+                    'quantity':             int             (value['quantity']),
+                    'retainerCity':         int             (value['retainerCity']),
+                    'retainerID':           str             (value['retainerID']),
+                    'retainerName':         str             (value['retainerName']),
+                    'sellerID':             str             (value['sellerID']),
+                    'stainID':              int             (value['stainID']),
+                    'total':                float           (value['total']),
+                    'worldID':              int             (value['worldID']),
+                    'worldName':            str             (value['worldName']),
+                }
         }
-    }
 
-    
-    db_entry = database.DB_LISTINGS.json().get(hash)
-    if(db_entry is None):
-        add_entry(hash, field, listing_object)
-    else:
-        updated_entry = {}
-        updated_entry = db_entry
-        updated_entry.update(listing_object)
-        update_entry(hash, field, updated_entry)
-    
-    update_recent(hash, field)
+    #Add listing to redis
+
+    add_entry(hash, field, listing_object)
+
+    #return
     return
-
-
-def on_message(ws_listing_add, message):
-    decoded_message = (bson.decode(message))
-    world = str(decoded_message['world'])
-    item = str(decoded_message['item'])
-    world_name = str(config.WORLDS[int(world)])
-    hash = world_name+"_"+str(item)
-    listings = (json.loads(json.dumps(decoded_message['listings'])))
-
-    if(world == "None" or item == "None" or len(world) == 0 or len(item) == 0):
-        return
-    
-    for listing in listings:
-        if(listing['listingID'] in config.BANNED_LISTING_IDS):
-            continue
-        if listing['listingID'] is None:
-            continue
-        listing['worldID'] = world
-        listing['worldName'] = world_name
-        handle_add_listing(hash, listing)
-
-
-def subscribe(ws_listing_add):
-    for i in config.WORLDS_TO_USE:
-        for k in config.WORLDS_TO_USE[i]:
-            sub_list_value = config.WORLDS_TO_USE[i][k]
-            world_id = "{world=" + str(k) + "}"
-            log.action("listings/add" + world_id)
-            ws_listing_add.send(bson.encode({"event": "subscribe", "channel": "listings/add" + world_id}))
-            log.action("Sent subscribe event for listings/add on world " + sub_list_value + "(" + str(k) + ")")
-
-
-
-def start_listing_add():
-    ws_listing_add = websocket.WebSocketApp(
-        config.UNIVERSALLIS_URL, on_open=subscribe, on_message=on_message)
-    ws_listing_add.run_forever()
-

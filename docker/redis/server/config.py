@@ -144,7 +144,7 @@ LIMIT_LOGS = {
 
 #Should server print to console
 PRINT_TO_SCREEN = {
-"DEBUG":False,
+"DEBUG":True,
 "ERROR":True,
 "ACTION":False,
 }
@@ -166,7 +166,7 @@ REDIS_PORT = 6379
 #### REDIS DB INDEXES
 
 REDIS_SALES_DB = os.environ.get('REDIS_SALES_DB')
-#REDIS_LISTINGS_DB = os.environ.get('REDIS_LISTINGS_DB')
+REDIS_LISTINGS_DB = os.environ.get('REDIS_LISTINGS_DB')
 REDIS_RECENT_DB = os.environ.get('REDIS_RECENT_CLEANING_DB')
 REDIS_TIMESERIES_DB = os.environ.get('REDIS_TIMESERIES_DB')
 

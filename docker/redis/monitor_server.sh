@@ -3,7 +3,7 @@
 # watch files in /server/logs/status
 
 if [ -z "$1" ]; then
-    NUMBER_OF_ACTION_LINES=15
+    NUMBER_OF_ACTION_LINES=5
 else
     NUMBER_OF_ACTION_LINES=$1
 fi

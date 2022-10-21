@@ -11,6 +11,7 @@ import time
 from redis.commands.json.path import Path
 import log
 import external
+import pprint
 
 ###########################
 #    ENTRY MANIPULATION   #

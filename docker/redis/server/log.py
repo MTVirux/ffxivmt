@@ -15,8 +15,6 @@ def error(message = "None", print_stack = True):
     message = str(message)
 
     if(config.PRINT_TO_SCREEN['ERROR'] == True):
-        if(print_stack == True):
-            print (traceback.print_stack())
         print("[ERROR]["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))
 
 
@@ -67,12 +65,16 @@ def action(message = "None"):
 
 def debug(message = "None"):
     log_file = open(config.LOGS_DIR+"debug.log", "a")
+    caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
     if message is not None:
         log_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - " + str(message))
         log_file.write('\n')
 
         if(config.LIMIT_LOGS['DEBUG'] != 0):
             limit_log(config.LOGS_DIR+"debug.log", "DEBUG")
+
+        if(config.PRINT_TO_SCREEN['DEBUG'] == True):
+            print("[DEBUG]["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))    
 
         return
 

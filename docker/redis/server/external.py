@@ -10,7 +10,7 @@ def warn_backend_to_update_item(hash):
     item_id = hash.split("_")[1]
     req = requests.post("http://" + config.BACKEND_HOST_CONTAINER + "/test/python_update", data={"item_id": item_id, "world_name": world_name})
     if(req.status_code == 200):
-        log.debug("Backend updated item " + hash)
+        log.action("Backend updated item " + hash)
     else:
         log.error("Backend could not update item " + hash)
 
