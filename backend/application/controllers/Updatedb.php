@@ -32,8 +32,10 @@ class Updatedb extends CI_Controller {
 
 		echo 'last_item_id: ' . $last_item_id . '<br>';
 		$i = 0;
+		$start_from = 0;
+		$entries_to_ignore = [];
 		foreach($csv as $item){
-			if($i <= $last_item_id){
+			if($i <= $last_item_id && $i >= $start_from && !in_array($i, $entries_to_ignore)){
 				$organized_item = array(
 					"id" => $item[0],
 					"name" => $item[10],
