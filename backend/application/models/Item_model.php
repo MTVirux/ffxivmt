@@ -63,9 +63,9 @@ class Item_model extends CI_Model {
 	public function update($item)
 	{
 		if(strpos(gettype($item),'array') !== false){
-			pretty_dump($this->db->update('items', $item, array('id' => $item["id"])));
+			return ($this->db->update('items', $item, array('id' => $item["id"])));
 		}else{
-			pretty_dump($this->db->update('items', $item, array('id' => $item->id)));
+			return ($this->db->update('items', $item, array('id' => $item->id)));
 		}
 	}
 
