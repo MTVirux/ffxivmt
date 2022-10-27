@@ -121,7 +121,9 @@ class Test extends CI_Controller {
 
 			//add bootstrap
 			$data['data'] = $this->table->generate();
-			$this->load->view('basic_bootstrap', $data);
+			$data['raw_data'] = $results;
+			$data['world'] = $world;
+			$this->load->view('test/graph', $data);
 		}
 
 		return;
