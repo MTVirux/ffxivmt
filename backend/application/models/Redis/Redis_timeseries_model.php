@@ -206,10 +206,9 @@ class Redis_timeseries_model extends MY_Redis_model{
             $key_result = json_decode($this->redis->executeRaw(['JSON.GET', $key]));
             $this->redis->select(2);
             foreach($key_result as $result){
-                logger('DEBUG', '['.$transposed_key_count.' / '.$total_keys.'] Transposing ['.$key.'] -> '.$result->timestamp.' -> '.$result->total);
                 $this->redis->select(2);
                 if($this->redis->executeRaw(['TS.ADD', $key, intval($result->timestamp), floatval($result->total)])){
-                    logger('DEBUG', '['.$transposed_key_count.' / '.$total_keys.'] Transposed ['.$key.'] -> '.$result->timestamp.' -> '.$result->total . ' Successfully');
+                    logger('TRANSPOSE_SALES_TO_TS', '['.$transposed_key_count.' / '.$total_keys.'] Transposed ['.$key.'] -> '.$result->timestamp.' -> '.$result->total . ' Successfully');
                 }else{
                     logger('ERROR', 'Failed to Transpose ['.$key.'] -> '.$result->timestamp.' -> '.$result->total);
                     pretty_dump('Failed to Transpose ['.$key.'] -> '.$result->timestamp.' -> '.$result->total);die();
