@@ -97,7 +97,6 @@ def on_message(ws_sales_add, message):
     #Set hash and sales
     hash = str(world_name + "_" + item)
     sales = (json.loads(json.dumps(decoded_message['sales'])))
-    external.warn_backend_to_update_item(hash)
 
     for sale in sales:
         if (sale['buyerName'] in config.BANNED_SALE_BUYERS):
@@ -106,6 +105,9 @@ def on_message(ws_sales_add, message):
         sale['worldName'] = world_name
         handle_add_sale(hash, sale)
         update_timeseries(item, sale)
+    
+    external.warn_backend_to_update_item(hash)
+    return
 
 
 def subscribe(ws_sales_add):
