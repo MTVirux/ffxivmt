@@ -41,7 +41,7 @@ class Item_model extends CI_Model {
 
 	public function add($item)
 	{
-		$this->db->insert('items',$item);
+		return $this->db->insert('items',$item);
 	}
 
 	public function remove($id = null)
