@@ -12,6 +12,8 @@ class Item_model extends CI_Model {
 			`id` int(11) NOT NULL,
 			`name` varchar(1024) NOT NULL,
 			`description` varchar(2048) DEFAULT NULL,
+			`craftingRecipe` longtext DEFAULT NULL,
+			`craftingComplexity` longtext DEFAULT NULL,
 			`canBeHQ` tinyint(4) DEFAULT NULL,
 			`alwaysCollectible` varchar(45) DEFAULT NULL,
 			`stackSize` float DEFAULT NULL,
