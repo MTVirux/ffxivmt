@@ -56,7 +56,16 @@ class Updatedb extends CI_Controller {
 					"materiaSlotCount" => $item[87],
 					"advancedMelding" => $item[88]
 				);
-					$this->Items->add($organized_item);
+
+				if(!isset($organized_item['name'])){
+					var_dump("Culprit: " . $organized_item['id']);
+					pretty_dump($item);
+					die();
+				}
+				
+				if($this->Items->add($organized_item)){
+					logger("ITEM_DB_ENTRY", "item_id: " . $organized_item["id"]);
+				}
 			}
 			$i = $i +1;
 		}
