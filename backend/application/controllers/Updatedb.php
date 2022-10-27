@@ -82,8 +82,7 @@ class Updatedb extends CI_Controller {
 
 		$all_ids = $this->Items->get_all_ids();
 		$ids_to_request = array();
-		$actually_updated_items = array();
-
+		
 		foreach($all_ids as $id){
 			$ids_to_request[] = $id->id;
 			if(count($ids_to_request) == 100 || $id->id == 39000){
@@ -100,12 +99,11 @@ class Updatedb extends CI_Controller {
 						};
 						$current_item->craftingComplexity = json_encode($craftingComplexity);
 						$new_item = $this->Items->update($current_item);
-						$actually_updated_items[] = array("id" => $new_item["id"], "craft" => $new_item["craftingRecipe"], "complexity" => $new_item["craftingComplexity"]);
+						logger("ITEM_CRAFTING_UPDATE", "item_id: " . $item["id"]);
 					}
 				}
 			}
 		}
-		pretty_dump($actually_updated_items);
 	}
 
 	function get_price($id){
