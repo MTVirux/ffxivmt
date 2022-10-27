@@ -7,9 +7,7 @@ class Updatedb extends CI_Controller {
 		parent::__construct();
 		$this->load->model('Item_model', 'Items');
 		$this->load->helper('url');
-		ini_set('max_execution_time', 3000);
-		ini_set('memory_limit','512M');
-
+		ini_set('max_execution_time', 9000);
 	}
 
 	public function no()
