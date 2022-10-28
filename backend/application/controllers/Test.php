@@ -11,18 +11,25 @@ class Test extends CI_Controller {
 
 	public function index()
 	{
-		$this->load->view("test/usage");
+
+		Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
+		Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
+		Header('Access-Control-Allow-Methods: GET'); //method allowed
+		echo json_encode('ok');
 	}
 
 	public function python_update(){
+		
 		if(empty($_POST['item_id']) || is_null($_POST['item_id'])){
 			echo "No item_id provided";
 			return;
 		}
+
 		if(empty($_POST['world_name']) || is_null($_POST['world_name'])){
 			echo "No world name provided";
 			return;
 		}
+
 		logger("PYTHON_UPDATE", "item_id: ".$_POST['item_id']." world_name: ".$_POST['world_name']);
 
 		$item_id = $_POST['item_id'];

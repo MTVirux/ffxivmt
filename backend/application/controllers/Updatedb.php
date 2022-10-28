@@ -76,6 +76,7 @@ class Updatedb extends CI_Controller {
 		echo 'DONE';
 
 		$this->update_craft_recipes_from_garland_db();
+		$this->update_marketability_from_universalis();
 	}
 
 	public function update_craft_recipes_from_garland_db(){
@@ -106,8 +107,11 @@ class Updatedb extends CI_Controller {
 		}
 	}
 
-	function get_price($id){
-		echo '';
+	function update_marketability_from_universalis(){
+		$json = file_get_contents('https://universalis.app/api/v2/marketable');
+		$json_decoded = json_decode($json, true);
+		pretty_dump($json_decoded);
+
 	}
 
 	function echo_headers($meta_headers, $columns, $data_type){
