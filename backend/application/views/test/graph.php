@@ -10,7 +10,7 @@
     <body>
         <div>
             <h1>24h Top Gil Flux [<?=$world?>] [<?=date('Y-m-d H:i:s', time() - 24*60*60) . ' ~ '.date('Y-m-d H:i:s', time())?>]</h1>
-            <canvas id="myChart"></canvas>
+            <canvas id="myChart" style="max-height:90vh;max-width:90vw;"></canvas>
             <?php
                 $names = [];
                 for($i = 0 ; $i < 10; $i++){
