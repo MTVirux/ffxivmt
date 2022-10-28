@@ -80,6 +80,7 @@ services:
     volumes:
       - ./docker/mariadb:/etc/mysql/conf.d
       - ffmt_mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/usr/local/bin:/usr/local/bin
     ports:
       - ${MARIADB_HOST_PORT}:3306
     networks:
