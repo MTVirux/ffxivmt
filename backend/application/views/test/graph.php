@@ -21,6 +21,7 @@
                 $datasets =  implode(",", $values) . PHP_EOL;
             ?>
         </div>
+        <?php echo $data?>
     </body>
 </html>
 
