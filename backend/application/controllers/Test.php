@@ -120,7 +120,29 @@ class Test extends CI_Controller {
 		$results = $updated_results;
 
 		if(!empty($results) && !is_null($results) && count($results) > 0){
-			$this->table->set_heading(array_keys((array)$results[0]));
+
+			//Add Universalis Link
+			foreach($results as &$row){
+				$row["Universalis Link"] = "<a target='_blank' href='https://universalis.app/market/". $row["item_id"]. "'>Link</a>";
+			}
+			
+			
+			//Change Headers to Readable Format
+			$headers_to_change = [
+				"name" => "Name",
+				"item_id" => "Item ID",
+				"updated_at" => "Updated At",
+				"latest_sale" => "Most Recent Sale",
+			];
+
+			$encoded_results = json_encode($results);
+
+			foreach($headers_to_change as $key => $value){
+				$encoded_results = str_replace($key, $value, $encoded_results);
+			}
+			$human_results = json_decode($encoded_results);
+
+			$this->table->set_heading(array_keys((array)$human_results[0]));
 			$this->table->set_template(array('table_open' => '<table class="table table-striped table-bordered table-hover">'));
 			foreach($results as $row){
 				$this->table->add_row(array_values((array)$row));
