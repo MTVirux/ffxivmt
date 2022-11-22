@@ -26,3 +26,4 @@ $config['redis_timeout'] = 0;
 $config['redis_index_db'] = 0;
 $config['redis_sales_db'] = 1;
 $config['redis_timeseries_db'] = 2;
+$config['redis_listings_db'] = 3;
