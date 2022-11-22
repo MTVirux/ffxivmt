@@ -89,7 +89,7 @@ $autoload['drivers'] = array();
 |
 |	$autoload['helper'] = array('url', 'file');
 */
-$autoload['helper'] = array('jojo_helper');
+$autoload['helper'] = array('jojo_helper', 'garland_helper', 'universalis_helper');
 
 /*
 | -------------------------------------------------------------------
