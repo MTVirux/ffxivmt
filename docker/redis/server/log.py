@@ -38,9 +38,13 @@ def error(message = "None", print_stack = True):
 #########################################
 
 
-def action(message = "None"):
+def action(message = "None", custom_log_channel = ""):
 
-    caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
+    if(custom_log_channel == ""):
+        caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
+    else:
+        caller_filename = custom_log_channel
+
     log_filename = config.LOGS_DIR+"action/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     message = str(message)
 
