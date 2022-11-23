@@ -9,7 +9,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3" crossorigin="anonymous"></script>
   <title>Chart</title>
 </head>
-    <body style="overflow-y:hidden">
+    <body style="overflow-x:hidden">
       <div id="page-title" class="row" style="text-align:center; margin-top:3vh;margin-bottom:3vh;">
         <h1 class="auto">24h Top Gil Flux [<?=$world?>] [<?=date('Y-m-d H:i:s', time() - 24*60*60) . ' ~ '.date('Y-m-d H:i:s', time())?>]</h1>
       </div>
@@ -46,7 +46,9 @@
             </h2>
             <div id="TableTab" class="accordion-collapse collapse show" aria-labelledby="headingTwo">
               <div class="accordion-body">
-                <?php echo $data?>
+                <div class="container-fluid flex" style="max-height:70vh;overflow:hidden; overflow-y:scroll">
+                    <?php echo $data?>
+                </div>
               </div>
             </div>
           </div>
