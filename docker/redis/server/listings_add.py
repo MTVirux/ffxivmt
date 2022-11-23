@@ -16,6 +16,7 @@ from redis.commands.json.path import Path
 import log
 import external
 import pprint
+import listings_remove
 
 ###########################
 #   ENTRY FUNCTIONS   #
@@ -51,7 +52,7 @@ def on_message(ws_listings_add, message):
 
 
     if(database.DB_LISTINGS.json().get(hash) != None):
-        remove_entry(hash)
+        listings_remove.remove_entry(hash)
 
     for listing in listings:
         listing['worldID'] = world
