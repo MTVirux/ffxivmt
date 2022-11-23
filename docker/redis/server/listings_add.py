@@ -29,12 +29,11 @@ def add_entry(hash, field, new_entry):
     else:
         log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET} Could not add " + hash + " to db")
 
-def remove_entry(hash):
-    if(database.DB_LISTINGS.json().delete(hash) == 1):
-        log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_DEL}Deleted listings for key " + hash)
-        return
+def update_entry(hash, field, updated_entry):
+    if(database.DB_LISTINGS.json().set(hash, Path.root_path(), updated_entry) == 1):
+        log.action("{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Added listing " + field + " to " + hash)
     else:
-        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_DEL} Could not delete " + hash + " from db")
+        log.error("[ERROR]{"+ str(config.REDIS_LISTINGS_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
 
 ###########################
 #   WEBSOCKET FUNCTIONS   #
@@ -129,7 +128,15 @@ def handle_add_listing(hash, value):
 
     #Add listing to redis
 
-    add_entry(hash, field, listing_object)
+    #hset(hash, field, value)
+    db_entry = database.DB_LISTINGS.json().get(hash)
+    
+    if(db_entry is None):
+        add_entry_result = add_entry(hash, field, listing_object)
+    else:
+        updated_entry = db_entry
+        updated_entry.update(listing_object)
+        update_entry(hash, field, updated_entry)
 
     #return
     return
