@@ -103,7 +103,7 @@ $autoload['helper'] = array('jojo_helper', 'garland_helper', 'universalis_helper
 | config files.  Otherwise, leave it blank.
 |
 */
-$autoload['config'] = array('redis', 'worlds', 'scoring', 'logs');
+$autoload['config'] = array('redis', 'worlds', 'scoring', 'logs', 'navbar');
 
 /*
 | -------------------------------------------------------------------
