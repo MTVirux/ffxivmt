@@ -34,7 +34,7 @@
         <div class="container">
             <div class="row"><br></div>
             <div class="row">
-                <?php $this->load->view('search')?>
+                <?php $this->load_view_template('search')?>
             </div>
 
             <div class="row"><br></div>
@@ -48,7 +48,7 @@
                     </h2>
                     <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
                         <div class="accordion-body">
-                            <?php $this->load->view('item_info_table', true)?>
+                            <?php $this->load_view_template('item_info_table', true)?>
                         </div>
                     </div>
                 </div>
