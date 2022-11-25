@@ -167,7 +167,7 @@ class Test extends MY_Controller {
 		pretty_dump($this->Redis_ts->calc_item_score($item_id));
 	}
 
-	public function item_product_profit($item_name = null, $world_or_dc = "Chaos"){
+	public function item_product_profit_calculator($item_name = null, $world_or_dc = "Chaos"){
 
 		$item_name = str_replace("_", " ", $item_name);
 		$item_name = str_replace("-", "'", $item_name);
