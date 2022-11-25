@@ -2,7 +2,7 @@
 
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Redis_funcs extends CI_Controller{
+class Redis_funcs extends MY_Controller{
 
     public function __construct(){
         parent::__construct();

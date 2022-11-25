@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Worlds extends CI_Controller {
+class Worlds extends MY_Controller {
 
 
     public function __construct(){
