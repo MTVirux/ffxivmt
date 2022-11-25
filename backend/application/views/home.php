@@ -11,4 +11,4 @@
     Calculations are made based on lowest price on the market board on your region and Universalis Sale Velocity (USV) data.
     <br>    <br>
     <h1> Questions or Feedback </h1>
-    For any questions and/or feedback please contact me via Discord: <b>@Jojo#1337</b>
+    For any questions please contact me via Discord: @Jojo#1337
