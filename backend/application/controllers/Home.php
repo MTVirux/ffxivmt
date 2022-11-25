@@ -14,7 +14,7 @@ class Home extends MY_Controller {
 
 	public function index()
 	{
-		$this->load->view('search');
+		$this->load_view_template('home');
 
 	}
 
@@ -23,7 +23,7 @@ class Home extends MY_Controller {
 		$item->prices = $this->get_universallis_prices($item->id);
         $data['item'] = $item;
 		$data['retainer_array'] = $this->get_retainers();
-        $this->load->view('item_info', $data);
+        $this->load_view_template('item_info', $data);
     }
 
 

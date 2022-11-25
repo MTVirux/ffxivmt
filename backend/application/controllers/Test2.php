@@ -13,7 +13,7 @@ class Test2 extends MY_Controller {
 
 	public function index()
 	{
-		$this->load->view("test/usage");
+		$this->load_view_template("test/usage");
 	}
 	
 	public function search_buyer($buyer_name){

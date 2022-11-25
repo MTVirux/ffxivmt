@@ -12,7 +12,7 @@ class Redis_funcs extends MY_Controller{
     }
 
     public function index(){
-        $this->load->view("test/usage");
+        $this->load_view_template("test/usage");
     }
 
     /********************/
@@ -38,7 +38,7 @@ class Redis_funcs extends MY_Controller{
         $valid_scopes = ['key', 'item', 'world', 'all'];
 
         if(empty($scope) && empty($input) && empty($input2) && empty($_POST['scope']) && empty($_POST['input']) && empty($_POST['input2'])){
-            $this->load->view("redis/get_sales_volumes/usage");
+            $this->load_view_template("redis/get_sales_volumes/usage");
 
             return;
         }

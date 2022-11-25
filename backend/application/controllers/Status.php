@@ -24,7 +24,7 @@ class Status extends MY_Controller {
 
         pretty_dump($data);die();
         
-        //$this->load->view('status', $data);
+        //$this->load_view_template'status', $data);
         return true;
     }
 }

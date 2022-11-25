@@ -152,7 +152,7 @@ class Test extends MY_Controller {
 			$data['data'] = $this->table->generate();
 			$data['raw_data'] = $results;
 			$data['world'] = $world;
-			$this->load->view('test/graph', $data);
+			$this->load_view_template('test/graph', $data);
 		}
 
 		return;
@@ -226,9 +226,7 @@ class Test extends MY_Controller {
 			$data['data'] = $this->table->generate();
 			$data['raw_data'] = $mb_treated_data;
 			$data['world'] = $world_or_dc;
-			$this->load->view('test/graph2', $data);
+			$this->load_view_template('test/graph2', $data);
 		}
-		
-
 	}
 }
