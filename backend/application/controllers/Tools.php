@@ -9,13 +9,10 @@ class Tools extends MY_Controller {
 		$this->load->model('/Redis/Redis_timeseries_model', 'Redis_ts');		
 	}
 
-    public function item_product_profit_calculator($item_name = null, $world_or_dc = null){
+	/*      
+		public function item_product_profit_calculator($item_name = null, $world_or_dc = null){
 
-        if(is_null($item_name) || empty($item_name) && is_null($world_or_dc) || empty($world_or_dc)){
-            $data['message'] = "Please enter a search term...";
-			$this->load_view_template('tools/item_product_profit_calculator', $data);
-			return;
-        }
+
 
 
 		$item_name = str_replace("_", " ", $item_name);
@@ -77,7 +74,8 @@ class Tools extends MY_Controller {
 			$data['world'] = $world_or_dc;
 			load_view_template('test/graph2', $data);
 		}
-	}
+	} 
+	*/
 
 	public function get_data(){
 		$search_term = $_POST["search_term"];
