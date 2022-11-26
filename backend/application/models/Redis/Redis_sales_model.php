@@ -35,8 +35,7 @@ class Redis_sales_model extends MY_Redis_Model{
                 }
             }
         }
-        pretty_dump("Results:");
-        pretty_dump($results);
+        return $results;
     }
 
     public function get_sales_entries(){
