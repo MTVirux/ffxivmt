@@ -10,6 +10,9 @@ class Redis extends RestController {
 
     public function __construct() {
         parent::__construct();
+        Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
+        Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
+        Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
         $this->load->model('Redis/Redis_listings_model', 'Listings');
         //$this->load->library('redis');
     }
