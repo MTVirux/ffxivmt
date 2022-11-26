@@ -99,7 +99,7 @@
 
 
                 $.ajax({
-                    url: "<?php echo base_url('tools/get_data')?>",
+                    url: "<?php echo base_url('tools/item_product_profit_calculator')?>",
                     type: "POST",
                     data: {
                         search_term: search_term,
