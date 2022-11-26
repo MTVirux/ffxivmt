@@ -142,6 +142,7 @@ def start_sales_add():
     ws_sales_add = websocket.WebSocketApp(
         config.UNIVERSALLIS_URL, on_open=subscribe, on_message=on_message)
     ws_sales_add.run_forever()
+    log.error("sales_add died")
 
 
 ###########################
