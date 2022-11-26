@@ -6,6 +6,7 @@ import listings_remove
 import sales_add
 import log
 import database
+import time
 
 
 #/Item_world/-----//
@@ -56,8 +57,27 @@ def join_threads(threads):
         except Exception as thread_error:
             log.error("THREAD FAILED TO JOIN" + str(thread_error))
 
+def check_thread_alive(thr):
+    try:
+        thr.join(timeout=0.0)
+        return thr.is_alive()
+    except Exception as thread_error:
+        return False
+
+def keep_alive(threads):
+    while True:
+        for x in threads:
+            if(check_thread_alive(x) == False):
+                log.debug("THREAD_DIED " + str(x) + " HAS DIED")
+                threads.remove(x)
+                threads.append(threading.Thread(target=x))
+                log.debug("THREAD_RESTART " + str(x) + " HAS BEEN RESTARTED")
+        time.sleep(1)
+
 start_threads(threads)
 log.debug("ALL THREADS STARTED")
+
+keep_alive(threads);
 
 join_threads(threads)
 log.debug("ALL THREADS JOINED")
