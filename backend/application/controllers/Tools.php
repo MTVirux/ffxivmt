@@ -77,7 +77,14 @@ class Tools extends MY_Controller {
 	} 
 	*/
 
-	public function get_data(){
+	public function item_product_profit_calculator(){
+
+		if(is_null($_POST) || empty($_POST)){
+			$data['message'] = "Please enter a search term...";
+			$this->load_view_template('tools/item_product_profit_calculator', $data);
+			return;
+		}
+
 		$search_term = $_POST["search_term"];
 		if(is_null($search_term) || empty($search_term)){
 			unset($data);
