@@ -3,6 +3,8 @@ ENV=0;
 BAT_IN_SCRIPTS=0;
 SH_IN_SCRIPTS=0;
 
+chmod +x scripts/*.sh
+
 for file in ./scripts/*; do
     if [ -d "$file" ]; 
     then
