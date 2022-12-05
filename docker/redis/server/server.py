@@ -28,8 +28,8 @@ import time
 
 threads = []
 
-listing_add_thread              = threading.Thread(target=listings_add.start_listing_add);
-threads.append(listing_add_thread)
+#listing_add_thread              = threading.Thread(target=listings_add.start_listing_add);
+#threads.append(listing_add_thread)
 
 #listing_remove_thread           = threading.Thread(target=listings_remove.start_listings_remove);
 #threads.append(listing_remove_thread)
