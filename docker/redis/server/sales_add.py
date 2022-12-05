@@ -102,7 +102,7 @@ def on_message(ws_sales_add, message):
         sale['worldName'] = world_name
         sale['itemID'] = item_id
         handle_add_sale(hash, sale)
-        update_timeseries(item, sale)
+        update_timeseries(sale)
     
     external.warn_backend_to_update_item(hash)
     return
