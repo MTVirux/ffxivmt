@@ -8,11 +8,15 @@ def parse_redis_key(section):
     for i in section:
         total_keys += int(section[i])
     
-    keys_to_log = ["db0", "db1", "db2", "db3"];
+    keys_to_log = [ "db0", 
+                    "db1", 
+                    "db2",
+                    #"db3",
+                    ];
     keys_to_log_human = {"db0": "INDEX",
                          "db1": "SALES",
                          "db2": "TIMESERIES",
-                         "db3": "LISTINGS",
+                         #"db3": "LISTINGS",
                          };
 
 
