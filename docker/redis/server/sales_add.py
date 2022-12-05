@@ -88,11 +88,11 @@ def on_message(ws_sales_add, message):
     #prepare vars
     decoded_message = (bson.decode(message))
     world = str(decoded_message['world'])
-    item = str(decoded_message['item'])
+    item_id = str(decoded_message['item'])
     world_name = str(config.WORLDS[int(world)]["name"])
 
     #Set hash and sales
-    hash = str(world_name + "_" + item)
+    hash = str(world_name + "_" + item_id)
     sales = (json.loads(json.dumps(decoded_message['sales'])))
 
     for sale in sales:
@@ -100,6 +100,7 @@ def on_message(ws_sales_add, message):
             continue
         sale['worldID'] = world
         sale['worldName'] = world_name
+        sale['itemID'] = item_id
         handle_add_sale(hash, sale)
         update_timeseries(item, sale)
     
