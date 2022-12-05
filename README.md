@@ -1,13 +1,13 @@
-#ON PATCH FIXING:
+# ON PATCH FIXING:
 
 - Update `patch_constants.php` config
 - Nuke everything with nuke_all.sh script + clear_docker_cache.sh script
 - Run first_start.sh
 
-#CRONS TO SET:
+# CRONS TO SET:
 0 0 * * * scripts/cron/store_logs.sh
 
-#TODO:
+# TODO:
 - Fix composer not updating on ffmt_backend
 - Create API documentation
 - Create API key system
