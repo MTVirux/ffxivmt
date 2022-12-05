@@ -83,4 +83,63 @@ class Redis_sales_model extends MY_Redis_Model{
     pretty_dump($final);
 
     }
+
+    public function add_sale($sale){
+        $sales_array = [];
+        if(gettype($sale) == 'array'){
+            $sales_array = $sale;
+        }else{
+            $sales_array[] = $sale;
+        }
+
+        $fulfilled_updates = 0;
+
+        logger("REDIS_SALES", "Parsing sales array (".count($sales_array)." entries)");
+
+        foreach($sales_array as $sale_data){
+            $hash = $sale_data["worldName"] . "_" . $sale_data["itemID"];
+            $key = $sale_data["buyerName"] . "_" . $sale_data["timestamp"];;
+
+            $sale_data_to_insert = [
+                "buyerName" => $sale_data["buyerName"],
+                "hq" => $sale_data["hq"],
+                "onMannequin" => $sale_data["onMannequin"],
+                "quantity" => $sale_data["quantity"],
+                "timestamp" => $sale_data["timestamp"],
+                "total" => $sale_data["total"],
+                "worldID" => $sale_data["worldID"],
+                "worldName" => $sale_data["worldName"],
+                "itemID" => $sale_data["itemID"],
+            ];
+
+            //Get hash
+            $current_json = json_decode($this->redis->executeRaw(['JSON.GET', $hash]));
+            
+            //if current json is null, create new object
+            if($current_json == null){
+                $current_json = new stdClass();
+            }
+            
+            $current_json->$key = $sale_data_to_insert;
+
+            if($current_json == null){
+                $current_json = json_encode($sale_data_to_insert);
+            }
+            
+            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, $key, json_encode($sale_data_to_insert)]);
+
+            if(is_null($transaction_status)){
+                logger('REDIS_SALES', "Error inserting sale into redis: " . $transaction_status);
+            }else{
+
+                //Add to fulfilled updates
+                $fulfilled_updates = $fulfilled_updates + 1;
+                //Percentage of updated sales
+                $percentage_of_fulfilled_updates = round(($fulfilled_updates / count($sales_array)) * 100, 2);
+                logger('REDIS_SALES', "Updated sales for hash(". $fulfilled_updates . " / " . count($sales_array) . " - " . $percentage_of_fulfilled_updates . "%): " . $hash);
+
+            }
+        }
+        
+    }
 }
