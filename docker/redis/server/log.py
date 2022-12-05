@@ -68,17 +68,19 @@ def action(message = "None", custom_log_channel = ""):
 #########################################
 
 def debug(message = "None"):
-    log_file = open(config.LOGS_DIR+"debug.log", "a")
+    log_file_name = config.LOGS_DIR+"debug/" + "debug" + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
+
     if message is not None:
-        log_file.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - " + str(message))
+        log_file = open(log_file_name, "a");
+        log_file.write("["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))
         log_file.write('\n')
 
         if(config.LIMIT_LOGS['DEBUG'] != 0):
-            limit_log(config.LOGS_DIR+"debug.log", "DEBUG")
+            limit_log(log_file, "DEBUG")
 
         if(config.PRINT_TO_SCREEN['DEBUG'] == True):
-            print("[DEBUG]["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))    
+            print("[DEBUG][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))    
 
         return
 
