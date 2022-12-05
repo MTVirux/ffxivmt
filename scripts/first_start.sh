@@ -14,7 +14,7 @@ echo "Updating MariaDB items table..."
 docker exec -it ffmt_mariadb /bin/bash import_maria_db.sh
 
 echo "Updating MariaDB items table from CSV file..."
-curl -X POST mtvirux.app/updatedb/
+curl -X POST localhost/updatedb/
 
 echo "Delete pre-existing Redis data"
 rm /root/ffxiv-market-tools/docker/redis/server/persistent_data/*.rdb
