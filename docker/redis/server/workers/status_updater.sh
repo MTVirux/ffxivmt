@@ -39,7 +39,9 @@ LISTINGS_REMOVE_ERROR_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/error/$(ls ${REDIS_SERVE
 #PYTHON BACKEND LOG
 EXTERNAL_COM_LOG=${REDIS_SERVER_LOGS_DIR}/action/$(ls ${REDIS_SERVER_LOGS_DIR}/action -1|grep external|tail -n 1)
 
-SERVER_DEBUG_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/$(ls ${REDIS_SERVER_LOGS_DIR} -1|grep debug|tail -n 1)
+#DEBUG
+SERVER_DEBUG_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/debug/$(ls ${REDIS_SERVER_LOGS_DIR}/debug -1|grep debug|tail -n 1)
+
 MEMORY_CLEANER_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/system/$(ls ${REDIS_SERVER_LOGS_DIR}/system -1|grep redis_memory_cleaner|tail -n 1)
 CPU_LOG_FILE=${REDIS_SERVER_LOGS_DIR}/system/$(ls ${REDIS_SERVER_LOGS_DIR}/system -1|grep cpu|tail -n 1)
 
@@ -105,7 +107,11 @@ while true; do
 
     ITERATOR=0
     for file in ${DEBUG_FILES_TO_TRACK[@]}; do
+        echo "124" > /output.txt
+        echo $SERVER_DEBUG_LOG_FILE >> /output.txt
+        echo $DEBUG_FILES_TO_TRACK >> /output.txt
         if [ -f $file ]; then
+        echo $file >> /output.txt
             #get just the name of the file
             FILE_NAME=$(basename $file)
             #file name without extension
@@ -121,7 +127,7 @@ while true; do
             LAST_DEBUG_LINE=$(tail -n 1 $file)
             LAST_STATUS_LINE=$(tail -n 1 ${REDIS_SERVER_LOGS_DIR}/status/$STATUS_FILE_NAME)
             if [ ["$STATUS_FILE_NAME"]"$LAST_DEBUG_LINE" != "$LAST_STATUS_LINE" ]; then
-                tail -n $NUMBER_OF_DEBUG_LINES ${REDIS_SERVER_LOGS_DIR}/$FILE_NAME > $STATUS_FILE
+                tail -n $NUMBER_OF_DEBUG_LINES ${REDIS_SERVER_LOGS_DIR}/debug/$FILE_NAME > $STATUS_FILE
                 DEBUG_OUTPUT_ARRAY["$ITERATOR"]=$(tail -n $NUMBER_OF_DEBUG_LINES "$file")
             fi
             ITERATOR=$((ITERATOR+1))
