@@ -77,7 +77,7 @@ def keep_alive(threads):
 start_threads(threads)
 log.debug("ALL THREADS STARTED")
 
-keep_alive(threads);
+#keep_alive(threads);
 
 join_threads(threads)
 log.debug("ALL THREADS JOINED")
