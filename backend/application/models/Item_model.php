@@ -16,7 +16,7 @@ class Item_model extends CI_Model {
 			`craftingComplexity` longtext DEFAULT NULL,
 			`canBeHQ` tinyint(4) DEFAULT NULL,
 			`alwaysCollectible` varchar(45) DEFAULT NULL,
-			`stackSize` float DEFAULT NULL,
+			`stackSize` int(20) DEFAULT NULL,
 			`itemLevel` int(11) DEFAULT NULL,
 			`iconImage` int(11) DEFAULT NULL,
 			`rarity` int(11) DEFAULT NULL,
