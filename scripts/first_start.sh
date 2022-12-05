@@ -1,10 +1,11 @@
-echo "Spinning up PHP backend"
+
+echo "Spinning up PHP backend..."
 docker-compose up -d ffmt_backend
 
-echo "Spinning up MariaDB"
+echo "Spinning up MariaDB..."
 docker-compose up -d ffmt_mariadb
 
-echo "Spinning up PMA"
+echo "Spinning up PMA..."
 docker-compose up -d ffmt_pma
 
 echo "Updating MariaDB items table..."
