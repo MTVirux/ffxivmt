@@ -1,3 +1,5 @@
+echo "Creating external volumes..."
+docker volume create ffmt_mariadb_data
 
 echo "Spinning up PHP backend..."
 docker-compose up -d ffmt_backend
