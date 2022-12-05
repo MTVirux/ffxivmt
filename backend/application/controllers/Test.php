@@ -30,12 +30,11 @@ class Test extends MY_Controller {
 			return;
 		}
 
-		logger("PYTHON_UPDATE", "item_id: ".$_POST['item_id']." world_name: ".$_POST['world_name']);
+		logger("PYTHON_UPDATE", "item_id: ".$_POST['item_id']." world_name: ".$_POST['world_name'], "python_update");
 
 		$item_id = $_POST['item_id'];
 		$world = $_POST['world_name'];
 
-		//logger('PYTHON_UPDATE', "Python update for item " . $item_id . " on world " . $world, 'python_update');
 		$this->load->config('worlds');
 		$worlds_to_use = $this->worlds_to_use();
 
