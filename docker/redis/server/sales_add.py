@@ -31,16 +31,13 @@ def update_entry(hash, field, updated_entry):
     else:
         log.error("[ERROR]{"+ str(config.REDIS_SALES_DB) + "}{JSON_SET(UPDATE)} Could not update " + hash)
 
-def update_timeseries(item, field):
+def update_timeseries(field):
 
     world_id_int = int(field['worldID'])
     field["datacenter"] = config.WORLDS[world_id_int]["datacenter"]
     field["region"] = config.WORLDS[world_id_int]["region"]
     field["worldName"] = config.WORLDS[world_id_int]["name"]
-    world_hash = str(field['worldName'] + "_" + str(item))
-    dc_hash = str(field['datacenter']   + "_" + str(item))
-    region_hash = str(field['region']   + "_" + str(item))
-    global_hash = str("global")         + "_" + str(item)
+    world_hash = str(field['worldName'] + "_" + field['itemID'])
     timestamp = int(field['timestamp']);
     value = field['total']
     if(database.DB_TIMESERIES.ts().add(str(world_hash), str(timestamp), float(value)) == int(timestamp)):
