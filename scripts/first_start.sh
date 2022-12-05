@@ -26,7 +26,7 @@ echo "Spinning up Redis..."
 docker-compose up -d ffmt_redis
 
 #Wait until redis is up and done loading
-echo "Waiting for Redis to revup..."
+echo "Waiting for Redis to wake up..."
 while ! docker exec -it ffmt_redis redis-cli ping | grep -q 'PONG'; do
   sleep 1
 done
