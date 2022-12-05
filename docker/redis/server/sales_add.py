@@ -162,6 +162,7 @@ def handle_add_sale(hash, value):
             "total":            float(value['total']),
             "worldID":          int(value['worldID']),
             "worldName":        str(value['worldName']),
+            "itemID":           int(value['itemID']),
         }
     }
 
