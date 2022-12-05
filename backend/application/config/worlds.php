@@ -1,9 +1,9 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-$config['dcs_to_use'] = array('Chaos', 'Light');
+$config['regions_to_use'] = array("Europe");
+$config['dcs_to_use'] = array();
 $config['worlds_to_use'] = array();
-$config['regions_to_use'] = array();
 
 $config['ffxiv_worlds'] = array(
                                 "21"      =>array(  "name" => "Ravana",
