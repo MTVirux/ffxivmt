@@ -1,5 +1,7 @@
 echo "Creating external volumes..."
 docker volume create ffmt_mariadb_data
+##docker volume create ffmt_redis_data #UNUSED AT THE TIME OF MAKING
+##docker volume create ffmt_redisinsight_data #UNUSED AT THE TIME OF MAKING
 
 echo "Spinning up PHP backend..."
 docker-compose up -d ffmt_backend
