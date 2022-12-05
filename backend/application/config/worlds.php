@@ -43,8 +43,8 @@ $config['ffxiv_worlds'] = array(
                                                     "region"=>"REGION_NOT_SET"
                                                 ),
                                 "33"      =>array(  "name" => "Twintania",
-                                                    "datacenter" => "DC_NOT_SET",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "datacenter" => "Light",
+                                                    "region"=>"Europe"
                                                 ),
                                 "34"      =>array(  "name" => "Brynhildr",
                                                     "datacenter" => "DC_NOT_SET",
@@ -55,8 +55,8 @@ $config['ffxiv_worlds'] = array(
                                                     "region"=>"REGION_NOT_SET"
                                                 ),
                                 "36"      =>array(  "name" => "Lich",
-                                                    "datacenter" => "DC_NOT_SET",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "datacenter" => "Light",
+                                                    "region"=>"Europe"
                                                 ),
                                 "37"      =>array(  "name" => "Mateus",
                                                     "datacenter" => "DC_NOT_SET",
@@ -131,8 +131,8 @@ $config['ffxiv_worlds'] = array(
                                                     "region"=>"REGION_NOT_SET"
                                                 ),
                                 "56"      =>array(  "name" => "Phoenix",
-                                                    "datacenter" => "DC_NOT_SET",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "datacenter" => "Light",
+                                                    "region"=>"Europe"
                                                 ),
                                 "57"      =>array(  "name" => "Siren",
                                                     "datacenter" => "DC_NOT_SET",
@@ -171,12 +171,12 @@ $config['ffxiv_worlds'] = array(
                                                     "region"=>"REGION_NOT_SET"
                                                 ),
                                 "66"      =>array(  "name" => "Odin",
-                                                    "datacenter" => "DC_NOT_SET",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "datacenter" => "Light",
+                                                    "region"=>"Europe"
                                                 ),
                                 "67"      =>array(  "name" => "Shiva",
-                                                    "datacenter" => "DC_NOT_SET",
-                                                    "region"=>"REGION_NOT_SET"
+                                                    "datacenter" => "Light",
+                                                    "region"=>"Europe"
                                                 ),
                                 "68"      =>array(  "name" => "Atomos",
                                                     "datacenter" => "DC_NOT_SET",
