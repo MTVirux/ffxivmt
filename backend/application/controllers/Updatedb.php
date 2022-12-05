@@ -8,75 +8,115 @@ class Updatedb extends MY_Controller {
 		$this->load->model('Item_model', 'Items');
 		$this->load->helper('url');
 		ini_set('max_execution_time', 9000);
+		ini_set('memory_limit', '1024M');
 	}
 
-	public function no()
+
+	public function index(){
+		$this->update_items();
+		$this->update_craft_recipes_from_garland_db();
+	}
+
+	
+	public function update_items()
 	{
-		echo base_url('resources/item_dump.csv');
 
-		echo '<pre>'; 
-		echo 'Starting CSV parse...<br>';
-		$csv = array_map('str_getcsv', file(base_url('resources/item_dump.csv')));
+		$csv = $this->parse_csv();
 
-		$meta_headers = array_shift($csv);
-		$columns = array_shift($csv);
-		#$data_type = array_shift($csv);
-
+		logger("ITEM_DB", "Prepping DB for update: " . count($csv) . " items");
 		$this->Items->prep_for_update();
-		echo "Prepped for update<br>";
+		logger("ITEM_DB", "DB ready to recieve update");
 
-		echo '<table>';
-		 
-		//assign last index of $csv to last_item_id
-		$last_item_id = $csv[count($csv) - 1][0];
-
-		echo 'last_item_id: ' . $last_item_id . '<br>';
-		$i = 0;
-		$start_from = 0;
-		$entries_to_ignore = [];
 		foreach($csv as $item){
-			if($i <= $last_item_id && $i >= $start_from && !in_array($i, $entries_to_ignore)){
-				$organized_item = array(
-					"id" => $item[0],
-					"name" => $item[10],
-					"description" => $item[9],
-					"canBeHQ" => $item[28],
-					"alwaysCollectible" => $item[39],
-					"stackSize" => $item[21],
-					"itemLevel" => $item[12],
-					"iconImage" => $item[11],
-					"rarity" => $item[13],
-					"filterGroup" => $item[14],
-					"itemUICategory" => $item[16],
-					"itemSearchCategory" => $item[17],
-					"equipSlotCategory" => $item[18],
-					"unique" => $item[22],
-					"untradable" => $item[23],
-					"disposable" => $item[24],
-					"dyable" => $item[29],
-					"aetherialReductible" => $item[40],
-					"materiaSlotCount" => $item[87],
-					"advancedMelding" => $item[88]
-				);
 
-				if(!isset($organized_item['name'])){
-					var_dump("Culprit: " . $organized_item['id']);
-					pretty_dump($item);
-					die();
-				}
-				
-				if($this->Items->add($organized_item)){
-					logger("ITEM_DB_ENTRY", "item_id: " . $organized_item["id"]);
-				}
+			$organized_item = $item;
+
+			//pretty_dump($organized_item);die();
+
+			if(!isset($organized_item['name'])){
+				var_dump("Culprit: " . $organized_item['id']);
+				logger("ITEM_DB_UPDATE", "Culprit: " . $organized_item['id'], "error");
+				pretty_dump($item);
+				die();
 			}
-			$i = $i +1;
+			
+			if($this->Items->add($organized_item)){
+				logger("ITEM_DB_ENTRY", " updated entry for item: " . $organized_item["id"] . " - " . $organized_item["name"]);
+			}
 		}
 
-		echo '</table>';
-		echo 'DONE';
+		logger("ITEM_DB_ENTRY", "FINISHED UPDATING ITEM DB");
+	}
 
-		$this->update_craft_recipes_from_garland_db();
-		$this->update_marketability_from_universalis();
+	public function verify_item_entries_against_garland_db(){
+
+		//Get an array with numbers from 1 to 39000
+		$all_item_ids = range(0, 39000);
+
+		foreach($all_item_ids as $item_id){
+
+			if(in_array($item_id, $this->config->item('preapproved_item_ids'))){
+				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " - Preaproved");
+				continue;
+			}
+
+			$local_item_data = $this->Items->get($item_id);
+
+			//If local item data name includes Dated, then it's a dated item and we don't need to verify it
+			if(strpos($local_item_data->name, 'Dated') !== false){
+				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " because it's a dated item");
+				continue;
+			}
+			
+			//If local item data has no name, then it's an unused item slot and we don't need to verify it
+			if($local_item_data->name == ""){
+				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " because it's an unused item slot");
+				continue;
+			}
+
+			logger("ITEM_DB_VERIFICATION", "Verifying item: " . $item_id . " against Garland DB");
+			$garland_item_data = garland_db_get_items($item_id);
+
+			//Ignore items with no entry in Garland DB
+			if($garland_item_data === False && !empty($local_item_data->name)){
+				logger("ITEM_DB_VERIFICATION", "Item: " . $item_id . " has no entry in Garland DB. Skipping.");
+				logger("ITEM_DB_VERIFICATION", "Local was name " . $local_item_data->name);
+				logger("ITEM_DB_VERIFICATION", "DID LOCAL EXIST: " . !empty($local_item_data->name));
+				//pretty_dump($garland_item_data);
+				pretty_dump($local_item_data);
+				die();
+			}
+			
+
+			//Adjust garland item data
+			$garland_item_data["item"]["icon"] = str_replace("t/", "", $garland_item_data["item"]["icon"]);
+
+
+
+			if($garland_item_data["item"]["name"] != $local_item_data->name){
+				logger("[ERROR]ITEM_DB", "Name:" . $garland_item_data["item"]["name"] . " != " . $local_item_data["name"] . " for item id: " . $item_id);
+				pretty_dump($garland_item_data);
+				pretty_dump($local_item_data);
+				die();
+			}
+			//if($garland_item_data["item"]["description"] != $local_item_data->description){
+			//	logger("[ERROR]ITEM_DB", "Description:" . $garland_item_data["item"]["description"] . " != " . $local_item_data->description . " for item id: " . $item_id);
+			//	pretty_dump($garland_item_data);
+			//	pretty_dump($local_item_data);
+			//	die();
+			//}
+
+			if(intval($garland_item_data["item"]["icon"]) != intval($local_item_data->iconImage)){
+				logger("[ERROR]ITEM_DB", "Icon:" . $garland_item_data["item"]["icon"] . " != " . $local_item_data->iconImage . " for item id: " . $item_id);
+				pretty_dump($garland_item_data);
+				pretty_dump($local_item_data);
+				die();
+			}
+
+		}
+
+		logger("ITEM_DB_VERIFICATION", "Verification Sucessful");
+
 	}
 
 	public function update_craft_recipes_from_garland_db(){
@@ -107,32 +147,170 @@ class Updatedb extends MY_Controller {
 		}
 	}
 
-	function update_marketability_from_universalis(){
-		$json = file_get_contents('https://universalis.app/api/v2/marketable');
-		$json_decoded = json_decode($json, true);
-		pretty_dump($json_decoded);
+	public function update_sales_from_universalis(){
 
+		$this->load->model('Redis/Redis_sales_model', 'Redis_sales');
+
+		//Get marketable items from universalis
+		$marketable_items = array_reverse(universalis_get_marketable_item_ids());
+		sleep(0.05);
+		
+		//Split into chunks of 100
+		$chunks = array_chunk($marketable_items, 100);
+		
+		//Make each chunk a string separated by commas
+		$chunks = array_map(function($chunk){
+			return implode(',', $chunk);
+		}, $chunks);
+
+		$worlds_to_use = $this->config->item('worlds_to_use');
+		$regions_to_use = $this->config->item('regions_to_use');
+		$dcs_to_use = $this->config->item('dcs_to_use');
+
+		$total_count_requests = (count($chunks) * count($worlds_to_use)) + (count($chunks) * count($regions_to_use)) + (count($chunks) * count($dcs_to_use));
+		$count_requests = 0;
+
+		$total_sales_entries_fulfilled = 0;
+
+		foreach($chunks as $chunk){
+			//first and last id string
+			$first_id = explode(',', $chunk)[0];
+			$last_id = explode(',', $chunk)[count(explode(',', $chunk)) - 1];
+			$id_range = '[' . $first_id . '-' . $last_id . ']';
+			$consolidated_sales_data = array();
+
+
+			//Handle Region requests and consolidate data
+			foreach($regions_to_use as $region_to_use){
+				$sales_data = universalis_get_item_sales_data($chunk, $region_to_use);
+				$count_requests++;
+				
+				logger("UNIVERSALIS_API", "Parsing sales data for " . $id_range . " @ " . $region_to_use);
+				foreach($sales_data["items"] as $item_id => $item_entry){
+					foreach($item_entry["entries"] as $sale_entry){
+						$sale_entry["itemID"] = $item_id;
+						$sale_entry["total"] = $sale_entry["quantity"] * $sale_entry["pricePerUnit"];
+						$consolidated_sales_data[] = $sale_entry;
+					}
+				}
+				sleep(0.1);
+			}
+
+			//Handle Datacenter requests and consolidate sales data
+			foreach($dcs_to_use as $dc_to_use){
+				$sales_data = universalis_get_item_sales_data($chunk, $dc_to_use);
+				$count_requests++;
+				foreach($sales_data["items"] as $item_id => $item_entry){
+					foreach($item_entry["entries"] as $sale_entry){
+						
+						$sale_entry["itemID"] = $item_id;
+						$sale_entry["total"] = $sale_entry["quantity"] * $sale_entry["pricePerUnit"];
+						$consolidated_sales_data[] = $sale_entry;
+
+					}
+				}
+				sleep(0.1);
+			}
+
+			//Handle World Request and consolidate sales data
+			foreach($worlds_to_use as $world_to_use){
+				$sales_data = universalis_get_item_sales_data($chunk, $world_to_use);
+				$count_requests++;
+				foreach($sales_data["items"] as $item_id => $item_entry){
+
+					$worldID = $item_entry["worldID"];
+					$worldName = get_world_name($worldID, $this->config->item('ffxiv_worlds'));
+					foreach($item_entry["entries"] as $sale_entry){
+						$sale_entry["worldID"] = $worldID;
+						$sale_entry["worldName"] = $worldName;
+						$sale_entry["total"] = $sale_entry["quantity"] * $sale_entry["pricePerUnit"];
+						$sale_entry["itemID"] = $item_id;
+
+						$consolidated_sales_data[] = $sale_entry;
+					}
+				}
+				sleep(0.1);
+			}
+
+			$this->Redis_sales->add_sale($consolidated_sales_data);
+			logger("UNIVERSALIS_API", "Total fulfilled updated sales requests: " . $count_requests . "/" . $total_count_requests);
+			$total_sales_entries_fulfilled = $total_sales_entries_fulfilled + count($consolidated_sales_data);
+			logger("UNIVERSALIS_API", "Completed " . $count_requests . " of " . $total_count_requests . " requests  currently @ " . $total_sales_entries_fulfilled . " sales entries");
+			$consolidated_sales_data = array();
+		}
 	}
+	
 
-	function echo_headers($meta_headers, $columns, $data_type){
-		array_shift($meta_headers);
-		echo '<tr>';
-		foreach($meta_headers as $i){
-			echo '<td>'; echo $i; echo '</td>';
-		}
-		echo '</tr>';
-		echo '<tr>';
-		foreach($columns as $i){
-			echo '<td>'; echo $i; echo '</td>';
-		}
-		echo '</tr>';
-		echo '<tr>';
-		foreach($data_type as $i){
-			echo '<td>'; echo $i; echo '</td>';
-		}
-		echo '</tr>';
+	function parse_csv() {
+
+		// Set the file to be read
+		$file = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/Item.csv';
 		
+		// Open the file for reading
+		$file_handle = fopen($file, 'r');
 		
-		return;
+		// Set the delimiter to be a comma
+		$delimiter = ',';
+		
+		// Read the first line of the file, which contains the field names
+		$field_names = fgetcsv($file_handle, 0, $delimiter);
+		fgetcsv($file_handle, 0, $delimiter);
+		fgetcsv($file_handle, 0, $delimiter);
+		fgetcsv($file_handle, 0, $delimiter);
+		
+		$final_item_data = [];
+
+		// Loop through each line of the file
+		while (($line = fgetcsv($file_handle, 0, $delimiter)) !== false) {
+			// Create an array to store the data for this line
+			$item = array();
+		
+			// Loop through each field in this line
+			for ($i = 0; $i < 92; $i++) {
+				// Check if the field is a string, and if so, remove the double quotes from the beginning and end
+				if (is_string($line[$i])) {
+					$line[$i] = trim($line[$i], '"');
+				}
+		
+				// Add the data for this field to the item array, using the field name as the key
+				$item[$field_names[$i]] = $line[$i];
+			}
+		
+			// Fit the data for this item into the desired schema
+
+
+			$item_data = array(
+				"id" => 					intval(		$item[array_key_first($item)]	),
+				"name" => 								$item[10-1],
+				"description" => 						$item[9-1],
+				"canBeHQ" => 				boolval(	$item[28-1]						),
+				"alwaysCollectible" => 					$item[39-1],
+				"stackSize" => 				intval(		$item[21-1]						),
+				"itemLevel" => 				intval(		$item[12-1]						),
+				"iconImage" => 				intval(		$item[11-1]						),
+				"rarity" => 				boolval(	$item[13-1]						),
+				"filterGroup" => 			boolval(	$item[14-1]						),
+				"itemUICategory" => 		boolval(	$item[16-1]						),
+				"itemSearchCategory" => 	boolval(	$item[17-1]						),
+				"equipSlotCategory" => 		boolval(	$item[18-1]						),
+				"unique" => 				boolval(	$item[22-1]						),
+				"untradable" => 			boolval(	$item[23-1]						),
+				"disposable" => 			boolval(	$item[24-1]						),
+				"dyable" => 				boolval(	$item[29-1]						),
+				"aetherialReductible" =>	boolval(	$item[40-1]						),
+				"materiaSlotCount" => 		boolval(	$item[87-1]						),
+				"advancedMelding" => 		boolval(	$item[88-1]						),
+			);
+		
+			// Print the data for this item for debugging purposes
+
+			$final_item_data[] = $item_data;
+		}
+		
+		// Close the file
+		fclose($file_handle);
+
+		return $final_item_data;
+		
 	}
 }
