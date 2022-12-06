@@ -8,7 +8,6 @@
 0 0 * * * scripts/cron/store_logs.sh
 
 # TODO:
-- Fix composer not updating on ffmt_backend
 - Create API documentation
 - Create API key system
 - Create a container to manage crons(?)
