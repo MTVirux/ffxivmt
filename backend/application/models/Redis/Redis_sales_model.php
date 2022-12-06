@@ -126,7 +126,7 @@ class Redis_sales_model extends MY_Redis_Model{
                 $current_json = json_encode($sale_data_to_insert);
             }
             
-            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, $key, json_encode($sale_data_to_insert)]);
+            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, "$", json_encode($sale_data_to_insert)]);
 
             if(is_null($transaction_status)){
                 logger('REDIS_SALES', "Error inserting sale into redis: " . $transaction_status);
