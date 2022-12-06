@@ -171,6 +171,16 @@ services:
       - ffmt_internal
       - ffmt_external
 
+  ffmt_grafana:
+    image: grafana/grafana-oss
+    container_name: ffmt_grafana
+    restart: "no"
+    ports:
+      - 3000:3000
+    networks:
+      - ffmt_internal
+      - ffmt_external
+
 
   #ffmt_redisinsight:
   #  image: "redislabs/redisinsight:latest"
