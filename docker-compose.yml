@@ -171,15 +171,52 @@ services:
       - ffmt_internal
       - ffmt_external
 
-  ffmt_grafana:
-    image: grafana/grafana-oss
-    container_name: ffmt_grafana
-    restart: "no"
+  #GRAFANA STACK
+  ffmt_loki:
+    image: grafana/loki:main
+    container_name: ffmt_loki
+    restart: "unless-stopped"
+    command: "-config.expand-env=true -config.file=/etc/loki/loki-config.yml"
+    environment:
+      - LOKI_HOST_HTTP_PORT=${LOKI_HOST_HTTP_PORT}
+      - LOKI_HOST_GRPC_PORT=${LOKI_HOST_GRPC_PORT}
     ports:
-      - 3000:3000
+      - ${LOKI_HOST_HTTP_PORT}:3100
+      - ${LOKI_HOST_GRPC_PORT}:9095
+    volumes:
+      - ./docker/grafana/loki/:/etc/loki
     networks:
-      - ffmt_internal
-      - ffmt_external
+      - ffmt_grafana
+  
+  ffmt_promtail:
+    image: grafana/promtail:main
+    container_name: ffmt_promtail
+    restart: "unless-stopped"
+    command: "-config.expand-env=true -config.file=/etc/promtail/promtail-config.yml"
+    ports:
+      - ${PROMTAIL_HOST_PORT}:9080
+    environment:
+      - LOKI_HOST_HTTP_PORT=${LOKI_HOST_HTTP_PORT}
+    volumes:
+      - ./backend/application/logs:/var/log/backend
+      - ./docker/redis/server/logs/actions:/var/log/redis/action
+      - ./docker/redis/server/logs/error:/var/log/redis/error
+      - ./docker/redis/server/logs/debug:/var/log/redis/debug
+      - ./docker/grafana/promtail:/etc/promtail
+    networks:
+      - ffmt_grafana
+
+  ffmt_grafana:
+    image: grafana/grafana-oss:latest
+    container_name: ffmt_grafana
+    restart: "unless-stopped"
+    ports:
+      - ${GRAFANA_HOST_PORT}:3000
+    volumes:
+      - ./docker/grafana/storage/data:/var/lib/grafana
+    networks:
+      - ffmt_grafana
+
 
 
   #ffmt_redisinsight:
@@ -218,6 +255,10 @@ networks:
     external: false
   
   ffmt_external:
+    driver: bridge
+    external: false
+
+  ffmt_grafana:
     driver: bridge
     external: false
 
