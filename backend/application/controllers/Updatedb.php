@@ -147,13 +147,18 @@ class Updatedb extends MY_Controller {
 		}
 	}
 
-	public function update_sales_from_universalis(){
+	public function update_sales_from_universalis($start_from_id = 0){
 
 		$this->load->model('Redis/Redis_sales_model', 'Redis_sales');
 
 		//Get marketable items from universalis
 		$marketable_items = array_reverse(universalis_get_marketable_item_ids());
-		sleep(0.05);
+		
+
+		//Remove all items from array greater than start_from_id
+		$marketable_items = array_filter($marketable_items, function($item_id) use ($start_from_id){
+			return $item_id <= $start_from_id;
+		});
 		
 		//Split into chunks of 100
 		$chunks = array_chunk($marketable_items, 100);

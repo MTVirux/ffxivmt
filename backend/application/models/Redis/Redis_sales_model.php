@@ -85,6 +85,8 @@ class Redis_sales_model extends MY_Redis_Model{
     }
 
     public function add_sale($sale){
+
+        //Make whatever var we get into an array
         $sales_array = [];
         if(gettype($sale) == 'array'){
             $sales_array = $sale;
@@ -92,13 +94,22 @@ class Redis_sales_model extends MY_Redis_Model{
             $sales_array[] = $sale;
         }
 
-        $fulfilled_updates = 0;
+        //Init metric vars
+        $fulfilled_inserts = 0;
+        $parsed_sales = 0;
 
-        logger("REDIS_SALES", "Parsing sales array (".count($sales_array)." entries)");
+        //Init array of objects to be inserted into the redis db
+        $sales_final_object = array();
+
+        //Foreach of the sales info, parse it
+        //and add it to the sales_final_object
 
         foreach($sales_array as $sale_data){
+            $parsed_sales++;
             $hash = $sale_data["worldName"] . "_" . $sale_data["itemID"];
-            $key = $sale_data["buyerName"] . "_" . $sale_data["timestamp"];;
+            $key = $sale_data["buyerName"] . "_" . $sale_data["timestamp"];
+            logger("REDIS_SALES", "Parsing sale (" . $parsed_sales . " / " . count($sales_array) . ") with hash: " . $hash );
+
 
             $sale_data_to_insert = [
                 "buyerName" => $sale_data["buyerName"],
@@ -112,34 +123,40 @@ class Redis_sales_model extends MY_Redis_Model{
                 "itemID" => $sale_data["itemID"],
             ];
 
-            //Get hash
+            if(!array_key_exists($hash, $sales_final_object)){
+                $sales_final_object[$hash] = new stdClass();
+            }
+            $sales_final_object[$hash]->$key = $sale_data_to_insert;
+        }
+
+
+        foreach($sales_final_object as $hash => $hash_sales_data){
+        
+            //Get current json data from Redis DB
             $current_json = json_decode($this->redis->executeRaw(['JSON.GET', $hash]));
-            
-            //if current json is null, create new object
+
+            //If there was no data in Redis DB, create new object
             if($current_json == null){
                 $current_json = new stdClass();
             }
             
-            $current_json->$key = $sale_data_to_insert;
-
-            if($current_json == null){
-                $current_json = json_encode($sale_data_to_insert);
+            //Add hash sales data to current json data
+            foreach($hash_sales_data as $key => $value){
+                $current_json->$key = $value;
             }
             
-            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, $key, json_encode($sale_data_to_insert)]);
+            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, "$", json_encode($current_json)]);
 
-            if(is_null($transaction_status)){
+            if($transaction_status != "OK"){
                 logger('REDIS_SALES', "Error inserting sale into redis: " . $transaction_status);
+                die();
             }else{
-
                 //Add to fulfilled updates
-                $fulfilled_updates = $fulfilled_updates + 1;
+                $fulfilled_inserts++;
                 //Percentage of updated sales
-                $percentage_of_fulfilled_updates = round(($fulfilled_updates / count($sales_array)) * 100, 2);
-                logger('REDIS_SALES', "Updated sales for hash(". $fulfilled_updates . " / " . count($sales_array) . " - " . $percentage_of_fulfilled_updates . "%): " . $hash);
-
+                $percentage_of_fulfilled_updates = round(($fulfilled_inserts / count($sales_final_object)) * 100, 2);
+                logger('REDIS_SALES', "Inserted hash data ". $fulfilled_inserts . " of " . count($sales_final_object) . " (" . $percentage_of_fulfilled_updates . "%) for hash:" . $hash);
             }
         }
-        
     }
 }

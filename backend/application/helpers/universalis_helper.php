@@ -91,6 +91,7 @@ function universalis_get_item_sales_data($item_ids, $worldDcRegion, $entriesToRe
         $retries++;
         if($httpcode != 200){
             logger("UNIVERSALIS_API", "Universalis API returned HTTP code " . $httpcode . " on attempt " . $retries . " of " . $max_retries);
+            sleep(5);
         }
         sleep(0.1);
     }
