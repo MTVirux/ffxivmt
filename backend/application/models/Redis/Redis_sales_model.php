@@ -158,6 +158,5 @@ class Redis_sales_model extends MY_Redis_Model{
                 logger('REDIS_SALES', "Inserted hash data ". $fulfilled_inserts . " of " . count($sales_final_object) . " (" . $percentage_of_fulfilled_updates . "%) for hash:" . $hash);
             }
         }
-        
     }
 }
