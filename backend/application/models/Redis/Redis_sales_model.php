@@ -126,12 +126,12 @@ class Redis_sales_model extends MY_Redis_Model{
                 $current_json = json_encode($sale_data_to_insert);
             }
             
-            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, "$", json_encode($sale_data_to_insert)]);
+            $transaction_status = $this->redis->executeRaw(['JSON.SET', $hash, "$", json_encode($current_json)]);
 
-            if(is_null($transaction_status)){
+            if($transaction_status != "OK"){
                 logger('REDIS_SALES', "Error inserting sale into redis: " . $transaction_status);
+                die();
             }else{
-
                 //Add to fulfilled updates
                 $fulfilled_updates = $fulfilled_updates + 1;
                 //Percentage of updated sales
