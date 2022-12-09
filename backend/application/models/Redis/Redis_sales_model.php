@@ -11,9 +11,12 @@ class Redis_sales_model extends MY_Redis_Model{
         $this->redis->select($this->config->item('redis_sales_db'));
     }
 
-    function search_buyer($buyer_name){
+    function search_buyer($buyer_name, $world = 'all'){
         $this->load->model('Item_model', 'Item');
-        $keys = $this->redis->keys('*');
+        if($world == 'all'){
+            $world='*';
+        }
+        $keys = $this->redis->keys($world.'_*');
         $results = [];
         $current_key = 0;
         $total_keys = count($keys);
