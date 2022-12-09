@@ -173,7 +173,7 @@ class Updatedb extends MY_Controller {
 
 		
 		//Split into chunks of 100
-		$chunks = array_chunk($marketable_items, 100);
+		$chunks = array_chunk($marketable_items, 50);
 		
 		//Make each chunk a string separated by commas
 		$chunks = array_map(function($chunk){
