@@ -255,6 +255,8 @@ class Updatedb extends MY_Controller {
 			logger("UNIVERSALIS_API", "Completed " . $count_requests . " of " . $total_count_requests . " requests  currently @ " . $total_sales_entries_fulfilled . " sales entries");
 			$consolidated_sales_data = array();
 		}
+
+		return true;
 	}
 	
 
