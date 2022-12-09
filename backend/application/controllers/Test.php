@@ -70,7 +70,7 @@ class Test extends MY_Controller {
 	}
 
 	public function transpose_sales_to_ts(){
-		set_time_limit(600);
+		set_time_limit(90000);
 		$this->Redis_ts->transpose_sales_to_ts();
 	}
 
