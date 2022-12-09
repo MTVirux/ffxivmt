@@ -6,7 +6,7 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: http://localhost:${LOKI_HOST_HTTP_PORT}/loki/api/v1/push
+  - url: http://ffmt_loki:3100/loki/api/v1/push
 
 scrape_configs:
 #BACKEND MONITORING
@@ -15,8 +15,9 @@ scrape_configs:
   - targets:
       - localhost
     labels:
-      job: varlogs
+      job: backend
       __path__: /var/log/backend/*log
+
 #DOCKER CONTAINER MONITORING
 - job_name: docker
   static_configs:
@@ -24,7 +25,8 @@ scrape_configs:
       - ffmt_loki
     labels:
       job: docker
-      __path__: /var/lib/docker/containers/*/*.log
+      __path__: /var/lib/docker/containers/*/*log
+
 #REDIS MONITORING
 - job_name: redis
   static_configs:
