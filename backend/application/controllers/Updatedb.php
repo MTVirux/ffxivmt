@@ -8,7 +8,7 @@ class Updatedb extends MY_Controller {
 		$this->load->model('Item_model', 'Items');
 		$this->load->helper('url');
 		ini_set('max_execution_time', 9000);
-		ini_set('memory_limit', '1024M');
+		ini_set('memory_limit', '2048M');
 	}
 
 
