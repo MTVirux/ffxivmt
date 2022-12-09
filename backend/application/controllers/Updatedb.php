@@ -147,18 +147,30 @@ class Updatedb extends MY_Controller {
 		}
 	}
 
-	public function update_sales_from_universalis($start_from_id = 0){
+	public function update_sales_from_universalis($reverse = false, $start_at_id= null, $end_at_id = null){
 
 		$this->load->model('Redis/Redis_sales_model', 'Redis_sales');
 
 		//Get marketable items from universalis
-		$marketable_items = array_reverse(universalis_get_marketable_item_ids());
-		
+		$marketable_items = universalis_get_marketable_item_ids();
 
-		//Remove all items from array greater than start_from_id
-		$marketable_items = array_filter($marketable_items, function($item_id) use ($start_from_id){
-			return $item_id <= $start_from_id;
-		});
+		//Remove all between the values of start and end ids
+		if($start_at_id != null && $end_at_id != null){
+			foreach($marketable_items as $key=>$item_id){
+				if($item_id < $start_at_id){
+					unset($marketable_items[$key]);
+				}
+				if($item_id > $end_at_id){
+					unset($marketable_items[$key]);
+				}
+			}
+		}
+
+		//Reverse if requested
+		if(is_null($reverse) || $reverse == true){
+			$marketable_items = array_reverse($marketable_items);
+		}
+
 		
 		//Split into chunks of 100
 		$chunks = array_chunk($marketable_items, 100);
