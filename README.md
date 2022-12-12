@@ -30,5 +30,6 @@
 - Give loading divs a fancy gif for UX improvement
 - Make script be copied to root dir instead of moved so git can stop panicking
 - Learn how to use Grafana now that it's working
+- Fix Item Product Profit Calculator (results are giving out false items)
 
 # BY THE 12 PLEASE REMEMBER TO MOVE THESE TO ISSUES
