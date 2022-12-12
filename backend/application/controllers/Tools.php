@@ -124,7 +124,7 @@ class Tools extends MY_Controller {
 
 		$this->load->model("Item_model", "Item");
 		$item_id = ($this->Item->get_by_name($search_term)[0]->id);
-		$garland_item = garland_get_item($item_id);
+		$garland_item = garland_db_get_items($item_id);
 		$garland_item_partials = $garland_item["partials"];
 		$item_crafts = [];
 		foreach($garland_item_partials as $partial){
