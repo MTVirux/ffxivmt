@@ -25,14 +25,6 @@ RUN rm -rf /var/www/html/docker
 RUN rm -rf docker-compose.yml
 RUN rm -rf Dockerfile
 
-#SET PERMISSIONS TO FOLDERS
-##SSL
-RUN chmod 755 /etc/apache2/ssl
-RUN chmod 710 /etc/apache2/ssl/private
-RUN chown -R root:root /etc/apache2/ssl/
-RUN chown -R root:ssl-cert /etc/apache2/ssl/private/
-RUN chmod 644 /etc/apache2/ssl/*.crt
-RUN chmod 640 /etc/apache2/ssl/private/*.key
 ##LOGS
 RUN chmod 777 /var/www/html/application/logs
 
