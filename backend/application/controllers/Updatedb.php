@@ -313,7 +313,7 @@ class Updatedb extends MY_Controller {
 				"itemSearchCategory" => 	boolval(	$item[17-1]						),
 				"equipSlotCategory" => 		boolval(	$item[18-1]						),
 				"unique" => 				boolval(	$item[22-1]						),
-				"untradable" => 			boolval(	$item[23-1]						),
+				"untradable" => 						$item[23-1],
 				"disposable" => 			boolval(	$item[24-1]						),
 				"dyable" => 				boolval(	$item[29-1]						),
 				"aetherialReductible" =>	boolval(	$item[40-1]						),
