@@ -2,18 +2,31 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 function universalis_get_mb_data($dc_or_server, $item_id){
+    $retries = 0;
+    $max_retries = 500;
+    $httpcode = 0;
+
     //GET request to garlandtools.org
     if(gettype($item_id) == "array"){
         $item_id = implode(",", $item_id);
     }
-    $base_url = 'https://universalis.app/api/v2/';
-    $url = $base_url . $dc_or_server . '/' . $item_id;
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    $output = curl_exec($ch);
-    curl_close($ch);
-    $mb_data = json_decode($output, true);
+
+    while($httpcode != 200 && $retries < $max_retries){
+        $base_url = 'https://universalis.app/api/v2/';
+        $url = $base_url . $dc_or_server . '/' . $item_id;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $output = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $mb_data = json_decode($output, true);
+        if($httpcode != 200){
+            logger("UNIVERSALIS_API", "Universalis API returned HTTP code " . $httpcode . " on attempt " . $retries . " of " . $max_retries);
+            $retries++;
+        }
+        sleep(0.1);
+    }
 
     return $mb_data;
 
