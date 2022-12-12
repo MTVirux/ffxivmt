@@ -213,9 +213,15 @@ services:
     container_name: ffmt_grafana
     user: "0:0"
     restart: "unless-stopped"
+    environment:
+      - GF_SERVER_PROTOCOL=https
+      - GF_SERVER_CERT_FILE=${GRAFANA_SSL_CERT}
+      - GF_SERVER_CERT_KEY=${GRAFANA_SSL_PRIVATE_KEY}
     ports:
       - ${GRAFANA_HOST_PORT}:3000
     volumes:
+      - ${HOST_SSL_CERTS_DIR}:${GRAFANA_SSL_CERTS_DIR}
+      - ${HOST_SSL_PRIVATE_KEY_DIR}:${GRAFANA_SSL_PRIVATE_KEY_DIR}
       - ./docker/grafana/storage/data:/var/lib/grafana
     networks:
       - ffmt_grafana
