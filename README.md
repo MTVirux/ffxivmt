@@ -26,3 +26,5 @@
 - Figure out what's Dependabot
 - Make worlds DB instead of config
 - What is even going on with Item_model -> get_by_name() ??????????
+
+# BY THE 12 PLEASE REMEMBER TO MOVE THESE TO ISSUES
