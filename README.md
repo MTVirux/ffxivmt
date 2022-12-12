@@ -28,5 +28,6 @@
 - Check var type conversions on item CSV import (Updateddb.php)
 - Make view for Bi-color Gemstone Profit Calculator and working AJAX script
 - Give loading divs a fancy gif for UX improvement
+- Make script be copied to root dir instead of moved so git can stop panicking
 
 # BY THE 12 PLEASE REMEMBER TO MOVE THESE TO ISSUES
