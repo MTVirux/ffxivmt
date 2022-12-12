@@ -7,9 +7,9 @@ function garland_db_get_items($item_id){
 
     //Is array
     if(gettype($item_id) == 'array'){
-        $item_id_array = $item_id
-    if(count(explode(',', $item_id)) > 1){ //String of multiple ids
-        $item_id_array = explode(',' $item_id);
+        $item_id_array = $item_id;
+    }else if(count(explode(',', $item_id)) > 1){ //String of multiple ids
+        $item_id_array = explode(',', $item_id);
     }else{ //Is single id String
         $item_id_array = [];
         $item_id_array[] = intval($item_id);
