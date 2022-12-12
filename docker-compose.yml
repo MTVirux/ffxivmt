@@ -58,6 +58,8 @@ services:
       - SECONDARY_DOCKER_SSL_PORT=${SECONDARY_DOCKER_SSL_PORT}
     volumes:
       - ./backend:/var/www/html/
+      - ${HOST_SSL_CERTS_DIR}:/etc/apache2/ssl
+      - ${HOST_SSL_PRIVATE_KEY_DIR}:/etc/apache2/ssl/private
     networks:
       - ffmt_internal
       - ffmt_external
