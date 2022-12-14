@@ -106,13 +106,15 @@ class Redis_sales_model extends MY_Redis_Model{
 
         //Foreach of the sales info, parse it
         //and add it to the sales_final_object
+        if(count($sales_array) > 0){
+            logger("REDIS_SALES", "Parsing sales for hash:" . $hash );
+        }
 
         foreach($sales_array as $sale_data){
             $parsed_sales++;
             $hash = $sale_data["worldName"] . "_" . $sale_data["itemID"];
             $key = $sale_data["buyerName"] . "_" . $sale_data["timestamp"];
-            logger("REDIS_SALES", "Parsing sale (" . $parsed_sales . " / " . count($sales_array) . ") with hash: " . $hash );
-
+            //logger("REDIS_SALES", "Parsing sale (" . $parsed_sales . " / " . count($sales_array) . ") with hash: " . $hash );
 
             $sale_data_to_insert = [
                 "buyerName" => $sale_data["buyerName"],
