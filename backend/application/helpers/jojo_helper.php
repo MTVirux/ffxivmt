@@ -29,7 +29,7 @@ function logger($channel, $message, $custom_file = null){
     }
     
     //write message to file
-    fwrite($file, $channel . ' - ' . date('Y-m-d H:i:s') . ' - ' . $message . PHP_EOL);
+    fwrite($file, $channel . ' - ' . $message . PHP_EOL);
 
     //close file
     fclose($file);
