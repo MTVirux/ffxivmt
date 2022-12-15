@@ -108,7 +108,7 @@ class Redis_timeseries_model extends MY_Redis_model{
             return;
         }
 
-        logger('ITEM_SCORE', '['. $item_id .'] -> # of keys: ' . $redis_item_keys_count); 
+        logger('ITEM_SCORE', json_encode(array("item_id" => $item_id, "redis_key_count" => $redis_item_keys_count, "specific_world" => is_null($world) ? "false" : "true")));
 
         foreach($redis_item_keys as $redis_item_key){
             
@@ -120,7 +120,6 @@ class Redis_timeseries_model extends MY_Redis_model{
                 $dc = get_world_dc($world, $this->config->item('ffxiv_worlds'));
                 $region = get_world_region($world, $this->config->item('ffxiv_worlds'));
                 $redis_entry = $this->redis->executeRaw(['TS.GET', $redis_item_key]);
-                logger('REDIS_RECORD', 'Record found for '. $item_id . ' @ ' . date('Y-m-d H:i:s', $redis_entry[0]), 'redis_time_keeper');
 
                 $item_score_entry['item_id'] = $item_id;
                 $item_score_entry['world'] = $world;
@@ -137,24 +136,26 @@ class Redis_timeseries_model extends MY_Redis_model{
                 foreach($this->get_times() as $col => $unix_from){
                     $total_price = 0;
                     $item_score_entry[$col] = $this->redis->executeRaw(['TS.RANGE', $redis_item_key, $unix_from, $unix_to]);
-                    //logger('INFO', '['. $item_id .']['.$col.']['.$item_score_entry['world'].'] - ['.$item_score_entry['name'].'] -> # of hits: ' . count($item_score_entry[$col]));          
                     if(count($item_score_entry[$col]) == 0){
                         $item_score_entry[$col] = 0;
-                        //logger('INFO', '['. $item_id .']['.$col.']['.$item_score_entry['world'].'] - ['.$item_score_entry['name'].'] -> Setting to 0 and skipping to next time period');
 
                     }else{
 
+                        //Foreach 
                         foreach($item_score_entry[$col] as $entry){
+                            //Add up all the prices
                             $total_price += $entry[1]->getPayload();
                         }
 
+                        //Set the total price to the column
                         $item_score_entry[$col] = $total_price;
-                        //logger('ITEM_SCORE_2', '['. $item_id .']['.$col.']['.$item_score_entry['world'].'] - ['.$item_score_entry['name'].'] -> ' . $item_score_entry[$col]);
+
 
                     }
 
                 }
 
+                logger('REDIS_RECORD', json_encode(array("log_timestamp"=>date('Y-m-d H:i:s'), "item_id"=>$item_id, "world"=>$world, "price_sum"=>$item_score_entry['alltime'])));
                 $this->Item_score->update($item_score_entry);
                 unset($item_score_entry);
                 unset($total_price);
