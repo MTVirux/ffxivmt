@@ -41,11 +41,11 @@ class Updatedb extends MY_Controller {
 			}
 			
 			if($this->Items->add($organized_item)){
-				logger("ITEM_DB_ENTRY", " updated entry for item: " . $organized_item["id"] . " - " . $organized_item["name"]);
+				logger("ITEM_DB", json_encode(array("job"=>"Item Entry Update", "item_id" => organized_item["id"], "item_name" => $organized_item["name"])));
 			}
 		}
 
-		logger("ITEM_DB_ENTRY", "FINISHED UPDATING ITEM DB");
+		logger("ITEM_DB", json_encode(array("job" => "Item Entry Update [DONE]")));
 	}
 
 	public function verify_item_entries_against_garland_db(){
@@ -56,7 +56,7 @@ class Updatedb extends MY_Controller {
 		foreach($all_item_ids as $item_id){
 
 			if(in_array($item_id, $this->config->item('preapproved_item_ids'))){
-				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " - Preaproved");
+				logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "message"=>"Skipping item: " . $item_id . " - Preaproved")));
 				continue;
 			}
 
@@ -64,17 +64,16 @@ class Updatedb extends MY_Controller {
 
 			//If local item data name includes Dated, then it's a dated item and we don't need to verify it
 			if(strpos($local_item_data->name, 'Dated') !== false){
-				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " because it's a dated item");
+				logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "message"=>"Skipping item: " . $item_id . " - Because it is a dated item")));
 				continue;
 			}
 			
 			//If local item data has no name, then it's an unused item slot and we don't need to verify it
 			if($local_item_data->name == ""){
-				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " because it's an unused item slot");
+				logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "message"=>"Skipping item: " . $item_id . " - Because it is an unused item slot")));
 				continue;
 			}
 
-			logger("ITEM_DB_VERIFICATION", "Verifying item: " . $item_id . " against Garland DB");
 			$garland_item_data = garland_db_get_items($item_id);
 
 			//Ignore items with no entry in Garland DB
@@ -113,6 +112,7 @@ class Updatedb extends MY_Controller {
 				die();
 			}
 
+			logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "item_id" => $item_id, "status" => 1, "message" => "SUCCESS")));
 		}
 
 		logger("ITEM_DB_VERIFICATION", "Verification Sucessful");
@@ -140,7 +140,7 @@ class Updatedb extends MY_Controller {
 						};
 						$current_item->craftingComplexity = json_encode($craftingComplexity);
 						$new_item = $this->Items->update($current_item);
-						logger("ITEM_CRAFTING_UPDATE", "item_id: " . $item["id"]);
+						logger("ITEM_DB", json_encode(array("job"=>"GarlandDB Craft Update", "item_id" => $item["id"], "craft_complexity" => $recipe["complexity"])));
 					}
 				}
 			}

@@ -155,7 +155,7 @@ class Redis_timeseries_model extends MY_Redis_model{
 
                 }
 
-                logger('REDIS_RECORD', json_encode(array("log_timestamp"=>date('Y-m-d H:i:s'), "item_id"=>$item_id, "world"=>$world, "price_sum"=>$item_score_entry['alltime'])));
+                logger('REDIS_RECORD', json_encode(array("item_id"=>$item_id, "world"=>$world, "price_sum"=>$item_score_entry['alltime'])));
                 $this->Item_score->update($item_score_entry);
                 unset($item_score_entry);
                 unset($total_price);
