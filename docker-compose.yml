@@ -133,7 +133,3 @@ volumes:
 
   ffmt_mariadb_data:
     external: true
-
-
-
-
