@@ -7,6 +7,21 @@ function logger($channel, $message, $custom_file = null){
         return;
     }
 
+    //Add log timestamp
+    
+    //if message is a json make it an array
+    if(is_json($message)){
+        $decoded_message = json_decode($message);
+    }else if(is_array($message)){
+        $decoded_message = $message;
+    }else if(is_string($message)){
+        $decoded_message = ["message" => $message];
+    }
+    
+    $decoded_message = array_merge(["log_timestamp" => date('Y-m-d H:i:s')], (array)$decoded_message);
+    
+    $message = json_encode($decoded_message);
+
     $file = fopen(APPPATH . 'logs/' . $channel . '.log', 'a');
     
     //write message to file
@@ -17,4 +32,9 @@ function logger($channel, $message, $custom_file = null){
     
     return true;
 
+}
+
+function is_json($string) {
+ json_decode($string);
+ return (json_last_error() == JSON_ERROR_NONE);
 }
