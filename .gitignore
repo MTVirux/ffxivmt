@@ -18,9 +18,12 @@ monitoring/docker/promtail/*
 monitoring/docker/portainer
 monitoring/docker/grafana
 
+####### ROOT DIR #######
 /*.bat
 /*.sh
 /*.ps1
+
+####### FILE TYPES #######
 *.db
 *.rdb
 *.aof
