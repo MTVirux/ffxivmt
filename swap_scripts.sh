@@ -20,6 +20,7 @@ if [ $choice -eq 1 ] || [ $choice -eq 2 ] || [ $choice -eq 3 ] || [ $choice -eq 
 
   if [ $choice -eq 1 ]; then
     cp ./scripts/sh/* .
+    chmod +x ./*.sh
   elif [ $choice -eq 2 ]; then
     cp ./scripts/bat/* .
   elif [ $choice -eq 3 ]; then
