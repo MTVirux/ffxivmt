@@ -1,3 +1,4 @@
+####### REDIS SERVER DIR #######
 docker/redis/server/__pycache__/*
 docker/redis/server/logs/*.log
 docker/redis/server/logs/action/*.log
@@ -7,6 +8,7 @@ docker/redis/server/logs/system/*.log
 docker/redis/server/nohup.out
 docker/redis/server/redis-monitor-server/__pycache__/*
 
+####### MONITORING DIR #######
 monitoring/docker/prometheus/*
 !monitoring/docker/prometheus/prometheus-config.yml
 monitoring/docker/loki/*
@@ -18,6 +20,7 @@ monitoring/docker/grafana
 
 /*.bat
 /*.sh
+/*.ps1
 *.db
 *.rdb
 *.aof
