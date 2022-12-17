@@ -6,6 +6,16 @@ docker/redis/server/logs/status/*.status
 docker/redis/server/logs/system/*.log
 docker/redis/server/nohup.out
 docker/redis/server/redis-monitor-server/__pycache__/*
+
+monitoring/docker/prometheus/*
+!monitoring/docker/prometheus/prometheus-config.yml
+monitoring/docker/loki/*
+!monitoring/docker/loki/loki-config.yml
+monitoring/docker/promtail/*
+!monitoring/docker/promtail/promtail-config.yml
+monitoring/docker/portainer
+monitoring/docker/grafana
+
 /*.bat
 /*.sh
 *.db
