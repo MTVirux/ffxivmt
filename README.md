@@ -29,5 +29,6 @@
 - Make script be copied to root dir instead of moved so git can stop panicking
 - Fix Item Product Profit Calculator (results are giving out false items)
 - Clean logger calls as $custom_file was deprecated
+- Verify ITEM_SCORE logs as always present "# of keus: 1"
 
 # BY THE 12 PLEASE REMEMBER TO MOVE THESE TO ISSUES

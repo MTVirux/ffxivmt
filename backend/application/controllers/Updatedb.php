@@ -41,11 +41,11 @@ class Updatedb extends MY_Controller {
 			}
 			
 			if($this->Items->add($organized_item)){
-				logger("ITEM_DB_ENTRY", " updated entry for item: " . $organized_item["id"] . " - " . $organized_item["name"]);
+				logger("ITEM_DB", json_encode(array("job"=>"Item Entry Update", "item_id" => $organized_item["id"], "item_name" => $organized_item["name"])));
 			}
 		}
 
-		logger("ITEM_DB_ENTRY", "FINISHED UPDATING ITEM DB");
+		logger("ITEM_DB", json_encode(array("job" => "Item Entry Update [DONE]")));
 	}
 
 	public function verify_item_entries_against_garland_db(){
@@ -56,7 +56,7 @@ class Updatedb extends MY_Controller {
 		foreach($all_item_ids as $item_id){
 
 			if(in_array($item_id, $this->config->item('preapproved_item_ids'))){
-				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " - Preaproved");
+				logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "message"=>"Skipping item: " . $item_id . " - Preaproved")));
 				continue;
 			}
 
@@ -64,17 +64,16 @@ class Updatedb extends MY_Controller {
 
 			//If local item data name includes Dated, then it's a dated item and we don't need to verify it
 			if(strpos($local_item_data->name, 'Dated') !== false){
-				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " because it's a dated item");
+				logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "message"=>"Skipping item: " . $item_id . " - Because it is a dated item")));
 				continue;
 			}
 			
 			//If local item data has no name, then it's an unused item slot and we don't need to verify it
 			if($local_item_data->name == ""){
-				logger("ITEM_DB_VERIFICATION", "Skipping item: " . $item_id . " because it's an unused item slot");
+				logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "message"=>"Skipping item: " . $item_id . " - Because it is an unused item slot")));
 				continue;
 			}
 
-			logger("ITEM_DB_VERIFICATION", "Verifying item: " . $item_id . " against Garland DB");
 			$garland_item_data = garland_db_get_items($item_id);
 
 			//Ignore items with no entry in Garland DB
@@ -113,9 +112,10 @@ class Updatedb extends MY_Controller {
 				die();
 			}
 
+			logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "item_id" => $item_id, "status" => 1, "message" => "SUCCESS")));
 		}
 
-		logger("ITEM_DB_VERIFICATION", "Verification Sucessful");
+		logger("ITEM_DB", json_encode(array("job" => "Item DB Verification[DONE]"));
 
 	}
 
@@ -140,7 +140,7 @@ class Updatedb extends MY_Controller {
 						};
 						$current_item->craftingComplexity = json_encode($craftingComplexity);
 						$new_item = $this->Items->update($current_item);
-						logger("ITEM_CRAFTING_UPDATE", "item_id: " . $item["id"]);
+						logger("ITEM_DB", json_encode(array("job"=>"GarlandDB Craft Update", "item_id" => $item["id"], "craft_complexity" => $recipe["complexity"])));
 					}
 				}
 			}
@@ -296,29 +296,29 @@ class Updatedb extends MY_Controller {
 			}
 		
 			// Fit the data for this item into the desired schema
-
+			$element_offset = 1;
 
 			$item_data = array(
 				"id" => 					intval(		$item[array_key_first($item)]	),
-				"name" => 								$item[10-1],
-				"description" => 						$item[9-1],
-				"canBeHQ" => 				boolval(	$item[28-1]						),
-				"alwaysCollectible" => 					$item[39-1],
-				"stackSize" => 				intval(		$item[21-1]						),
-				"itemLevel" => 				intval(		$item[12-1]						),
-				"iconImage" => 				intval(		$item[11-1]						),
-				"rarity" => 				boolval(	$item[13-1]						),
-				"filterGroup" => 			boolval(	$item[14-1]						),
-				"itemUICategory" => 		boolval(	$item[16-1]						),
-				"itemSearchCategory" => 	boolval(	$item[17-1]						),
-				"equipSlotCategory" => 		boolval(	$item[18-1]						),
-				"unique" => 				boolval(	$item[22-1]						),
-				"untradable" => 						$item[23-1],
-				"disposable" => 			boolval(	$item[24-1]						),
-				"dyable" => 				boolval(	$item[29-1]						),
-				"aetherialReductible" =>	boolval(	$item[40-1]						),
-				"materiaSlotCount" => 		boolval(	$item[87-1]						),
-				"advancedMelding" => 		boolval(	$item[88-1]						),
+				"name" => 								$item[10-$element_offset],
+				"description" => 						$item[9-$element_offset],
+				"canBeHQ" => 				boolval(	$item[28-$element_offset]						),
+				"alwaysCollectible" => 					$item[39-$element_offset],
+				"stackSize" => 				intval(		$item[21-$element_offset]						),
+				"itemLevel" => 				intval(		$item[12-$element_offset]						),
+				"iconImage" => 				intval(		$item[11-$element_offset]						),
+				"rarity" => 				boolval(	$item[13-$element_offset]						),
+				"filterGroup" => 			boolval(	$item[14-$element_offset]						),
+				"itemUICategory" => 		boolval(	$item[16-$element_offset]						),
+				"itemSearchCategory" => 	boolval(	$item[17-$element_offset]						),
+				"equipSlotCategory" => 		boolval(	$item[18-$element_offset]						),
+				"unique" => 				boolval(	$item[22-$element_offset]						),
+				"untradable" => 						$item[23-$element_offset],
+				"disposable" => 			boolval(	$item[24-$element_offset]						),
+				"dyable" => 				boolval(	$item[29-$element_offset]						),
+				"aetherialReductible" =>	boolval(	$item[40-$element_offset]						),
+				"materiaSlotCount" => 		boolval(	$item[87-$element_offset]						),
+				"advancedMelding" => 		boolval(	$item[88-$element_offset]						),
 			);
 		
 			// Print the data for this item for debugging purposes
