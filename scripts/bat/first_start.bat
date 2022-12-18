@@ -38,6 +38,10 @@ goto loop
 )
 :done_waiting
 
+
+echo "Updating Item DB from CSV..."
+curl -X POST localhost/updatedb/ > /dev/null
+
 echo "Updating item sales from universalis..."
 curl -X POST localhost/updatedb/update_sales_from_universalis > nul
 
