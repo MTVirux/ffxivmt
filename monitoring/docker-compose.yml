@@ -55,21 +55,6 @@ services:
     networks:
       - ffmt_network
 
-  ffmt_prometheus:
-    image: prom/prometheus:latest
-    container_name: ${PROMETHEUS_CONTAINER_NAME}
-    restart: "unless-stopped"
-    command: "--config.file=/etc/prometheus/prometheus-config.yml"
-    ports:
-      - ${PROMETHEUS_HOST_PORT}:9090
-    volumes:
-      - ./docker/prometheus/etc/prometheus:/etc/prometheus
-      - ./docker/prometheus/prometheus:/prometheus
-      - ${HOST_SSL_CERT}/home/prometheus/certs/mtvirux_app/mtvirux_app.crt
-      - ${HOST_SSL_PRIVATE_KEY}/home/prometheus/certs/mtvirux_app/mtvirux_app.key
-    networks:
-      - ffmt_network
-
   portainer:
     image: portainer/portainer-ce
     container_name: portainer
@@ -85,6 +70,47 @@ services:
     command:
       --sslcert /certs/portainer.cert
       --sslkey /certs/portainer.key
+    networks:
+      - ffmt_network
+
+  ffmt_prometheus:
+    image: prom/prometheus:latest
+    container_name: ${PROMETHEUS_CONTAINER_NAME}
+    restart: "unless-stopped"
+    command: "--config.file=/etc/prometheus/prometheus-config.yml"
+    user: "0:0"
+    volumes:
+      - ./docker/prometheus/etc/prometheus:/etc/prometheus
+      - ./docker/prometheus/prometheus:/prometheus
+    networks:
+      - ffmt_network
+
+
+
+######## PROMETHEUS EXPORTERS ########
+  ffmt_node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: ${NODE_EXPORTER_CONTAINER_NAME}
+    command:
+     - '--path.rootfs=/host'
+    pid: host
+    restart: unless-stopped
+    volumes:
+     - '/:/host:ro,rslave'
+    networks:
+     - ffmt_network
+  
+  ffmt_cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: ${CADVISOR_CONTAINER_NAME}
+    volumes:
+     - /:/rootfs:ro
+     - /var/run:/var/run:ro
+     - /sys:/sys:ro
+     - /var/lib/docker:/var/lib/docker:ro
+     - /dev/disk/:/dev/disk:ro
+    devices:
+     - /dev/kmsg
     networks:
       - ffmt_network
 
