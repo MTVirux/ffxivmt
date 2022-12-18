@@ -33,6 +33,9 @@ while ! docker exec -it ffmt_redis redis-cli ping | grep -q 'PONG'; do
   sleep 1
 done
 
+echo "Updating Item DB from CSV..."
+curl -X POST localhost/updatedb/ > /dev/null
+
 echo "Updating item sales from universalis..."
 curl -X POST localhost/updatedb/update_sales_from_universalis > /dev/null
 
@@ -41,6 +44,3 @@ curl -X POST localhost/test/transpose_sales_to_ts > /dev/null
 
 echo "Updating item scores..."
 curl -X POST localhost/test/update_item_scores > /dev/null
-
-echo "DB fully refreshed!"
-docker-compose up -d ffmt_portainer

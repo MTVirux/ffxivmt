@@ -9,8 +9,8 @@ docker/redis/server/nohup.out
 docker/redis/server/redis-monitor-server/__pycache__/*
 
 ####### MONITORING DIR #######
-monitoring/docker/prometheus/*
-!monitoring/docker/prometheus/prometheus-config.yml
+monitoring/docker/prometheus/prometheus/*
+!monitoring/docker/prometheus/etc/prometheus/*
 monitoring/docker/loki/*
 !monitoring/docker/loki/loki-config.yml
 monitoring/docker/promtail/*

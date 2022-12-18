@@ -132,7 +132,8 @@ services:
       - ${PMA_HOST_PORT}:80
     depends_on:
       - ${MARIADB_CONTAINER_NAME}
-
+    networks:
+      - ffmt_network
 
 #VOLUMES
 volumes:
