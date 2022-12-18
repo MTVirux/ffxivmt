@@ -41,7 +41,7 @@ class Updatedb extends MY_Controller {
 			}
 			
 			if($this->Items->add($organized_item)){
-				logger("ITEM_DB", json_encode(array("job"=>"Item Entry Update", "item_id" => organized_item["id"], "item_name" => $organized_item["name"])));
+				logger("ITEM_DB", json_encode(array("job"=>"Item Entry Update", "item_id" => $organized_item["id"], "item_name" => $organized_item["name"])));
 			}
 		}
 
@@ -115,7 +115,7 @@ class Updatedb extends MY_Controller {
 			logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "item_id" => $item_id, "status" => 1, "message" => "SUCCESS")));
 		}
 
-		logger("ITEM_DB_VERIFICATION", "Verification Sucessful");
+		logger("ITEM_DB", json_encode(array("job" => "Item DB Verification[DONE]"));
 
 	}
 
