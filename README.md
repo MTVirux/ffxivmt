@@ -17,10 +17,8 @@
 - Make cron and script to backup mariaDB
 - Find a way to not have so many scripts in root when working
 - Move dockerfiles to docker/dockerfiles
-- Update README.md more often
 - Ponder fusing nuke_all script with clear_docker_cache script (bat and sh)
 - Move this to do list to github issues
-- Grafana container(?)
 - Autogenerate the patch constants instead of them being kept in config
 - Figure out what's Dependabot
 - Make worlds DB instead of config
@@ -29,9 +27,8 @@
 - Make view for Bi-color Gemstone Profit Calculator and working AJAX script
 - Give loading divs a fancy gif for UX improvement
 - Make script be copied to root dir instead of moved so git can stop panicking
-- Learn how to use Grafana now that it's working
 - Fix Item Product Profit Calculator (results are giving out false items)
 - Clean logger calls as $custom_file was deprecated
 - Verify ITEM_SCORE logs as always present "# of keus: 1"
- 
+
 # BY THE 12 PLEASE REMEMBER TO MOVE THESE TO ISSUES
