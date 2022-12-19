@@ -1,4 +1,4 @@
-####### REDIS SERVER DIR #######
+####### WS_WORKER SERVER DIR #######
 docker/ws_worker/server/__pycache__/*
 docker/ws_worker/server/logs/*.log
 docker/ws_worker/server/logs/action/*.log
