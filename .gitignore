@@ -1,12 +1,10 @@
 ####### REDIS SERVER DIR #######
-docker/redis/server/__pycache__/*
-docker/redis/server/logs/*.log
-docker/redis/server/logs/action/*.log
-docker/redis/server/logs/error/*.log
-docker/redis/server/logs/status/*.status
-docker/redis/server/logs/system/*.log
-docker/redis/server/nohup.out
-docker/redis/server/redis-monitor-server/__pycache__/*
+docker/ws_worker/server/__pycache__/*
+docker/ws_worker/server/logs/*.log
+docker/ws_worker/server/logs/action/*.log
+docker/ws_worker/server/logs/error/*.log
+docker/ws_worker/server/logs/system/*.log
+docker/scylla/*
 
 ####### MONITORING DIR #######
 monitoring/docker/prometheus/prometheus/*

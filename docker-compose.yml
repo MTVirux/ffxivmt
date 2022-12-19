@@ -2,25 +2,6 @@ version: '3.3'
 
 services:
 
-    #FRONTEND
-    
-    #ffmt_vue:
-  #  container_name: ffmt_vue
-  #  image: node:18-alpine3.16
-  #  build:
-  #    context: .
-  #    dockerfile: ${FRONTEND_DOCKERFILE}
-  #  restart: "always"
-  #  ports:
-  #    - "${FRONTEND_HOST_PORT}:8080"
-  #  
-  #  volumes:
-  #    - ./docker/vue_app:/vue_app
-  #  networks:
-  #    - ffmt_internal
-  #    - ffmt_external
-  # BACKEND
-
   ffmt_backend:
     container_name: ${BACKEND_CONTAINER_NAME}
     build:
@@ -43,10 +24,41 @@ services:
       - ${HOST_SSL_PRIVATE_KEY_DIR}:/etc/apache2/ssl/private
     networks:
       - ffmt_network
-
-
+  
+  ffmt_ws_worker:
+    image: mtvirux/ubuntu-lunar-python3.10.5:latest
+    container_name: ${WS_WORKER_CONTAINER_NAME}
+    restart: "unless-stopped"
+    depends_on:
+      - ${SCYLLADB_CONTAINER_NAME}
+      - ${BACKEND_CONTAINER_NAME}
+    environment:
+      - BACKEND_HOST=${BACKEND_CONTAINER_NAME}
+      - SCYLLADB_HOST=${SCYLLADB_CONTAINER_NAME}
+    volumes:
+      - ./docker/ws_worker/startup_scripts:/startup_scripts
+      - ./docker/ws_worker/server:/server
+    networks:
+      - ffmt_network
 
 # DATABASES
+  ffmt_scylla:
+    container_name: ${SCYLLADB_CONTAINER_NAME}
+    image: scylladb/scylla
+    ports:
+      - 9042:9042
+      - 7000:7000
+      - 7001:7001
+      - 7199:7199
+      - 9180:9180
+      - 10000:10000
+    volumes:
+      - ./docker/scylla/data:/var/lib/scylla
+      - ./docker/scylla/commitlog:/var/lib/scylla/commitlog
+      - ./docker/scylla/saved_caches:/var/lib/scylla/saved_caches
+      - ./docker/scylla/log:/var/log/scylla
+    networks:
+      - ffmt_network
 
   ffmt_mariadb:
     image: ffmt_mariadb
@@ -54,71 +66,21 @@ services:
       context: .
       dockerfile: ${MARIADB_DOCKERFILE}
     container_name: ${MARIADB_CONTAINER_NAME}
-    restart: "always"
+    restart: "unless-stopped"
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_DATABASE=${MARIADB_DATABASE_NAME}
     volumes:
-      - ./docker/mariadb:/etc/mysql/conf.d
-      - ffmt_mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/etc/mysql/conf.d:/etc/mysql/conf.d
+      - ./docker/mariadb/var/lib/mysql:/var/lib/mysql
       - ./docker/mariadb/usr/local/bin:/usr/local/bin
     ports:
       - ${MARIADB_HOST_PORT}:3306
     networks:
       - ffmt_network
 
-  ffmt_redis:
-    image: mtvirux/redis-stack-python:R702rc3-p3.10.5
-    build: 
-      context: .
-      dockerfile: ${REDIS_DOCKERFILE}
-    container_name: ${REDIS_CONTAINER_NAME}
-    restart: "always"
-    environment:
 
-      - REDIS_CONFIG_FILE=${REDIS_CONFIG_FILE}
-      - REDIS_DATA_DIR=${REDIS_DATA_DIR}
-      - REDIS_SERVER_LOGS_DIR=${REDIS_SERVER_LOGS_DIR}
-
-      - REDIS_SERVER_RESTART_DELAY=${REDIS_SERVER_RESTART_DELAY}
-      - REDIS_MEMORY_CLEANER_RESTART_DELAY=${REDIS_MEMORY_CLEANER_RESTART_DELAY}
-
-      - REDIS_MEMORY_CLEANER_INTERVAL=${REDIS_MEMORY_CLEANER_INTERVAL}
-      - REDIS_MEMORY_CLEANER_TRIGGER_TYPE=${REDIS_MEMORY_CLEANER_TRIGGER_TYPE}
-
-      - REDIS_MEMORY_CLEANER_THRESHOLD_PERCENTAGE=${REDIS_MEMORY_CLEANER_THRESHOLD_PERCENTAGE}
-      - REDIS_MEMORY_CLEANER_THRESHOLD_SIZE=${REDIS_MEMORY_CLEANER_THRESHOLD_SIZE}
-
-      - REDIS_INDEX_DB=${REDIS_INDEX_DB}
-      - REDIS_SALES_DB=${REDIS_SALES_DB}
-      - REDIS_TIMESERIES_DB=${REDIS_TIMESERIES_DB}
-      - REDIS_LISTINGS_DB=${REDIS_LISTINGS_DB}
-
-      - REDIS_STATUS_UPDATER_INTERVAL=${REDIS_STATUS_UPDATER_INTERVAL}
-
-      - REDIS_CPU_LOG_FILE=${REDIS_CPU_LOG_FILE}
-      - REDIS_STATS_LOG_FILE=${REDIS_STATS_LOG_FILE}
-
-      - BACKEND_HOST=${BACKEND_CONTAINER_NAME}
-
-      - REDISTIMESERIES_ARGS=${REDISTIMESERIES_ARGS}
-
-    ports:
-      - "${REDIS_HOST_PORT}:6379"      
-    volumes:
-      - ./docker/redis/usr/local/etc/redis:/usr/local/etc/redis
-      - ./docker/redis/usr/local/bin:/usr/local/bin
-      - ./docker/redis/server:/server
-      - ./docker/redis/monitor_server.sh:/monitor_server.sh
-      - ./docker/redis/server/redis-config/redis-custom-stack.conf:/redis-stack.conf
-      - ./docker/redis/data/:/data
-    deploy:
-      resources:
-        limits:
-          memory: ${REDIS_MEMORY_LIMIT}
-    networks:
-      - ffmt_network
 
 # DATABASE MANAGEMENT
   ffmt_pma:
@@ -134,12 +96,6 @@ services:
       - ${MARIADB_CONTAINER_NAME}
     networks:
       - ffmt_network
-
-#VOLUMES
-volumes:
-
-  ffmt_mariadb_data:
-    external: true
 
 networks:
   ffmt_network:
