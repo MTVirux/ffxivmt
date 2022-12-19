@@ -32,6 +32,7 @@ services:
     depends_on:
       - ${SCYLLADB_CONTAINER_NAME}
       - ${BACKEND_CONTAINER_NAME}
+      - ${MARIADB_CONTAINER_NAME}
     environment:
       - BACKEND_HOST=${BACKEND_CONTAINER_NAME}
       - SCYLLADB_HOST=${SCYLLADB_CONTAINER_NAME}
