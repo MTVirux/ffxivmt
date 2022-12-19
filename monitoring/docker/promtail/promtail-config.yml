@@ -28,10 +28,10 @@ scrape_configs:
       __path__: /var/lib/docker/containers/*/*log
 
 #REDIS MONITORING
-- job_name: redis
+- job_name: ws_worker
   static_configs:
   - targets:
       - ffmt_loki
     labels:
       job: redis
-      __path__: /var/log/redis/*/*log
+      __path__: /var/log/ws_worker/*/*log

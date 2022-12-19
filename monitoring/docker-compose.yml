@@ -30,9 +30,9 @@ services:
       - LOKI_HOST_HTTP_PORT=${LOKI_HOST_HTTP_PORT}
     volumes:
       - ${FFMT_BACKEND_LOGS_DIR}:/var/log/backend
-      - ${FFMT_REDIS_ACTION_LOGS_DIR}:/var/log/redis/action
-      - ${FFMT_REDIS_ERROR_LOGS_DIR}:/var/log/redis/error
-      - ${FFMT_REDIS_DEBUG_LOGS_DIR}:/var/log/redis/debug
+      - ${FFMT_WS_WORKER_ACTION_LOGS_DIR}:/var/log/ws_worker/action
+      - ${FFMT_WS_WORKER_ERROR_LOGS_DIR}:/var/log/ws_worker/error
+      - ${FFMT_WS_WORKER_DEBUG_LOGS_DIR}:/var/log/ws_worker/debug
       - ./docker/promtail:/etc/promtail
     networks:
       - ffmt_network
