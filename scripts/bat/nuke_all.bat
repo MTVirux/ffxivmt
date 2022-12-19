@@ -2,12 +2,10 @@
 
 docker compose down
 
-for /f "tokens=*" %%i in ('docker images -q') do (
-    docker rmi %%i
+for /f "tokens=*" %%i in ('docker container ls -qa') do (
+    docker container rm -f %%i
 )
 
-docker volume rm ffmt_mariadb_data
-docker volume rm ffmt_redis_data
-
-docker volume create ffmt_mariadb_data
-docker volume create ffmt_redis_data
+for /f "tokens=*" %%i in ('docker images ls -qa') do (
+    docker rmi %%i
+)
