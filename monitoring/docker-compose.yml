@@ -79,6 +79,8 @@ services:
     restart: "unless-stopped"
     command: "--config.file=/etc/prometheus/prometheus-config.yml"
     user: "0:0"
+    ports:
+      - 9090:9090
     volumes:
       - ./docker/prometheus/etc/prometheus:/etc/prometheus
       - ./docker/prometheus/prometheus:/prometheus
