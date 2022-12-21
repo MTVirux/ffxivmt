@@ -71,12 +71,18 @@ function universalis_get_item_sales_data($item_ids, $worldDcRegion, $entriesToRe
     //30 days in milliseconds
     $milliseconds_in_30_days = 2592000000;
 
+    //15 days in milliseconds
+    $milliseconds_in_15_days = 1296000000;
+
+    //7 days in milliseconds
+    $milliseconds_in_7_days = 604800000;
+
     if(is_null($stats_within)){
-        $stats_within = $milliseconds_in_30_days;
+        $stats_within = $milliseconds_in_15_days;
     }
 
     if(is_null($entries_within)){
-        $entries_within = $milliseconds_in_30_days;
+        $entries_within = $milliseconds_in_15_days;
     }
 
     if(is_null($entriesToReturn)){
