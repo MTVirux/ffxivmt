@@ -9,7 +9,7 @@ docker-compose up -d
 
 
 
-To kill the stack run the following command on this dir:
+To kill the monitoring stack run the following command on this dir:
 
 ```
 docker-compose down
