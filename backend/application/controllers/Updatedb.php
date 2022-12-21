@@ -115,7 +115,7 @@ class Updatedb extends MY_Controller {
 			logger("ITEM_DB", json_encode(array("job" => "Item DB Verification", "item_id" => $item_id, "status" => 1, "message" => "SUCCESS")));
 		}
 
-		logger("ITEM_DB", json_encode(array("job" => "Item DB Verification[DONE]"));
+		logger("ITEM_DB", json_encode(array("job" => "Item DB Verification[DONE]")));
 
 	}
 
