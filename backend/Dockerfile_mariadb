@@ -1,3 +1,0 @@
-FROM mariadb:latest
-COPY ./docker/mariadb/ /usr/local/bin/
-COPY ./private/mariadb/ /usr/local/bin/
