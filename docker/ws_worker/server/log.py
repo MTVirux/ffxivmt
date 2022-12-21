@@ -2,6 +2,8 @@ import datetime
 import traceback
 import inspect
 import config
+import json
+import time
 
 
 #########################################
@@ -46,15 +48,18 @@ def action(message = "None", custom_log_channel = ""):
         caller_filename = custom_log_channel
 
     log_filename = config.LOGS_DIR+"action/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
-    message = str(message)
+    message = json.loads(message)
+    message['timestamp'] = int(time.time())*1000
+    message['caller_filename'] = caller_filename
+    message = json.dumps(message)
 
     if(config.PRINT_TO_SCREEN['ACTION'] == True):
-        print("[ACTION]["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message))
+        print("[ACTION]" + message)
 
 
     log_file = open(log_filename, "a")
     if message is not None:
-        log_file.write("["+caller_filename+"][" + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + "] - " + str(message)) 
+        log_file.write(message)
         log_file.write('\n')
     
     if(config.LIMIT_LOGS['ACTION'] != 0):

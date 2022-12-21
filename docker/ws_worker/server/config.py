@@ -121,6 +121,7 @@ DCS_TO_USE = {
 
 REGIONS_TO_USE = {
 1:"Europe",
+2:"REGION_NOT_SET"
 }
 
 #LOGGING

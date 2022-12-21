@@ -1,0 +1,16 @@
+#
+# MTVirux Redis Dockerfile
+#
+#
+
+# Pull base image.
+FROM mtvirux/redis-stack-python:R702rc3-p3.10.5
+
+COPY ./docker/redis/ /
+
+RUN chmod +x /usr/local/bin/startup.sh
+RUN chmod +x /monitor_server.sh
+
+WORKDIR /server
+
+CMD ["/usr/local/bin/startup.sh"]
