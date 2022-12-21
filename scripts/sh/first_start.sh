@@ -16,10 +16,10 @@ docker-compose up -d ffmt_scylla
 echo "Spinning up PMA..."
 docker-compose up -d ffmt_pma
 
-echo "Updating Item DB from CSV..."
+echo "Updating Item DB from CSV (Log Channel ITEM_DB)..."
 curl -X POST localhost/updatedb/ > /dev/null
 
-echo "Updating item sales from universalis..."
+echo "Updating item sales from universalis (Log Channel UNIVERSALIS_API)..."
 curl -X POST localhost/updatedb/update_sales_from_universalis > /dev/null
 
 echo "Transposing sales to timeseries..."
