@@ -9,16 +9,6 @@ docker/scylla/*
 ####### MARIADB DOCKER DIR #######
 docker/mariadb/var/*
 
-####### MONITORING DIR #######
-monitoring/docker/prometheus/prometheus/*
-!monitoring/docker/prometheus/etc/prometheus/*
-monitoring/docker/loki/*
-!monitoring/docker/loki/loki-config.yml
-monitoring/docker/promtail/*
-!monitoring/docker/promtail/promtail-config.yml
-monitoring/docker/portainer
-monitoring/docker/grafana
-
 ####### ROOT DIR #######
 /*.bat
 /*.sh

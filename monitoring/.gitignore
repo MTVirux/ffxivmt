@@ -1,0 +1,9 @@
+docker/prometheus/prometheus/*
+!docker/prometheus/etc/prometheus/*
+docker/loki/*
+!docker/loki/loki-config.yml
+docker/promtail/*
+!docker/promtail/promtail-config.yml
+docker/portainer
+./docker/grafana/*
+!./docker/grafana/custom-dashboards
