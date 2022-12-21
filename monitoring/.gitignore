@@ -5,5 +5,5 @@ docker/loki/*
 docker/promtail/*
 !docker/promtail/promtail-config.yml
 docker/portainer
-./docker/grafana/*
-!./docker/grafana/custom-dashboards
+docker/grafana/*
+!docker/grafana/custom-dashboards
