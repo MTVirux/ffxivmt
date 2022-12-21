@@ -6,6 +6,9 @@ docker/ws_worker/server/logs/error/*.log
 docker/ws_worker/server/logs/system/*.log
 docker/scylla/*
 
+
+.vscode/*
+
 ####### MARIADB DOCKER DIR #######
 docker/mariadb/var/*
 
