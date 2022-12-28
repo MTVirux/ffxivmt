@@ -1,0 +1,6 @@
+backend
+monitoring
+scripts
+docker/*
+!docker/dockerfiles
+!docker/backend
