@@ -1,40 +1,9 @@
-FROM oberd/php-8.0-apache
-#PHP Plugins
-RUN docker-php-ext-install mysqli
-RUN pecl install -o -f redis \
-&&  rm -rf /tmp/pear \
-&&  docker-php-ext-enable redis
-
-#SSL Stuff
-RUN apt-get update && apt-get install -y ssl-cert nano systemctl apt-utils
-RUN rm -rf /var/www/html/index.html
+FROM mtvirux/php8-cassandra-mysqli-apache:ssl
 
 #COPY FILES FROM REPO TO CONTAINER
 COPY ./docker/backend/ /
-COPY ./backend/ /var/www/html/
 
-#VENDOR INSTALL
-WORKDIR /var/www/html/application
-RUN rm -rf /var/www/html/vendor
-RUN composer install
-
-#CLEAN UP DIR
 WORKDIR /var/www/html/
-RUN rm -rf /var/www/html/.git
-RUN rm -rf /var/www/html/docker
-RUN rm -rf docker-compose.yml
-RUN rm -rf Dockerfile
-
-##LOGS
-RUN chmod 777 /var/www/html/application/logs
-
-#APACHE ENABLE SITES
-RUN a2ensite mtvirux_app.conf
-RUN a2ensite mtvirux_app_ssl.conf
-
-#APACHE MOD ENABLES
-RUN a2enmod rewrite
-RUN a2enmod ssl
 
 #INITIATE CONTAINER
 RUN chmod +x /usr/local/bin/run_entrypoints.sh
