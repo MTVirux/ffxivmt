@@ -15,4 +15,11 @@ class MY_Controller extends CI_Controller{
         $this->load->view('common/footer');
     }
 
+    public function load_maintenance_template($view, $data = null){
+        $this->load->view('common/header');
+        $this->load->view('common/navbar');
+        $this->load->view('errors/maintnance', $data);
+        $this->load->view('common/footer');
+    }
+
 }
