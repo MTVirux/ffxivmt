@@ -139,6 +139,8 @@ services:
       - REDISTIMESERIES_ARGS=${REDISTIMESERIES_ARGS}
     networks:
       - ffmt_network
+    volumes:
+      - ./docker/redis/server:/server
 
 networks:
   ffmt_network:
