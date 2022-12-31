@@ -248,7 +248,7 @@ class Test extends MY_Controller {
 				"name" => $this->Item->get_item_name($listing["item"][0]["id"]),
 				"id" => $listing["item"][0]["id"],
 				"price" => $listing["currency"]["0"]["amount"],
-				"currency" => $listing["currency"]["0"]["id"],
+				"currency_id" => $listing["currency"]["0"]["id"],
 				"currency_name" => $this->Item->get_item_name($listing["currency"]["0"]["id"]),
 		];
 			
