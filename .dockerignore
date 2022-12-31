@@ -1,6 +1,5 @@
 backend
 monitoring
 scripts
-docker/*
-!docker/dockerfiles
-!docker/backend
+docker/mariadb/var
+docker/scylla
