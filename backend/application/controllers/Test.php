@@ -231,16 +231,13 @@ class Test extends MY_Controller {
 
 	function bicolor_gemstone_profit_calculator(){
 
-		if(empty($_POST)){
-			$this->load_view_template('tools/bicolor_gemstone_profit_calculator');
-			return;
-		}
+		//if(empty($_POST)){
+		//	$this->load_view_template('tools/bicolor_gemstone_profit_calculator');
+		//	return;
+		//}
 		
 		$this->load->model("Item_model", "Item");
 		$item_data = garland_db_get_items(26807);
-		//pretty_dump($item_data);
-
-		//pretty_dump(($item_data["item"]["tradeCurrency"][0]["listings"]));
 
 		$listings = $item_data["item"]["tradeCurrency"][0]["listings"];
 
