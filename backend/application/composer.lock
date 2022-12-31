@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ee2931617bf54d9550096166deae2ef8",
+    "content-hash": "906554cd197139230e7b3a7ce888e8bb",
     "packages": [
         {
             "name": "chriskacerguis/codeigniter-restserver",
@@ -113,6 +113,43 @@
                 }
             ],
             "time": "2022-10-11T16:52:29+00:00"
+        },
+        {
+            "name": "uri2x/php-cql",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/uri2x/php-cql.git",
+                "reference": "0979314a82ffff739214823955e162c84e7947d9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/uri2x/php-cql/zipball/0979314a82ffff739214823955e162c84e7947d9",
+                "reference": "0979314a82ffff739214823955e162c84e7947d9",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "CassandraNative\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Uri Hartmann",
+                    "homepage": "http://www.humancodes.org/projects/php-cql"
+                }
+            ],
+            "description": "A native Apache Cassandra and ScyllaDB connector for PHP based on the CQL binary protocol with support for persistent connections",
+            "support": {
+                "issues": "https://github.com/uri2x/php-cql/issues",
+                "source": "https://github.com/uri2x/php-cql/tree/1.0.0"
+            },
+            "time": "2022-12-16T11:15:31+00:00"
         }
     ],
     "packages-dev": [
