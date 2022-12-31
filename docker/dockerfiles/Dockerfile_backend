@@ -1,9 +1,6 @@
-FROM mtvirux/php8-cassandra-mysqli-apache:ssl
+FROM mtvirux/php-8.0-apache-mysqli-sockets:latest
 
-#COPY FILES FROM REPO TO CONTAINER
-COPY ./docker/backend/ /
-
-WORKDIR /var/www/html/
+COPY ./docker/backend /
 
 #INITIATE CONTAINER
 RUN chmod +x /usr/local/bin/run_entrypoints.sh
