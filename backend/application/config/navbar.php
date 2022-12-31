@@ -61,5 +61,6 @@ $config['navbar_structure'] =
     "Other Tools" =>[
         "Item Product Profit Solver" => 'tools/item_product_profit_calculator',
         "Bi-color Gemstone Profit Calculator" => 'test/bicolor_gemstone_profit_calculator',
+        "Currency Efficiency Calculator (test mode)" => 'test/currency_efficiency_calculator',
     ],
 ];

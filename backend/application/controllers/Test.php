@@ -305,4 +305,120 @@ class Test extends MY_Controller {
 
 		
 	}
+
+
+
+
+	function currency_efficiency_calculator(){
+
+		if(!array_key_exists("currency_id", $_POST) || !array_key_exists("location", $_POST) || !array_key_exists("request_id", $_POST)){
+			$this->load_view_template('tools/currency_efficiency_calculator');
+			return;
+		}
+
+		if(empty($_POST["currency_id"])){
+			echo "POST_ERROR: No currency id provided.";
+			return;
+		}
+
+		if(empty($_POST["location"])){
+			echo "POST_ERROR: No location provided.";
+			return;
+		}
+
+		if(empty($_POST["request_id"])){
+			echo "POST_ERROR: No request_id provided.";
+			return;
+		}
+
+		$this->load->model("Item_model", "Item");
+
+		$currency_id = $this->Item->get_by_name($_POST["currency_id"])[0]->id;
+		$worldDcRegion = $_POST["location"];
+		$request_id = $_POST["request_id"];
+
+		$item_data = garland_db_get_items($currency_id);
+
+		//pretty_dump($item_data);die();
+
+		//pretty_dump(($item_data["item"]["tradeCurrency"][0]["listings"]));
+
+		$shops = $item_data["item"]["tradeCurrency"];
+
+
+		$final_data = [];
+
+		foreach($shops as $shop_index => $shop){
+			$listings = $item_data["item"]["tradeCurrency"][$shop_index]["listings"];
+			//pretty_dump($shop_index);
+			foreach($listings as $listing){
+				//pretty_dump($listing);die();
+				$final_data[$listing["item"][0]["id"]] = [
+					"name" => $this->Item->get_item_name($listing["item"][0]["id"]),
+					"id" => $listing["item"][0]["id"],
+					"price" => $listing["currency"][0]["amount"],
+					"currency_id" => $listing["currency"][0]["id"],
+					"currency_name" => $this->Item->get_item_name($listing["currency"][0]["id"]),
+				];
+				//pretty_dump($final_data);die();
+			}
+		}
+
+		//Grab all the array keys from $final_data
+		$keys = array_keys($final_data);
+		
+		//Filter out untradable
+		$marketable_ids = universalis_get_marketable_item_ids();
+
+		foreach($keys as $index => $key){
+			if(!in_array($key, $marketable_ids)){
+				unset($keys[$index]);
+			}
+		}
+
+
+		//Split the keys into arrays of 50 elements
+		$keys_array = array_chunk($keys, 50);
+
+		//Var to be populated with all the API results
+		$full_mb_data = [];
+
+		foreach($keys_array as $key_array){
+			//Implode
+			$keys_to_send = implode(",", $key_array);
+			//Get the data from the API
+			$mb_data = universalis_get_mb_data($worldDcRegion, $keys_to_send);
+			//Add the data to the full data array
+
+			foreach($mb_data["items"] as $item_id => $item_data){
+				$final_data[$item_id]["minPrice"] = floatval($item_data["minPrice"]);
+				$final_data[$item_id]["regularSaleVelocity"] = $item_data["regularSaleVelocity"];
+				$final_data[$item_id]["mtvirux_score"] = floatval($final_data[$item_id]["minPrice"]) * floatval($final_data[$item_id]["regularSaleVelocity"]);
+			}
+		}
+
+		foreach($final_data as $item_id => $item_data){
+			if(!isset($item_data["mtvirux_score"])){
+				unset($final_data[$item_id]);
+			}
+		}
+
+		//Sort final data by mtvirux score
+		$mtvirux_scores = array_column($final_data, 'mtvirux_score');
+		array_multisort($mtvirux_scores, SORT_DESC, $final_data);
+
+		echo json_encode(array(
+			"status" => "success", 
+			"data" => $final_data, 
+			"request_id" => $request_id, 
+			"item_name" => $this->Item->get_item_name($currency_id), 
+			"item_id" => $currency_id, 
+			"location" => $worldDcRegion)
+		);
+		return $final_data;
+
+		
+	}
+
+	}
 }
