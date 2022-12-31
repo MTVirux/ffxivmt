@@ -132,6 +132,9 @@ class Tools extends MY_Controller {
 				$item_crafts[$partial["id"]]["name"] = $partial["obj"]["n"];
 			}
 		}
+		
+		//Add the base item in there too
+		$item_crafts[$item_id]["name"] = $garland_item["item"]["name"];
 
 		//get all keys
 		foreach($item_crafts as $key => $item_craft){
