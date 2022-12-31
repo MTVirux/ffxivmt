@@ -106,6 +106,9 @@ services:
       dockerfile: ${REDIS_DOCKERFILE}
     container_name: ${REDIS_CONTAINER_NAME}
     restart: "always"
+    ports:
+      - 6379:6379
+      
     environment:
 
       - REDIS_CONFIG_FILE=${REDIS_CONFIG_FILE}
