@@ -89,7 +89,7 @@ $autoload['drivers'] = array();
 |
 |	$autoload['helper'] = array('url', 'file');
 */
-$autoload['helper'] = array('jojo_helper', 'garland_helper', 'universalis_helper', 'ffxiv_worlds_helper', 'logger_helper');
+$autoload['helper'] = array('jojo_helper', 'garland_helper', 'universalis_helper', 'logger_helper');
 
 /*
 | -------------------------------------------------------------------
@@ -103,7 +103,7 @@ $autoload['helper'] = array('jojo_helper', 'garland_helper', 'universalis_helper
 | config files.  Otherwise, leave it blank.
 |
 */
-$autoload['config'] = array('redis', 'worlds', 'scoring', 'logs', 'navbar', 'patch_constants');
+$autoload['config'] = array('redis', 'scoring', 'logs', 'navbar', 'patch_constants');
 
 /*
 | -------------------------------------------------------------------
