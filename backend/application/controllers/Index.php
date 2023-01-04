@@ -6,7 +6,6 @@ class Index extends MY_Controller{
     function __construct(){
         parent::__construct();
         $this->load->helper('ffxiv_worlds');
-        $this->load->model('Redis/redis_info_model', 'redis');
     }
 
     public function get_current_timestamp(){
@@ -15,20 +14,8 @@ class Index extends MY_Controller{
         return $time;
     }
 
-    public function number_of_redis_keys(){
-        $results = $this->redis->key_count();
-        $data['db'] = $results;
-        $total_count = 0;
-        foreach($results as $result){
-            $total_count += $result;
-        }
-        $data['total'] = $total_count;
-        pretty_dump($data);
-        
-    }
-
     public function index(){
-		$this->load_view_template('home');
+		$this->load_view_template('temp/maintnance');
     }
 
 }
