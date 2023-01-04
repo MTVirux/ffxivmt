@@ -75,11 +75,11 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'ffmt_mariadb',
-	'username' => 'root',
-	'password' => 'password',
-	'database' => 'ffxiv_db',
-	'dbdriver' => 'mysqli',
+	'hostname' => 'ffmt_scylla',
+	'username' => '',
+	'password' => '',
+	'database' => 'ffmt',
+	'dbdriver' => 'pdo',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
 	'db_debug' => (ENVIRONMENT !== 'production'),
