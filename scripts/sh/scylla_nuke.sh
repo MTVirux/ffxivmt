@@ -1,5 +1,6 @@
 #!/bin/bash
 
 docker container rm -f ffmt_scylla
-docker image rm -f $(docker image ls -q)
+rm -rf ./docker/scylla/persistent
+docker image rm -f ffmt_scylla
 docker-compose up -d ffmt_scylla
