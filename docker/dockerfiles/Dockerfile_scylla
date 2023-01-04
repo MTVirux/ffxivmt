@@ -1,0 +1,14 @@
+FROM scylladb/scylla:5.1
+
+COPY ./docker/scylla/etc/scylla /etc/scylla
+
+COPY ./docker/scylla/usr/local/bin/run_entrypoints.sh /usr/local/bin/run_entrypoints.sh
+RUN chmod +x /usr/local/bin/run_entrypoints.sh
+
+COPY ./docker/scylla/startup_scripts /startup_scripts
+RUN chmod +x /startup_scripts/*.sh
+
+RUN mkdir -p /backup
+RUN chmod 777 /backup
+
+ENTRYPOINT ["/usr/local/bin/run_entrypoints.sh"]
