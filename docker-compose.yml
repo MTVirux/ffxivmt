@@ -32,7 +32,6 @@ services:
     depends_on:
       - ${SCYLLADB_CONTAINER_NAME}
       - ${BACKEND_CONTAINER_NAME}
-      - ${MARIADB_CONTAINER_NAME}
     environment:
       - BACKEND_HOST=${BACKEND_CONTAINER_NAME}
       - SCYLLADB_HOST=${SCYLLADB_CONTAINER_NAME}
@@ -66,44 +65,7 @@ services:
 
     networks:
       - ffmt_network
-
-  ffmt_mariadb:
-    image: ffmt_mariadb
-    build:
-      context: .
-      dockerfile: ${MARIADB_DOCKERFILE}
-    container_name: ${MARIADB_CONTAINER_NAME}
-    restart: "unless-stopped"
-    environment:
-      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MARIADB_DATABASE=${MARIADB_DATABASE_NAME}
-    volumes:
-      - ./docker/mariadb/etc/mysql/conf.d:/etc/mysql/conf.d
-      - ./docker/mariadb/var/lib/mysql:/var/lib/mysql
-      - ./docker/mariadb/usr/local/bin:/usr/local/bin
-    ports:
-      - ${MARIADB_HOST_PORT}:3306
-    networks:
-      - ffmt_network
-
-
-
-# DATABASE MANAGEMENT
-  ffmt_pma:
-    image: "phpmyadmin/phpmyadmin"
-    container_name: ${PMA_CONTAINER_NAME}
-    restart: "unless-stopped"
-    environment:
-      - PMA_HOST=${MARIADB_CONTAINER_NAME}
-      - UPLOAD_LIMIT=300M
-    ports:
-      - ${PMA_HOST_PORT}:80
-    depends_on:
-      - ${MARIADB_CONTAINER_NAME}
-    networks:
-      - ffmt_network
-
+      
 networks:
   ffmt_network:
     driver: bridge
