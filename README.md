@@ -1,9 +1,3 @@
-# ON PATCH FIXING:
-
-- Update `patch_constants.php` config
-- Nuke everything with nuke_all.sh script + clear_docker_cache.sh script
-- Run first_start.sh
-
 # RECOMMENDED CRONS TO SET:
 0 0 * * * scripts/cron/store_logs.sh
 
@@ -14,21 +8,11 @@
 - Make API endpoints instead of the various controllers
 - Make function to recreate preaproved items based on rules and store them in DB instead of config
 - Separate frontend to another repo
-- Make cron and script to backup mariaDB
-- Find a way to not have so many scripts in root when working
-- Move dockerfiles to docker/dockerfiles
 - Ponder fusing nuke_all script with clear_docker_cache script (bat and sh)
 - Move this to do list to github issues
-- Autogenerate the patch constants instead of them being kept in config
 - Figure out what's Dependabot
-- Make worlds DB instead of config
 - What is even going on with Item_model -> get_by_name() ??????????
-- Check var type conversions on item CSV import (Updateddb.php)
-- Make view for Bi-color Gemstone Profit Calculator and working AJAX script
 - Give loading divs a fancy gif for UX improvement
-- Make script be copied to root dir instead of moved so git can stop panicking
-- Fix Item Product Profit Calculator (results are giving out false items)
-- Clean logger calls as $custom_file was deprecated
 - Verify ITEM_SCORE logs as always present "# of keus: 1"
 
 # BY THE 12 PLEASE REMEMBER TO MOVE THESE TO ISSUES
