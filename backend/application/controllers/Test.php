@@ -416,9 +416,4 @@ class Test extends MY_Controller {
 		
 	}
 
-	function scylla_check(){
-		echo ' controller ';
-		$this->load->model('Scylla/Sales_model', 'Sales');
-		$this->Sales->test();
-	}
 }
