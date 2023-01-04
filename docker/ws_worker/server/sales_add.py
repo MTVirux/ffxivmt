@@ -118,17 +118,15 @@ def add_entry(hash, field, new_entry):
         )
 
         params_dict = {
-            "buyerName": new_entry['buyerName'],
+            "buyer_name": new_entry['buyerName'],
             "hq": new_entry['hq'],
-            "onMannequin": new_entry['onMannequin'],
+            "on_mannequin": new_entry['onMannequin'],
             "pricePerUnit": int(new_entry['pricePerUnit']),
             "quantity": new_entry['quantity'],
             "sale_time": int(new_entry['timestamp'])*1000,
-            "worldID": new_entry['worldID'],
-            "itemID": new_entry['itemID'],
+            "world_id": new_entry['worldID'],
+            "item_id": new_entry['itemID'],
             "world_name": config.WORLDS[new_entry['worldID']]["name"],
-            "datacenter": config.WORLDS[new_entry['worldID']]["datacenter"],
-            "region": config.WORLDS[new_entry['worldID']]["region"],
         }
 
         formatted_query = query % params
