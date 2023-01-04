@@ -12,36 +12,33 @@ class Item_product_profit_calculator extends RestController{
         
         Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
         Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
-        Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
+        Header('Access-Control-Allow-Methods: GET, POST'); //method allowed
 
     }
     
-    public function post_index(){
-        $search_term = $_POST["search_term"];
+    public function index_get(){
+        $search_term = $_GET["search_term"];
         if(is_null($search_term) || empty($search_term)){
-            logger("API_ERROR", "api/v1/item_product_profit_calculator --- POST REQUEST FAILED: Missing: search_term field");
+            logger("API_ERROR", "api/v1/item_product_profit_calculator --- GET REQUEST FAILED: Missing: search_term field");
             return $this->response([
                 'status' => false,
-                'message' => "POST request failed, please try again. Missing: search_term field",
+                'message' => "GET request failed, please try again. Missing: search_term field",
             ], 400);
         }
 
-        $location = $_POST["location"];
+        $location = $_GET["location"];
         if(is_null($location) || empty($location)){
-            logger("API_ERROR", "api/v1/item_product_profit_calculator --- POST REQUEST FAILED: Missing: location field");
+            logger("API_ERROR", "api/v1/item_product_profit_calculator --- GET REQUEST FAILED: Missing: location field");
             return $this->response([
                 'status' => false,
-                'message' => "POST request failed, please try again. Missing: location field",
+                'message' => "GET request failed, please try again. Missing: location field",
             ], 400);
         }
 
-        $request_id = $_POST["request_id"];
+        $request_id = $_GET["request_id"];
         if(is_null($request_id) || empty($request_id)){
-            logger("API_ERROR", "api/v1/item_product_profit_calculator --- POST REQUEST FAILED: Missing: request_id field");
-            return $this->response([
-                'status' => false,
-                'message' => "POST request failed, please try again. Missing: request_id field",
-            ], 400);
+            //Give it a random hex string
+            $request_id = bin2hex(random_bytes(16));
         }
 
         logger("API_INFO", "api/v1/item_product_profit_calculator --- Request [".$request_id."] for ".$search_term." on ".$location." received");
@@ -52,7 +49,7 @@ class Item_product_profit_calculator extends RestController{
 
         $this->load->model("Item_model", "Item");
         $item_id = ($this->Item->get_by_name($search_term)[0]->id);
-        $garland_item = garland_get_item($item_id);
+        $garland_item = garland_db_get_items($item_id);
         $garland_item_partials = $garland_item["partials"];
         $item_crafts = [];
         foreach($garland_item_partials as $partial){
@@ -74,7 +71,7 @@ class Item_product_profit_calculator extends RestController{
             $data['status'] 	= "UNIVERSALIS API ERROR";
             $data['message']	= "There was an error with the Universalis API, please try again later.";
             $data['debug'] 		= var_dump($mb_data);
-            logger("API_ERROR", "api/v1/item_product_profit_calculator --- POST REQUEST FAILED: Missing: mb_data field");
+            logger("API_ERROR", "api/v1/item_product_profit_calculator --- GET REQUEST FAILED: Missing: mb_data field");
             echo json_encode($data);
             return;
         }
@@ -92,6 +89,7 @@ class Item_product_profit_calculator extends RestController{
             $mb_treated_data[$product_name]["regularSaleVelocity"] = $mb_treated_data[$item_id]["regularSaleVelocity"];
             $mb_treated_data[$product_name]["ffmt_score"] = $mb_treated_data[$product_name]["min_price"] * $mb_treated_data[$product_name]["regularSaleVelocity"];
             $mb_treated_data[$product_name]["id"] = $item_id;
+            $mb_treated_data[$product_name]["name"] = $product_name;
             unset($mb_treated_data[$item_id]);
         }
 
@@ -101,30 +99,34 @@ class Item_product_profit_calculator extends RestController{
         //pretty_dump($mb_treated_data);die();
 
         if(!empty($mb_treated_data) && !is_null($mb_treated_data) && count($mb_treated_data) > 0){
-            $this->table->set_heading(["Item ID", "Name", "Price", "Universalis Sale Velocity", "FFMT Score (price * USV)"]);
-            $this->table->set_template(array('table_open' => '<table class="table table-striped table-bordered table-hover">'));
-            foreach($mb_treated_data as $name=>$row){
-                $this->table->add_row([$row["id"], $name, $row["min_price"], $row["regularSaleVelocity"], $row["ffmt_score"]]);
-            }
 
             //add bootstrap
             $data['status'] = "success";
             $data['item_name'] = $search_term;
             $data['item_id'] = $item_id;
-            $data['data'] = $this->table->generate();
-            $data['raw_data'] = $mb_treated_data;
             $data['location'] = $location;
             $data['request_id'] = $request_id;
-            logger("api/v1/item_product_profit_calculator", "Request [".$request_id."] for ".$product_name." on ".$location." SUCCESS");
+            $data['data'] = $mb_treated_data;
+
+            logger("API_INFO", "api/v1/item_product_profit_calculator --- Request [".$request_id."] for ".$product_name." on ".$location." SUCCESS");
             
-            echo json_encode($data);
+            $this->response([
+                'status' => true,
+                'data' => $data
+            ], 200 );
+
         }else{
+
             unset($data);
             $data['status'] 	= "Could not fetch MB Data from Universalis";
             $data['message']	= "Could not fetch MB Data from Universalis. Please try again later.";
-            echo json_encode($data);
-            logger("api/v1/item_product_profit_calculator", "Request [".$request_id."] for ".$product_name." on ".$location." FAIL");
+            $this->response([
+                'status' => false,
+                'message' => $data
+            ], 200 );
+            logger("API_ERROR", "api/v1/item_product_profit_calculator --- Request [".$request_id."] for ".$product_name." on ".$location." FAIL");
             return;
+
         }
     }
 }
