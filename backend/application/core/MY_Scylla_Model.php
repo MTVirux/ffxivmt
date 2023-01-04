@@ -1,6 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-require_once APPPATH.'vendor/uri2x/php-cql/src/Cassandra.php';
+include_once APPPATH.'vendor/uri2x/php-cql/src/Cassandra.php';
 
 class MY_Scylla_Model extends CI_Model{
 
@@ -8,16 +8,19 @@ class MY_Scylla_Model extends CI_Model{
 
     public function __construct() {
         parent::__construct();
+        $this->load->config('scylla');
 
-        $scylla = new CassandraNative\Cassandra();
+        $this->scylla = new CassandraNative\Cassandra();
+        $scylla_config = $this->config->item('scylla');
+        
+        $host = $scylla_config['database']['host'];
+        $user = $scylla_config['database']['user'];
+        $pass = $scylla_config['database']['pass'];
+        $dbname = $scylla_config['database']['dbname'];
+        $port = $scylla_config['database']['port'];
 
-        $host = 'ffmt_scylla';
-        $user = '';
-        $pass = '';
-        $dbname = 'sales';
-        $port = 9042;
-
-        pretty_dump($scylla->connect($host, $user, $pass, $dbname, $port));
+        $this->scylla->connect($host, $user, $pass, $dbname, $port);
+        return $this->scylla;
         
     }
 }
