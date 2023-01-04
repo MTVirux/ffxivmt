@@ -6,7 +6,6 @@ class Test extends MY_Controller {
 	public function __construct(){
 		parent::__construct();
 		$this->load->helper('url');
-		$this->load->model('/Redis/Redis_timeseries_model', 'Redis_ts');		
 	}
 
 	public function index()
