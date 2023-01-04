@@ -11,8 +11,7 @@ docker/redis/server/logs/action/*.log
 docker/redis/server/logs/error/*.log
 docker/redis/server/logs/system/*.log
 
-docker/scylla/*
-
+docker/scylla/persistent
 
 .vscode/*
 

@@ -2,4 +2,4 @@ backend
 monitoring
 scripts
 docker/mariadb/var
-docker/scylla
+docker/scylla/persistent
