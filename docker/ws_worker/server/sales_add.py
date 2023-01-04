@@ -13,6 +13,8 @@ import pprint
 from concurrent.futures import ThreadPoolExecutor, Future
 
 
+ITEM_NAME_DICT = external.get_item_name_dict()
+
 ###########################
 #   WEBSOCKET FUNCTIONS   #
 ###########################
@@ -62,8 +64,6 @@ def subscribe(ws_sales_add):
 
 def world_subscribe(ws_sales_add, world_name, world_id):
     ws_sales_add.send(bson.encode({"event": "subscribe", "channel": "sales/add{world=" + str(world_id)+"}"}))
-    log.debug("Subscribed to sales/add on world " + world_name)
-
 
 
 def start_sales_add():
@@ -77,22 +77,31 @@ def start_sales_add():
 ###########################
 
 def handle_add_sale(hash, value):
+    global ITEM_NAME_DICT
 
     #Field is a string concat so we set it beforehand
     field = str(value['buyerName']).replace(" ", "_") + "_" + str(value['timestamp'])
 
-    sale_object = {
-            "buyerName":        str(value['buyerName']),
-            "hq":               bool(value['hq']),
-            "onMannequin":      bool(value['onMannequin']),
-            "pricePerUnit":     float(value['pricePerUnit']),
-            "quantity":         int(value['quantity']),
-            "timestamp":        float(value['timestamp']),
-            "total":            float(value['total']),
-            "worldID":          int(value['worldID']),
-            "worldName":        str(value['worldName']),
-            "itemID":           int(value['itemID']),
-    }
+    try:
+        sale_object = {
+                "buyerName":        str(value['buyerName']),
+                "hq":               bool(value['hq']),
+                "onMannequin":      bool(value['onMannequin']),
+                "pricePerUnit":     float(value['pricePerUnit']),
+                "quantity":         int(value['quantity']),
+                "timestamp":        float(value['timestamp']),
+                "total":            float(value['total']),
+                "worldID":          int(value['worldID']),
+                "worldName":        str(value['worldName']),
+                "itemID":           int(value['itemID']),
+                "itemName":         str(external.ITEM_NAME_DICT[int(value['itemID'])]),
+        }
+    except Exception as e:
+        log.error("Error while creating sale object")
+        log.error(type(external.ITEM_NAME_DICT))
+        log.error(str(external.ITEM_NAME_DICT[int(value['itemID'])]))
+        exit();
+        return
 
     #hset(hash, field, value)
     add_entry(hash, field, sale_object)
@@ -105,7 +114,7 @@ def handle_add_sale(hash, value):
 def add_entry(hash, field, new_entry):
     #create_table_query = "CREATE TABLE IF NOT EXISTS sales (buyer_name text, hq boolean, on_mannequin  boolean, unit_price int, quantity int, sale_time timestamp, world_id int, item_id int, PRIMARY KEY ((item_id, world_id), sale_time))"
     try:
-        query = """INSERT INTO sales (buyer_name, hq, on_mannequin, unit_price, quantity, sale_time, world_id, item_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+        query = """INSERT INTO sales (buyer_name, hq, on_mannequin, unit_price, quantity, sale_time, world_id, item_id, world_name, item_name, total) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         params = (
             new_entry['buyerName'],
             new_entry['hq'],
@@ -115,22 +124,26 @@ def add_entry(hash, field, new_entry):
             int(new_entry['timestamp'])*1000,
             new_entry['worldID'],
             new_entry['itemID'],
+            new_entry['worldName'],
+            new_entry['itemName'],
+            int(new_entry['total']),
         )
 
         params_dict = {
             "buyer_name": new_entry['buyerName'],
             "hq": new_entry['hq'],
             "on_mannequin": new_entry['onMannequin'],
-            "pricePerUnit": int(new_entry['pricePerUnit']),
+            "unit_price": int(new_entry['pricePerUnit']),
             "quantity": new_entry['quantity'],
             "sale_time": int(new_entry['timestamp'])*1000,
             "world_id": new_entry['worldID'],
             "item_id": new_entry['itemID'],
-            "world_name": config.WORLDS[new_entry['worldID']]["name"],
+            "world_name": new_entry['worldName'],
+            "item_name": new_entry['itemName'],
+            "total": int(new_entry['total']),
         }
 
         formatted_query = query % params
-
     except Exception as e:
         log.error(e)
 
