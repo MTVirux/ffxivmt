@@ -16,7 +16,6 @@ class Updatedb extends MY_Controller {
 		$this->update_craft_recipes(true, 0, 999999999);
 		$this->update_marketability();
 		$this->update_worlds();
-		$this->update_sales();
 	}
 
 	public function update_marketability(){
@@ -49,8 +48,6 @@ class Updatedb extends MY_Controller {
 		foreach($csv as $item){
 
 			$organized_item = $item;
-
-			//pretty_dump($organized_item);die();
 
 			if(!isset($item['name'])){
 				var_dump("Culprit: " . $item['id']);
@@ -115,83 +112,6 @@ class Updatedb extends MY_Controller {
 		logger("SCYLLA_DB" , json_encode(array("message" => "Item craftability updated", "craftable_items" => $items_with_crafting)));
 
 	}
-
-	public function update_sales($reverse = true, $start_at_id= 0, $end_at_id = 999999999){
-
-		$this->load->model('Scylla/Sale_model', 'Sale_model');
-		$this->load->model('Scylla/World_model', 'World_model');
-		$this->load->model('Scylla/Item_model', 'Item_model');
-
-		$item_names = $this->Item_model->get_name();
-
-		//Get marketable items from universalis
-		$marketable_items = boolval($reverse) ? array_reverse(universalis_get_marketable_item_ids()) : universalis_get_marketable_item_ids();
-		foreach($marketable_items as $key=>$item){
-			if($item < $start_at_id || $item > $end_at_id){
-				unset($marketable_items[$key]);
-			}
-		}
-
-		
-		//Split into chunks of 100
-		$chunks = array_chunk($marketable_items, 10);
-		
-		//Make each chunk a string separated by commas
-		$chunks = array_map(function($chunk){
-			return implode(',', $chunk);
-		}, $chunks);
-
-		$regions = $this->World_model->get_regions();
-
-		$total_sales_entries_fulfilled = 0;
-		$requests_fullfilled = 0;
-		$total_request_count = count($chunks) * count($regions);
-
-		foreach($chunks as $chunk){
-
-			foreach($regions as $region){
-				$consolidated_sales_data = array();
-
-				$sales_data = universalis_get_item_sales_data($chunk, $region);
-				$requests_fullfilled++;
-
-				foreach($sales_data["items"] as $sales){
-
-					foreach($sales["entries"] as $sale_entry){
-
-						$consolidated_sales_data[] = array(
-							"hq" => $sale_entry["hq"],
-							"unit_price" => $sale_entry["pricePerUnit"],
-							"quantity" => $sale_entry["quantity"],
-							"buyer_name" => $sale_entry["buyerName"],
-							"on_mannequin" => $sale_entry["onMannequin"],
-							"sale_time" => $sale_entry["timestamp"],
-							"world_name" => $sale_entry["worldName"],
-							"world_id" => $sale_entry["worldID"],
-							"total" => $sale_entry["pricePerUnit"] * $sale_entry["quantity"],
-							"item_id" => $sales["itemID"],
-							"item_name" => $item_names[$sales["itemID"]]
-						);
-
-					}
-
-
-				}
-
-				$this->Sale_model->add_sale($consolidated_sales_data);
-			
-				logger("UNIVERSALIS_API", "Total fulfilled updated sales requests: " . $requests_fullfilled . "/" . $total_request_count);
-				$total_sales_entries_fulfilled = $total_sales_entries_fulfilled + count($consolidated_sales_data);
-				logger("UNIVERSALIS_API", "Completed " . $requests_fullfilled . " of " . $total_request_count . " requests  currently @ " . $total_sales_entries_fulfilled . " sales entries");
-
-			}
-
-		}
-
-		return true;
-	}
-	
-
 	function parse_csv() {
 
 		// Set the file to be read
