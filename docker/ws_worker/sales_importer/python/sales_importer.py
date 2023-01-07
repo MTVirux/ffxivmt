@@ -1,17 +1,13 @@
-import threading
 import external
-import time
 import log
-import pprint
-import math
 import sales_add
-import threading
-from ratelimit import limits, sleep_and_retry
-import time
+import metrics
+
 import queue
 import requests
-import os
-
+import time
+import threading
+from ratelimit import limits, sleep_and_retry
 
 @sleep_and_retry
 @limits(calls=25, period=1)
