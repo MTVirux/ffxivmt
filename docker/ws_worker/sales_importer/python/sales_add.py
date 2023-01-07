@@ -1,6 +1,6 @@
 import database
 import log
-import pprint
+import metrics
 
 def parse(new_entry, url, external_item_name_dict):
 
@@ -9,10 +9,13 @@ def parse(new_entry, url, external_item_name_dict):
 
     for item_id in new_entry["items"]:
         for sale in new_entry["items"][item_id]["entries"]:
+
             total_sales_entries += 1
+
             sale['total'] = int(sale['pricePerUnit']) * int(sale['quantity'])
             sale['itemID'] = int(item_id)
             sale['itemName'] = external_item_name_dict[int(item_id)]
+
             formatted_query = ""
             params = ()
             escaped_params = ()
@@ -52,9 +55,9 @@ def parse(new_entry, url, external_item_name_dict):
             except Exception as e:
                 log.error(e)
             try:
-                result_set_object = database.SCYLLA_DB.execute(query, params)
-                pprint.pprint(result_set_object)
+                database.SCYLLA_DB.execute(query, params)
                 parsed_sales += 1
+                metrics.PARSED_SALES += 1
                 
             except Exception as e:
                 log.panic(formatted_query)

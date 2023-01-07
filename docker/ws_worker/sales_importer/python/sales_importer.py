@@ -39,8 +39,13 @@ def watcher():
     global req_threads
     global db_threads
     global url_queue
+    global request_queue
+    global requests_completed
+    global total_requests
+    parsed_sales_per_second = 0
 
     while len(req_threads) > 0 or len(db_threads) > 0 or url_queue.qsize() > 0:
+        parsed_sales_per_second = metrics.PARSED_SALES - parsed_sales_per_second
         #write status to file
         file = open("../IMPORT.status", "w")
         file.write("Req threads: " + str(len(req_threads)))
@@ -49,8 +54,16 @@ def watcher():
         file.write('\n')
         file.write("Queue size: " + str(url_queue.qsize()))
         file.write('\n')
+        file.write("Request queue size: " + str(request_queue.qsize()))
+        file.write('\n')
+        file.write("Requests completed: " + str(requests_completed) + " / " + str(total_requests))
+        file.write('\n')
+        file.write("Total sales parsed: " + str(metrics.PARSED_SALES))
+        file.write('\n')
+        file.write("Sales parsed per second: " + str(parsed_sales_per_second) + "/s")
         file.close()
-        time.sleep(0.1)
+        parsed_sales_per_second = metrics.PARSED_SALES
+        time.sleep(1)
     
     print("IMPORT FINISHED - WATCHER EXITING")
     file.write
