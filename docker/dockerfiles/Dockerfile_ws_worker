@@ -3,55 +3,6 @@
 #
 #
 
-# Pull base image.
-FROM ubuntu:lunar-20221207
-
-#Python pre-reqs
-RUN apt update && apt install -y \
-build-essential \
-zlib1g-dev \
-libncurses5-dev \
-libgdbm-dev \
-libnss3-dev \
-libssl-dev \
-libreadline-dev \
-libffi-dev \
-libsqlite3-dev \
-wget \
-libbz2-dev \
-nano \
-bc 
-
-#Download Python 3.10.5 tar
-RUN wget https://www.python.org/ftp/python/3.10.5/Python-3.10.5.tgz
-
-#Extract Python 3.10.5 tar
-RUN tar -xf Python-3.10.5.tgz
-RUN rm -rf Python-3.10.5.tgz
-WORKDIR /Python-3.10.5
-RUN ./configure --enable-optimizations
-RUN make -j $(nproc)
-RUN make altinstall
-
-#Install pip3
-RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python3.10 get-pip.py
-
-#Install required python modules
-RUN pip3.10 install websocket && \
-pip3.10 install websocket-client && \
-pip3.10 install bson && \
-pip3.10 install pymongo && \
-pip3.10 install redis && \
-pip3.10 install scylla-driver && \
-pip3.10 install requests && \
-pip3.10 install prettytable && \
-
-EXPOSE 80
-
-RUN cp /Python-3.10.5/python /usr/local/bin/
-
-
-COPY ./docker/ws_worker/usr/local/bin/run_entrypoints.sh /usr/local/bin/run_entrypoints.sh
+FROM mtvirux/ubuntu-lunar-python3.10.5:latest
 
 CMD ["/usr/local/bin/run_entrypoints.sh"]
