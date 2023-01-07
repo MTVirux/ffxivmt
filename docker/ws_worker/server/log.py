@@ -113,3 +113,13 @@ def limit_log(filename, type):
         f.writelines(lines[-config.LOG_LIMIT[type]:])
     return
 
+
+def panic(cql):
+    log_file_name = config.LOGS_DIR+"panic/" + "panic" + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
+
+    if cql is not None:
+        log_file = open(log_file_name, "a");
+        log_file.write(cql+";")
+        log_file.write('\n')
+
+        return    

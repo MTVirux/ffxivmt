@@ -129,13 +129,27 @@ def add_entry(hash, field, new_entry):
             int(new_entry['total']),
         )
 
+        escaped_params = (
+            "'" + new_entry['buyerName'].replace("'", "''") + "'",
+            new_entry['hq'],
+            new_entry['onMannequin'],
+            int(new_entry['pricePerUnit']),
+            new_entry['quantity'],
+            int(new_entry['timestamp'])*1000,
+            new_entry['worldID'],
+            new_entry['itemID'],
+            "'" + new_entry['worldName'].replace("'", "''") + "'",
+            "'" + new_entry['itemName'].replace("'", "''") + "'",
+            int(new_entry['total']),
+        )
+
         params_dict = {
             "buyer_name": new_entry['buyerName'],
             "hq": new_entry['hq'],
             "on_mannequin": new_entry['onMannequin'],
             "unit_price": int(new_entry['pricePerUnit']),
             "quantity": new_entry['quantity'],
-            "sale_time": int(new_entry['timestamp'])*1000,
+            "new_entry_time": int(new_entry['timestamp'])*1000,
             "world_id": new_entry['worldID'],
             "item_id": new_entry['itemID'],
             "world_name": new_entry['worldName'],
@@ -143,14 +157,15 @@ def add_entry(hash, field, new_entry):
             "total": int(new_entry['total']),
         }
 
-        formatted_query = query % params
+        formatted_query = query % escaped_params
+        
     except Exception as e:
         log.error(e)
-
     try:
         result_set_object = database.SCYLLA_DB.execute(query, params)
         log.action(str(json.dumps(params_dict)))
     except Exception as e:
+        log.panic(formatted_query)
         log.error(e)
         log.error(formatted_query)
         return False
