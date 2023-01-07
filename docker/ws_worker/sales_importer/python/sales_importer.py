@@ -20,12 +20,11 @@ def send_request(url):
 def request_handler(url):
     global db_threads
     global external_item_name_dict
+    global request_queue
     response = send_request(url);
     if(response.status_code == 200):
-        #spawn thread to add sales
-        thread = threading.Thread(target=sales_add.parse, daemon=True, args=(response.json(), url, external_item_name_dict))
-        db_threads.append(thread)
-        thread.start()
+        #put a dict in request queue with the response and the url
+        request_queue.put({"response": response.json(), "url": url})
     else:
         #Retry if error status code
         log.error("Response status code: " + str(response.status_code) + " [Retrying] --- " + str(url))
@@ -124,19 +123,31 @@ for region in query_list:
 for url in url_list:
     url_queue.put(url)
 
+#establish total requests
+total_requests = url_queue.qsize()
+
 # start watcher thread after url queue is populated 
 # as to have a condition to keep it running
 watcher_thread.start()
 
 # While url queue is not empty or there are active threads
-while not url_queue.empty() or len(req_threads) > 0:
+while not url_queue.empty() or len(req_threads) > 0 or len(db_threads) > 0:
+
+    while (request_queue.qsize() == request_queue_limit and len(req_threads) == max_request_threads and len(db_threads) == max_db_threads):
+        time.sleep(0.1)
 
     # Start a new thread if there are fewer than `max_request_threads` active threads
-    if (len(req_threads) < max_request_threads) and ((len(db_threads) + len(req_threads)) < max_db_threads):
+    if (len(req_threads) < max_request_threads and (request_queue.qsize()+len(req_threads)) < request_queue_limit):
       url = url_queue.get()
       thread = threading.Thread(target=request_handler, args=(url,))
       thread.start()
       req_threads.append(thread)
+    elif (len(db_threads) < max_db_threads) and request_queue.qsize() > 0:
+        # Start a new thread if there are fewer than `max_db_threads` active threads
+        current_response = request_queue.get()
+        thread = threading.Thread(target=sales_add.parse, daemon=True, args=(current_response["response"], current_response["url"], external_item_name_dict))
+        thread.start()
+        db_threads.append(thread)
     else:
         # Wait for a thread to finish before starting a new one
         for thread in req_threads:
@@ -146,7 +157,7 @@ while not url_queue.empty() or len(req_threads) > 0:
         for thread in db_threads:
             if not thread.is_alive():
               db_threads.remove(thread)
-
+              requests_completed += 1
 
 # Wait for all request threads to finish
 for thread in req_threads:
