@@ -1,4 +1,7 @@
 rm -rf ./docker/scylla/persistent
+rm -rf ./backend/application/logs/*.log
+rm -rf ./docker/ws_worker/server/logs/
+rm -rf ./docker/ws_worker/sales_importer/logs/
 
 echo "Spinning up Scylla..."
 docker-compose up -d ffmt_scylla
@@ -6,7 +9,13 @@ docker-compose up -d ffmt_scylla
 echo "Spinning up PHP backend..."
 docker-compose up -d ffmt_backend
 
-echo "Updating Item DB from CSV (Log Channel ITEM_DB)..."
+#Wait for scylla to be ready
+while ! docker exec ffmt_scylla test -f "/.ffmt_scylla_ready"; do
+echo -en "\r$(date) - Waiting for file '/.ffmt_scylla_ready' to exist inside the container..." 
+sleep 1
+done
+
+echo "Updating Item DB (Log Channel SCYLLADB)..."
 curl -X POST localhost/updatedb/ > /dev/null
 
 echo "Spinning up WS Worker..."
