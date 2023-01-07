@@ -30,11 +30,13 @@ function universalis_get_item_sales_data($item_ids, $worldDcRegion, $time_ago_to
 
 
     $preset_time_intervals = [
-                                "90 days"   =>    7776000000,   //milliseconds_in_90_days,
-                                "30 days"   =>    2592000000,   //milliseconds_in_30_days,
-                                "15 days"   =>    1296000000,   //milliseconds_in_15_days,
-                                "7 days"    =>    604800000,    //milliseconds_in_7_days,
-                                "1 day"     =>    86400000,     //milliseconds_in_1_day,
+                                "90_days"       =>    7776000000,   //90_days_in_milliseconds
+                                "30_days"       =>    2592000000,   //30_days_in_milliseconds
+                                "15_days"       =>    1296000000,   //15_days_in_milliseconds
+                                "7_days"        =>    604800000,    //7_days_in_milliseconds
+                                "1_day"         =>    86400000,     //1_day_in_milliseconds
+                                "1_hour"        =>    3600000,      //1_hour_in_milliseconds
+                                "30_min"        =>    1800000,      //30_minutes_in_milliseconds
                             ];
     
     if(!is_null($time_ago_to_query)){
@@ -43,12 +45,16 @@ function universalis_get_item_sales_data($item_ids, $worldDcRegion, $time_ago_to
         }
     }
 
-    if(is_null($stats_within)){
-        $stats_within = $preset_time_intervals["90 days"];
+    if(is_null($stats_within) && is_null($time_ago_to_query)){
+        $stats_within = $preset_time_intervals["1_hour"];
+    } if(is_null($stats_within) && !is_null($time_ago_to_query)){
+        $stats_within = $time_ago_to_query;
     }
 
-    if(is_null($entries_within)){
-        $entries_within = $preset_time_intervals["90 days"];
+    if(is_null($entries_within) && is_null($time_ago_to_query)){
+        $entries_within = $preset_time_intervals["1_hour"];
+    } if(is_null($entries_within) && !is_null($time_ago_to_query)){
+        $entries_within = $time_ago_to_query;
     }
 
     if(is_null($entriesToReturn)){
@@ -56,7 +62,7 @@ function universalis_get_item_sales_data($item_ids, $worldDcRegion, $time_ago_to
     }
 
     if(is_null($time_ago_to_query)){
-        $time_ago_to_query = $preset_time_intervals["90 days"];
+        $time_ago_to_query = $preset_time_intervals["1_hour"];
     }
 
     if(gettype($item_ids) == "array"){
