@@ -26,7 +26,10 @@ services:
       - ffmt_network
   
   ffmt_ws_worker:
-    image: mtvirux/ubuntu-lunar-python3.10.5:latest
+    build:
+      context: .
+      dockerfile: ${WS_WORKER_DOCKERFILE}
+    image: ffmt_ws_worker
     container_name: ${WS_WORKER_CONTAINER_NAME}
     restart: "unless-stopped"
     depends_on:
@@ -38,6 +41,7 @@ services:
     volumes:
       - ./docker/ws_worker/startup_scripts:/startup_scripts
       - ./docker/ws_worker/server:/server
+      - ./docker/ws_worker/sales_importer:/sales_importer
     networks:
       - ffmt_network
 
