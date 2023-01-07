@@ -78,8 +78,13 @@ query_list = {}
 url_list = []
 req_threads = []
 db_threads = []
+
 url_queue = queue.Queue()
+request_queue = queue.Queue()
+
+request_queue_limit = 50
 max_request_threads = 25
+requests_completed = 0
 max_db_threads = 50 #Each thread should consume about 50 ~ 100 MB of RAM
 
 #Create a IMPORT.status file if it doesn't exist
