@@ -1,5 +1,6 @@
 #! /bin/bash
 #sleep forver
+rm -rf ./ffmt_scylla_ready
 
 mkdir -p /startup_scripts
 touch /init.log
@@ -18,6 +19,8 @@ for f in /startup_scripts/*.sh; do
   bash -x "$f" >> /init.log
 done
 
+
+touch /.ffmt_scylla_ready
 
 #sleep forver
 while true; do sleep 1000; done
