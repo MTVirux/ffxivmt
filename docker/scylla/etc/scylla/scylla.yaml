@@ -554,6 +554,9 @@ force_schema_commit_log: true
 api_ui_dir: /opt/scylladb/swagger-ui/dist/
 api_doc_dir: /opt/scylladb/api/api-doc/
 
+max_memory_for_unlimited_query_soft_limit: 2147483648 # 2GB
+max_memory_for_unlimited_query_hard_limit: 4294967296 # 4GB
 
-max_memory_for_unlimited_query_soft_limit: 6442450944 # 6GB
-max_memory_for_unlimited_query_hard_limit: 8589934592 # 8GB
+read_request_timeout_in_ms: 60000 # 1 minute
+write_request_timeout_in_ms: 5000 # 5 seconds
+
