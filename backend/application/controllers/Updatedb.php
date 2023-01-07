@@ -102,7 +102,7 @@ class Updatedb extends MY_Controller {
 						};
 
 						unset($item["obj"]["item"]["craft"][0]["complexity"]);
-						$current_item["crafted"]	=	!empty($item["obj"]["item"]["craft"][0]) ? true : false;
+						$current_item["craftable"]	=	!empty($item["obj"]["item"]["craft"][0]) ? true : false;
 
 						if($this->Scylla_items->update($current_item)){
 							logger("SCYLLA_DB" , "Item recipe updated: " . $current_item["id"] . ' - ' . $current_item['name']);
@@ -251,7 +251,7 @@ class Updatedb extends MY_Controller {
 				'aetherial_reductible'  =>	boolval(	$item[40-$element_offset]		),
 				'materia_slot_count'    =>	intval(		$item[87-$element_offset]		),
 				'advanced_melding'      =>	boolval(	$item[88-$element_offset]		),
-				'crafted'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
+				'craftable'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 				'marketable'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 			);
 		

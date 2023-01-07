@@ -5,7 +5,7 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.items (
 id int,
 name text,
 description text,
-crafted boolean,
+craftable boolean,
 marketable boolean,
 can_Be_HQ boolean,
 always_collectible boolean,
@@ -27,5 +27,6 @@ advanced_Melding boolean,
 PRIMARY KEY (id));"
 
 
-cqlsh -e "CREATE INDEX IF NOT EXISTS is_crafted ON ffmt.items (crafted)"
 cqlsh -e "CREATE INDEX IF NOT EXISTS item_names ON ffmt.items (name)"
+cqlsh -e "CREATE INDEX IF NOT EXISTS is_crafted ON ffmt.items (craftable)"
+cqlsh -e "CREATE INDEX IF NOT EXISTS marketable ON ffmt.items (marketable)"
