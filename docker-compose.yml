@@ -66,7 +66,7 @@ services:
       - ./docker/scylla/persistent/commitlog:/var/lib/scylla/commitlog
       - ./docker/scylla/persistent/saved_caches:/var/lib/scylla/saved_caches
       - ./docker/scylla/persistent/log:/var/log/scylla
-      - ./docker/scylla/etc/scylla:/etc/scylla
+      - ./docker/scylla/etc/scylla/scylla.yaml:/etc/scylla/scylla.yaml
 
     networks:
       - ffmt_network
