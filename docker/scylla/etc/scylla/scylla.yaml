@@ -122,13 +122,13 @@ native_shard_aware_transport_port: 19042
 #native_shard_aware_transport_port_ssl: 19142
 
 # How long the coordinator should wait for read operations to complete
-read_request_timeout_in_ms: 5000
+read_request_timeout_in_ms: 60000
 
 # How long the coordinator should wait for writes to complete
-write_request_timeout_in_ms: 2000
+write_request_timeout_in_ms: 20000
 # how long a coordinator should continue to retry a CAS operation
 # that contends with other proposals for the same row
-cas_contention_timeout_in_ms: 1000
+cas_contention_timeout_in_ms: 100000
 
 # phi value that must be reached for a host to be marked down.
 # most users should never need to adjust this.
@@ -411,9 +411,9 @@ native_transport_max_frame_size_in_mb: 256
 # compaction_rows_count_warning_threshold: 100000
 
 # How long the coordinator should wait for seq or index scans to complete
-# range_request_timeout_in_ms: 10000
+range_request_timeout_in_ms: 100000
 # How long the coordinator should wait for writes to complete
-# counter_write_request_timeout_in_ms: 5000
+counter_write_request_timeout_in_ms: 50000
 # How long a coordinator should continue to retry a CAS operation
 # that contends with other proposals for the same row
 # cas_contention_timeout_in_ms: 1000
@@ -422,7 +422,7 @@ native_transport_max_frame_size_in_mb: 256
 # we need to flush first so we can snapshot before removing the data.)
 # truncate_request_timeout_in_ms: 60000
 # The default timeout for other, miscellaneous operations
-# request_timeout_in_ms: 10000
+request_timeout_in_ms: 60000
 
 # Enable or disable inter-node encryption. 
 # You must also generate keys and provide the appropriate key and trust store locations and passwords. 
@@ -556,7 +556,3 @@ api_doc_dir: /opt/scylladb/api/api-doc/
 
 max_memory_for_unlimited_query_soft_limit: 2147483648 # 2GB
 max_memory_for_unlimited_query_hard_limit: 4294967296 # 4GB
-
-read_request_timeout_in_ms: 60000 # 1 minute
-write_request_timeout_in_ms: 5000 # 5 seconds
-
