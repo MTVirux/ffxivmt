@@ -15,7 +15,7 @@ class Index extends MY_Controller{
     }
 
     public function index(){
-		$this->load_view_template('temp/maintnance');
+		$this->load_view_template('home');
     }
 
 }
