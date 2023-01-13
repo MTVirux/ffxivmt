@@ -2,20 +2,13 @@ from pprint import pprint
 import requests
 import config
 import log
-import pprint
+import metrics
 import database
 from cassandra.query import dict_factory
-
-def warn_backend_to_update_item(world_name, item_id):
-    #Split hash into item_id and world_name
-
-    req = requests.post("http://" + config.BACKEND_HOST_CONTAINER + "/test/python_update", data={"item_id": item_id, "world_name": world_name})
-    if(req.status_code == 200):
-        log.action("Backend updated item " + hash)
-    else:
-        log.error("Backend could not update item " + hash)
-
-    pass
+import json
+import queue
+from math import floor
+from time import time
 
 def get_item_id_list():
     result = database.SCYLLA_DB.execute("SELECT id FROM items WHERE marketable = true");
@@ -46,3 +39,31 @@ def get_item_name_dict():
     return item_name_dict
 
 ITEM_NAME_DICT = get_item_name_dict()
+
+
+def send_sales_to_php(response_item):
+    global FAILED_REQUEST_URLS
+
+    metrics.LAST_RESPONSE = response_item["json"]
+    headers = {'Content-type': 'application/json'}
+    response = requests.post("http://" + config.BACKEND_HOST_CONTAINER + "/api/v1/updatedb/python_request", json=response_item["json"], headers=headers)
+    url = response_item["url"];
+    print(response.status_code)
+    if(response.status_code == 200):
+        try:
+            metrics.PHP_REQUESTS_COMPLETED += 1
+            log.action(response.text)
+            metrics.TOTAL_SALES_PARSED += int(json.loads(response.text)["data"]["parsed_sales"])
+        except Exception as e:
+            log.error(f"Error parsing response --- {response.text}")
+            FAILED_REQUEST_URLS.put(url)
+    else:
+        print("REQUEST FAILED")
+        metrics.PHP_REQUESTS_FAILED += 1
+        FAILED_REQUEST_URLS.put(url)
+        log.error(f"Request failed --- {response.status_code} --- {response.text}")
+
+FAILED_REQUEST_URLS = queue.Queue()
+
+def get_current_timestamp_ms():
+    return int(floor(time() * 1000))
