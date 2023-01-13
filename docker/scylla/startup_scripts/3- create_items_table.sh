@@ -28,5 +28,5 @@ PRIMARY KEY (id));"
 
 
 cqlsh -e "CREATE INDEX IF NOT EXISTS item_names ON ffmt.items (name)"
-cqlsh -e "CREATE INDEX IF NOT EXISTS is_crafted ON ffmt.items (craftable)"
-cqlsh -e "CREATE INDEX IF NOT EXISTS marketable ON ffmt.items (marketable)"
+cqlsh -e "CREATE INDEX IF NOT EXISTS item_is_crafted ON ffmt.items (craftable)"
+cqlsh -e "CREATE INDEX IF NOT EXISTS item_is_marketable ON ffmt.items (marketable)"
