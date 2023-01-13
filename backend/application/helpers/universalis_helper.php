@@ -13,7 +13,7 @@ function universalis_get_mb_data($dc_or_server, $item_id){
 
     $mb_data = json_decode(universalis_run_request($url), true);
 
-    return mb_data;
+    return $mb_data;
 
 }
 
