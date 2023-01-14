@@ -42,19 +42,26 @@ ITEM_NAME_DICT = get_item_name_dict()
 
 
 def send_sales_to_php(response_item):
-    global FAILED_REQUEST_URLS
-
-    metrics.LAST_RESPONSE = response_item["json"]
-    headers = {'Content-type': 'application/json'}
-    response = requests.post("http://" + config.BACKEND_HOST_CONTAINER + "/api/v1/updatedb/python_request", json=response_item["json"], headers=headers)
-    url = response_item["url"];
-    print(response.status_code)
+    try:
+        global FAILED_REQUEST_URLS
+        metrics.LAST_RESPONSE = response_item["json"]
+        headers = {'Content-type': 'application/json'}
+        response = requests.post("http://" + config.BACKEND_HOST_CONTAINER + "/api/v1/updatedb/python_request", json=json.loads(response_item["json"]), headers=headers)
+        url = response_item["url"];
+        print(response.status_code)
+    except e as Exception:
+        log.error(e)
+        log.error(f"Error sending sales to PHP --- {response_item['json']}")
+        FAILED_REQUEST_URLS.put(url)
+        return
+        
     if(response.status_code == 200):
         try:
             metrics.PHP_REQUESTS_COMPLETED += 1
             log.action(response.text)
             metrics.TOTAL_SALES_PARSED += int(json.loads(response.text)["data"]["parsed_sales"])
         except Exception as e:
+            log.error(e)
             log.error(f"Error parsing response --- {response.text}")
             FAILED_REQUEST_URLS.put(url)
     else:

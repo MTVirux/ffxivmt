@@ -21,10 +21,10 @@ def send_request(url):
     response = requests.get(url)
     if(response.status_code == 200 and response.text != ""):
         log.action(f"Request success --- {url}")
-        response_queue.put({"url": url, "json":json.loads(response.text)})
+        response_queue.put({"url": url, "json":response.text})
         return True
     else:
-        log.error(f"Request failed --- {response.status_code} --- RETRYING: {url}")
+        #log.error(f"Request failed --- {response.status_code} --- RETRYING: {url}")
         external.FAILED_REQUEST_URLS.put(url)
 
 def watcher():
@@ -121,7 +121,7 @@ items_per_request = 10
 
 response_queue_limit = 25 #Each queue entry should consume about 50 ~ 100 MB of RAM
 max_request_threads = 25
-php_concurrent_request_limit = 40
+php_concurrent_request_limit = 1
 
 #Make combos of region and item id
 external_region_list = external.get_region_list()

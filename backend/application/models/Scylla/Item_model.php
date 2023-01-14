@@ -92,5 +92,15 @@ class Item_model extends MY_Scylla_Model{
         return $names;
     }
 
+    public function get_all_names(){
+        $result = $this->scylla->query('SELECT id, name FROM items');
+        $names = [];
+        foreach($result as $row){
+            $names[$row["id"]] = $row['name'];
+        }
+
+        return $names;
+    }
+
     
 }

@@ -72,6 +72,7 @@ class Sale_model extends MY_Scylla_Model{
         }
 
         logger('SCYLLA_SALES', "Inserted " . $parsed_sales . " sales in " . microtime(true) - $start_time . " seconds");
+        return array("parsed_sales" => $parsed_sales, "time" => microtime(true) - $start_time);
     }
 
     public function search_buyer($buyer_name, $world = ""){
