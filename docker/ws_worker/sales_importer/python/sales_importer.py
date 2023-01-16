@@ -121,7 +121,7 @@ items_per_request = 10
 
 response_queue_limit = 25 #Each queue entry should consume about 50 ~ 100 MB of RAM
 max_request_threads = 25
-php_concurrent_request_limit = 1
+php_concurrent_request_limit = 40
 
 #Make combos of region and item id
 external_region_list = external.get_region_list()
