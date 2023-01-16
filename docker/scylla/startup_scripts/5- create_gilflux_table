@@ -1,0 +1,19 @@
+#!/bin/bash
+
+cqlsh -e "CREATE TABLE gilflux (
+item_id int,
+item_name text,
+world_id int,
+world_name text,
+datacenter text,
+region text,
+total int,
+sale_time timestamp,
+PRIMARY KEY ((item_id, world_id, datacenter, region), sale_time)
+);"
+
+cqlsh -e "CREATE INDEX item_sales ON item_sales (item_id);"
+cqlsh -e "CREATE INDEX item_sales ON item_sales (world_name);"
+cqlsh -e "CREATE INDEX item_sales ON item_sales (datacenter);"
+cqlsh -e "CREATE INDEX item_sales ON item_sales (region);"
+cqlsh -e "CREATE INDEX item_sales ON item_sales (sale_time);"
