@@ -53,7 +53,7 @@ services:
       dockerfile: ${SCYLLADB_DOCKERFILE}
     image: ffmt_scylla
     restart: "unless-stopped"
-    command: --memory 8G
+    command: --memory 4G
     ports:
       - 9042:9042
       - 7000:7000
