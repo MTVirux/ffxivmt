@@ -78,7 +78,7 @@
                     $("div[request_id='"+request_id+"']").remove();
                 }
 
-                var accordion_item = `<div class='accordion-item' request_id='`+request_id+`'id='`+`PLACEHOLDER_ID`+`'>`+
+                var accordion_item = `<div class='accordion-item' request_id='`+request_id+`'id='`+`PLACEHOLDER_ITEM_ID`+`'>`+
                             `<h2 class='accordion-header' id='heading-`+`PLACEHOLDER_ID`+`'>`+
                                 `<button class='accordion-button' type='button' data-bs-toggle='collapse' data-bs-target='#collapse-`+`PLACEHOLDER_ID`+`' aria-expanded='true' aria-controls='collapseOne'>`+
                                     search_term + `-[` + location + `]`+
@@ -99,8 +99,8 @@
 
 
                 $.ajax({
-                    url: "<?php echo base_url('tools/item_product_profit_calculator')?>",
-                    type: "POST",
+                    url: "https://mtvirux.app/api/v1/tools/item_product_profit_calculator",
+                    type: "GET",
                     data: {
                         search_term: search_term,
                         location: location,
@@ -108,26 +108,65 @@
                     },
                     success: function (data) {
 
-                        var data = JSON.parse(data);
+                        data = data.data
+
+                        console.log(data)
 
                         if(data.status != "success"){
                             $(".message-row").html(data.message);
                             return;
                         }
 
-                        $("div.accordion-item[request_id='"+data.request_id+"']").attr("id", data.request_id);
-                        $("div.accordion-item[request_id='"+data.request_id+"']").html(
-                            $("div.accordion-item[request_id='"+data.request_id+"']").html()
+
+                        response_accordion_item = $("div.accordion-item[request_id='"+data.request_id+"']");
+                        $(response_accordion_item).find("button").html(data.item_name + " - [" + data.location + "]");
+                        $("#"+data.item_id).remove();
+
+                        response_accordion_item.attr("id", data.item_id);
+                        response_accordion_item.html(
+                            response_accordion_item.html()
                                 .replaceAll("PLACEHOLDER_NAME", data.item_name)
                                 .replaceAll("PLACEHOLDER_LOCATION", data.location)
                                 .replaceAll("PLACEHOLDER_ID", data.request_id)
+                                .replaceAll("PLACEHOLDER_ITEM_ID", data.item_id)
                         );
+                        
+                        var table = $("<table class='table table-striped table-hover table-bordered'>");
+                        var thead = $("<thead>");
+                        var headerRow = $("<tr>");
+                        headerRow.append($("<th>").text("ID"));
+                        headerRow.append($("<th>").text("Name"));
+                        headerRow.append($("<th>").text("Min Price"));
+                        headerRow.append($("<th>").text("Regular Sale Velocity"));
+                        headerRow.append($("<th>").text("FFMT Score"));
+                        thead.append(headerRow);
+                        table.append(thead);
 
-                        console.log("Updating content")
-                        $("#accordion-body-"+data.request_id).html(data.data);
+                        var tbody = $("<tbody>");
+                        for (var key in data.data) {
+                            var row = $("<tr>");
+                            var idCell = $("<td>").text(data.data[key]["id"]);
+                            var nameCell = $("<td>").text(data.data[key]["name"]);
+                            var minPriceCell = $("<td>").text(data.data[key]["min_price"]);
+                            var regularSaleVelocityCell = $("<td>").text(data.data[key]["regularSaleVelocity"]);
+                            var ffmtScoreCell = $("<td>").text(data.data[key]["ffmt_score"]);
+                            row.append(nameCell);
+                            row.append(minPriceCell);
+                            row.append(regularSaleVelocityCell);
+                            row.append(ffmtScoreCell);
+                            row.append(idCell);
+                            tbody.append(row);
+                        }
+                        table.append(tbody);
+                        $("body").append(table);
+
+
+                        $("#accordion-body-"+data.request_id).html(table);
+
                     },
                     error: function (data) {
-                        $("div.accordion-item[request_id='"+data.request_id+"']").remove();
+                        response_accordion_item = $("div.accordion-item[request_id='"+data.request_id+"']");
+                        response_accordion_item.remove();
                         $("#PLACEHOLDER_ID").remove();
                     }
                 });
