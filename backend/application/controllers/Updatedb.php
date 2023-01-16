@@ -14,6 +14,7 @@ class Updatedb extends MY_Controller {
 	public function index(){
 		$this->item_array = $this->parse_csv();
 		$this->update_items();
+		$this->update_elastic_items();
 		$this->update_craft_recipes(true, 0, 999999999);
 		$this->update_marketability();
 		$this->update_worlds();
@@ -67,6 +68,38 @@ class Updatedb extends MY_Controller {
 				logger("SCYLLA_DB" , json_encode(array("message" => "Item added to database", "item_id" => $item["id"], "item_name" => $item['name'])));
 			}else{
 				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to add item to DB", "item_id" => $item["id"])));
+				die();
+			}
+		}
+	}
+
+	public function update_elastic_items(){
+
+		if(isset($this->item_array)){
+			$csv = $this->item_array;
+		}else{
+			$csv = $this->parse_csv();
+		}
+
+		$this->load->model('Elastic/Elastic_Item_model', 'Elastic_items');
+
+		foreach($csv as $item){
+
+			$elastic_item = array("id" => $item["id"], "name" => $item["name"]);
+
+			if(!isset($elastic_item['name'])){
+				var_dump("Culprit: " . $elastic_item['id']);
+				logger("ELASTIC_DB", json_encode(array("message" => "Culprit: " . $elastic_item['id'], "error")));
+				pretty_dump($elastic_item);
+				die();
+			}
+
+			$response = $this->Elastic_items->add($elastic_item);
+			
+			if($response["result"] == "updated" || $response["result"] == "created"){
+				logger("ELASTIC_DB" , json_encode(array("message" => "Item added to database", "item_id" => $elastic_item["id"], "item_name" => $elastic_item['name'])));
+			}else{
+				logger("ELASTIC_DB" , json_encode(array("message" => "[ERROR] Failed to add item to DB", "item_id" => $elastic_item["id"], "response" => json_encode($response))));
 				die();
 			}
 		}
