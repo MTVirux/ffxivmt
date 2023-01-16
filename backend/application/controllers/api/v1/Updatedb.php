@@ -61,6 +61,7 @@ class updatedb extends RestController{
                 $sale["item_id"] = $item_id;
                 $sale["total"] = $sale["quantity"] * $sale["unit_price"];
                 $sale["item_name"] = $names_array[$item_id];
+                $sale["sale_time"] = $sale_time*1000;
                 $consolidated_sales_data[] = $sale;
             }
         }
