@@ -63,7 +63,6 @@ class Updatedb extends MY_Controller {
 				die();
 			}
 			
-			$this->load->model('Scylla/Item_model', 'Scylla_items');
 			if($this->Scylla_items->add($item)){
 				logger("SCYLLA_DB" , json_encode(array("message" => "Item added to database", "item_id" => $item["id"], "item_name" => $item['name'])));
 			}else{
