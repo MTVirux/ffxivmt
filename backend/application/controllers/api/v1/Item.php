@@ -28,7 +28,7 @@ class item extends RestController{
             //Make name properly capitalized
             $name = ucwords(strtolower($_GET["name"]));
 
-            $this->load->model('Scylla/Item_model');
+            $this->load->model('Scylla/Scylla_Item_model');
             $result = $this->Item_model->get_by_name($name);
 
             $this->response([

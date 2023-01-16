@@ -19,7 +19,7 @@ class Updatedb extends MY_Controller {
 	}
 
 	public function update_marketability(){
-		$this->load->model('Scylla/Item_model', 'Scylla_items');
+		$this->load->model('Scylla/Scylla_Item_model', 'Scylla_items');
 		$marketable_items_ids = universalis_get_marketable_item_ids();
 
 		$marketable_item_count = count($marketable_items_ids);
@@ -43,7 +43,8 @@ class Updatedb extends MY_Controller {
 	
 	public function update_items(){
 
-		$csv = $this->parse_csv();
+
+		$scylla = $this->load->model('Scylla/Scylla_Item_model', 'Scylla_items');
 
 		foreach($csv as $item){
 
@@ -68,7 +69,7 @@ class Updatedb extends MY_Controller {
 
 	public function update_craft_recipes(){
 
-		$this->load->model('Scylla/Item_model', 'Scylla_items');
+		$this->load->model('Scylla/Scylla_Item_model', 'Scylla_items');
 		$all_ids = $this->Scylla_items->get_all_ids();
 		$ids_to_request = array();
 

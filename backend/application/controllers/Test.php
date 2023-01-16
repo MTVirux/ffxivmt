@@ -327,7 +327,7 @@ class Test extends MY_Controller {
 			return;
 		}
 
-		$this->load->model("Item_model", "Item");
+		$this->load->model("Scylla/Scylla_Item_model", "Scylla_Item");
 
 		$currency_id = $this->Item->get_by_name($_POST["currency_id"])[0]->id;
 		$worldDcRegion = $_POST["location"];
@@ -407,7 +407,7 @@ class Test extends MY_Controller {
 			"status" => "success", 
 			"data" => $final_data, 
 			"request_id" => $request_id, 
-			"item_name" => $this->Item->get_item_name($currency_id), 
+			"item_name" => $this->Scylla_Item->get($currency_id)[0]["name"], 
 			"item_id" => $currency_id, 
 			"location" => $worldDcRegion)
 		);

@@ -36,7 +36,7 @@ class updatedb extends RestController{
 
         $consolidated_sales_data = array();
 
-        $this->load->model('Scylla/Item_model', 'Items');
+        $this->load->model('Scylla/Scylla_Item_model', 'Items');
         $names_array = $this->Items->get_all_names();
 
         foreach($sales_data["items"] as $item_id => $sale_data){

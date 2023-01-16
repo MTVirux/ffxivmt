@@ -3,7 +3,7 @@ defined ('BASEPATH') OR exit('No direct script access allowed');
 require_once APPPATH.'core/MY_Scylla_Model.php';
 
 
-class Item_model extends MY_Scylla_Model{
+class Scylla_Item_model extends MY_Scylla_Model{
     
     function __construct() {
         parent::__construct();

@@ -42,13 +42,11 @@ class Item_product_profit_calculator extends RestController{
         }
 
         logger("API_INFO", "api/v1/item_product_profit_calculator --- Request [".$request_id."] for ".$search_term." on ".$location." received");
-
-        $search_term = str_replace("_", " ", $search_term);
-        $search_term = str_replace("-", "'", $search_term);
-        $this->load->library('table');
-
-        $this->load->model("Item_model", "Item");
-        $item_id = ($this->Item->get_by_name($search_term)[0]->id);
+        $this->load->model("Scylla/Scylla_Item_model", "Item");
+        $this->load->model("Elastic/Elastic_Item_model", "Elastic_Item");
+        $response = $this->Elastic_Item->get($search_term);
+        $item_id = $response["hits"]["hits"][0]["_id"];
+        $fixed_name = $response["hits"]["hits"][0]["_source"]["name"];
         $garland_item = garland_db_get_items($item_id);
         $garland_item_partials = $garland_item["partials"];
         $item_crafts = [];
@@ -63,6 +61,7 @@ class Item_product_profit_calculator extends RestController{
             $item_ids[] = $key;
         }
 
+        $item_ids[] = $item_id;
         $item_ids = implode(",", $item_ids);
 
         $mb_data = (universalis_get_mb_data($location, $item_ids));
@@ -84,7 +83,7 @@ class Item_product_profit_calculator extends RestController{
         //pretty_dump($mb_data);die();
 
         foreach($mb_treated_data as $item_id => $min_price){
-            $product_name = $this->Item->get_item_name($item_id);
+            $product_name = $this->Item->get($item_id)[0]["name"];
             $mb_treated_data[$product_name]["min_price"] = $mb_treated_data[$item_id]["minPrice"];
             $mb_treated_data[$product_name]["regularSaleVelocity"] = $mb_treated_data[$item_id]["regularSaleVelocity"];
             $mb_treated_data[$product_name]["ffmt_score"] = $mb_treated_data[$product_name]["min_price"] * $mb_treated_data[$product_name]["regularSaleVelocity"];
@@ -102,7 +101,7 @@ class Item_product_profit_calculator extends RestController{
 
             //add bootstrap
             $data['status'] = "success";
-            $data['item_name'] = $search_term;
+            $data['item_name'] = $fixed_name;
             $data['item_id'] = $item_id;
             $data['location'] = $location;
             $data['request_id'] = $request_id;
@@ -123,7 +122,7 @@ class Item_product_profit_calculator extends RestController{
             $this->response([
                 'status' => false,
                 'message' => $data
-            ], 200 );
+            ], 400 );
             logger("API_ERROR", "api/v1/item_product_profit_calculator --- Request [".$request_id."] for ".$product_name." on ".$location." FAIL");
             return;
 

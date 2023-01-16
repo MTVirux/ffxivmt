@@ -52,9 +52,9 @@ class Tools extends MY_Controller {
 
 		$search_term = str_replace("_", " ", $search_term);
 		$search_term = str_replace("-", "'", $search_term);
-		$this->load->library('table');
+		
+		$this->load->model("Scylla/Scylla_Item_model", "Item");
 
-		$this->load->model("Item_model", "Item");
 		$item_id = ($this->Item->get_by_name($search_term)[0]->id);
 		$garland_item = garland_db_get_items($item_id);
 		$garland_item_partials = $garland_item["partials"];
