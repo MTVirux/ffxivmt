@@ -12,6 +12,7 @@ class Updatedb extends MY_Controller {
 
 
 	public function index(){
+		$this->item_array = $this->parse_csv();
 		$this->update_items();
 		$this->update_craft_recipes(true, 0, 999999999);
 		$this->update_marketability();
@@ -43,6 +44,11 @@ class Updatedb extends MY_Controller {
 	
 	public function update_items(){
 
+		if(isset($this->item_array)){
+			$csv = $this->item_array;
+		}else{
+			$csv = $this->parse_csv();
+		}
 
 		$scylla = $this->load->model('Scylla/Scylla_Item_model', 'Scylla_items');
 
