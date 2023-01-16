@@ -35,16 +35,21 @@ class updatedb extends RestController{
         }
 
         $consolidated_sales_data = array();
+        $consolidated_gilflux_data = array();
 
-        $this->load->model('Scylla/Scylla_Item_model', 'Items');
-        $names_array = $this->Items->get_all_names();
+        $this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
+        $this->load->model('Scylla/World_model', 'Scylla_Worlds');
+        $names_array = $this->Scylla_Items->get_all_names();
+        $worlds_info = $this->Scylla_Worlds->get();
+        $worlds_formatted_info = [];
+        foreach($worlds_info as $world_info){
+            $worlds_formatted_info[$world_info["id"]] = $world_info;
+        }
 
         foreach($sales_data["items"] as $item_id => $sale_data){
             foreach($sale_data["entries"] as $sale){
 
-                //pretty_dump($sale);die();
-
-                
+                //Regular Sale
                 $sale["buyer_name"] = $sale["buyerName"];
                 unset($sale["buyerName"]);
                 $sale["on_mannequin"] = $sale["onMannequin"];
@@ -61,17 +66,32 @@ class updatedb extends RestController{
                 $sale["item_id"] = $item_id;
                 $sale["total"] = $sale["quantity"] * $sale["unit_price"];
                 $sale["item_name"] = $names_array[$item_id];
-                $sale["sale_time"] = $sale_time*1000;
+                $sale["sale_time"] = $sale["sale_time"]*1000;
                 $consolidated_sales_data[] = $sale;
+
+                //Gilflux Sale
+                $gilflux_sale["item_id"] = $item_id;
+                $gilflux_sale["item_name"] = $names_array[$item_id];
+                $gilflux_sale["world_id"] = $sale["world_id"];
+                $gilflux_sale["world_name"] = $sale["world_name"];
+                $gilflux_sale["region"] = $worlds_formatted_info[$sale["world_id"]]["region"];
+                $gilflux_sale["datacenter"] = $worlds_formatted_info[$sale["world_id"]]["datacenter"];
+                $gilflux_sale["sale_time"] = $sale["sale_time"];
+                $gilflux_sale["total"] = $sale["total"];
+                $consolidated_gilflux_data[] = $gilflux_sale;
             }
         }
 
 
         logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => sizeof($sales_data))));
 
-        $this->load->model('Scylla/Sale_model', 'Sales');
+        $this->load->model('Scylla/Sale_model', 'Scylla_Sales');
+        $this->load->model('Scylla/Scylla_Gilflux_model', 'Scylla_Gilflux');
+    
+        $sale_result = $this->Scylla_Sales->add_sale($consolidated_sales_data);
+        $gilflux_result = $this->Scylla_Gilflux->add_sale($consolidated_gilflux_data);
 
-        $result = $this->Sales->add_sale($consolidated_sales_data);
+        $result = array("parsed_sales" => $sale_result["parsed_sales"], "parsed_gilflux" => $gilflux_result["parsed_sales"], "time" => $sale_result["time"] + $gilflux_result["time"]);
         
         $this->response([
             'status' => true,
