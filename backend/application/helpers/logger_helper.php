@@ -27,6 +27,11 @@ function logger($channel, $message, $custom_file = null){
     //write message to file
     fwrite($file, $message . PHP_EOL);
 
+    if(ENVIRONMENT !== 'production'){
+        $file = fopen(APPPATH . 'logs/' . 'ALL' . '.log', 'a');
+        //write message to file
+        fwrite($file, $message . PHP_EOL);
+    }
     //close file
     fclose($file);
     
