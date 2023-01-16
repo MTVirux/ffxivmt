@@ -114,7 +114,7 @@
 
 
                 $.ajax({
-                    url: "<?php echo base_url('test/currency_efficiency_calculator')?>",
+                    url: "https://mtvirux.app/test/currency_efficiency_calculator",
                     type: "POST",
                     data: {
                         currency_id: currency_id,
