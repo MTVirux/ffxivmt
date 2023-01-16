@@ -65,9 +65,9 @@ class Updatedb extends MY_Controller {
 			}
 			
 			if($this->Scylla_items->add($item)){
-				logger("SCYLLA_DB" , json_encode(array("message" => "Item added to database", "item_id" => $item["id"], "item_name" => $item['name'])));
+				logger("SCYLLA_DB" , json_encode(array("message" => "Item added to Scylla", "item_id" => $item["id"], "item_name" => $item['name'])));
 			}else{
-				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to add item to DB", "item_id" => $item["id"])));
+				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to add item to Scylla", "item_id" => $item["id"])));
 				die();
 			}
 		}
@@ -97,9 +97,9 @@ class Updatedb extends MY_Controller {
 			$response = $this->Elastic_items->add($elastic_item);
 			
 			if($response["result"] == "updated" || $response["result"] == "created"){
-				logger("ELASTIC_DB" , json_encode(array("message" => "Item added to database", "item_id" => $elastic_item["id"], "item_name" => $elastic_item['name'])));
+				logger("ELASTIC_DB" , json_encode(array("message" => "Item added to Elasticsearch", "item_id" => $elastic_item["id"], "item_name" => $elastic_item['name'])));
 			}else{
-				logger("ELASTIC_DB" , json_encode(array("message" => "[ERROR] Failed to add item to DB", "item_id" => $elastic_item["id"], "response" => json_encode($response))));
+				logger("ELASTIC_DB" , json_encode(array("message" => "[ERROR] Failed to add item to Elasticsearch", "item_id" => $elastic_item["id"], "response" => json_encode($response))));
 				die();
 			}
 		}
