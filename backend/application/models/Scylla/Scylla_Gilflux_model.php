@@ -42,7 +42,7 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
 
         foreach($sales_array as $sale_data_to_insert){
 
-            $stmt = $this->scylla->prepare("INSERT INTO sales (item_id, item_name, world_id, world_name, datacenter, region, total, sale_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $this->scylla->prepare("INSERT INTO gilflux (item_id, item_name, world_id, world_name, datacenter, region, total, sale_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $batch->add_prepared($stmt, $sale_data_to_insert);
             $batch_statement_count ++;
 
