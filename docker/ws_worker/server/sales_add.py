@@ -118,7 +118,6 @@ def handle_add_sale(hash, value):
 #    ENTRY MANIPULATION   #
 ###########################
 def add_entry(hash, field, new_entry):
-    #create_table_query = "CREATE TABLE IF NOT EXISTS sales (buyer_name text, hq boolean, on_mannequin  boolean, unit_price int, quantity int, sale_time timestamp, world_id int, item_id int, PRIMARY KEY ((item_id, world_id), sale_time))"
     try:
         query = """INSERT INTO sales (buyer_name, hq, on_mannequin, unit_price, quantity, sale_time, world_id, item_id, world_name, item_name, total) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         params = (
