@@ -176,3 +176,56 @@ def add_entry(hash, field, new_entry):
         log.error(formatted_query)
         return False
     return True
+
+def add_gilflux_entry(hash, field, new_entry):
+
+    try:
+        query = """INSERT INTO gilflux (item_id, item_name, world_id, world_name, datacenter, region, sale_time, total) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+    
+        params = (
+            new_entry['itemID'],
+            new_entry['itemName'],
+            new_entry['worldID'],
+            new_entry['worldName'],
+            new_entry['datacenter'],
+            new_entry['region'],
+            int(new_entry['timestamp']*1000),
+            int(new_entry['total']),
+        )
+
+        escaped_params = (
+            new_entry['itemID'],
+            "'" + new_entry['itemName'].replace("'", "''") + "'",
+            new_entry['worldID'],
+            "'" + new_entry['worldName'].replace("'", "''") + "'",
+            "'" + new_entry['datacenter'].replace("'", "''") + "'",
+            "'" + new_entry['region'].replace("'", "''") + "'",
+            new_entry['timestamp']*1000,
+            int(new_entry['total']),
+        )
+
+        params_dict = {
+            "item_id": new_entry['itemID'],
+            "item_name": new_entry['itemName'],
+            "world_id": new_entry['worldID'],
+            "world_name": new_entry['worldName'],
+            "datacenter": new_entry['datacenter'],
+            "region": new_entry['region'],
+            "sale_time": int(new_entry['timestamp']*1000),
+            "total": int(new_entry['total']),
+        }
+
+        formatted_query = query % escaped_params
+
+    except Exception as e:
+        log.error(e)
+    
+    try:
+        result_set_object = database.SCYLLA_DB.execute(query, params)
+        log.action(str(json.dumps(params_dict)))
+
+    except Exception as e:
+        log.panic(formatted_query)
+        log.error(e)
+        log.error(formatted_query)
+        return False
