@@ -9,7 +9,7 @@
                         <div class="input-group mb-3">
                             <span class="input-group-text" id="basic-addon1">Currency:</span>
                             <select class="form-select" aria-label="Default select example" id="currency_select">
-                                <option value="none" selected>Select a currency</option>
+                                <option value="none" selected disabled>Select a currency:</option>
 
                                 <option value="none"disabled>PvE:</option>
                                 <option value="Allagan Tomestone of Astronomy">Allagan Tomestone of Astronomy (Red and Black)</option>
