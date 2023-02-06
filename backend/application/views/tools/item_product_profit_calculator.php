@@ -139,18 +139,18 @@
                         table.append(thead);
 
                         var tbody = $("<tbody>");
-                        for (var key in data.data) {
+                        for (var key in data.data){
                             var row = $("<tr>");
                             var idCell = $("<td>").text(data.data[key]["id"]);
                             var nameCell = $("<td>").text(data.data[key]["name"]);
                             var minPriceCell = $("<td>").text(data.data[key]["min_price"]);
                             var regularSaleVelocityCell = $("<td>").text(data.data[key]["regularSaleVelocity"]);
                             var ffmtScoreCell = $("<td>").text(data.data[key]["ffmt_score"]);
+                            row.append(idCell);
                             row.append(nameCell);
                             row.append(minPriceCell);
                             row.append(regularSaleVelocityCell);
                             row.append(ffmtScoreCell);
-                            row.append(idCell);
                             tbody.append(row);
                         }
                         table.append(tbody);
