@@ -8,7 +8,7 @@ chmod 777 /init.log
 
 exec /docker-entrypoint.py "$@" &
 
-CQL = "SELECT NOW() FROM system.local;"
+CQL="SELECT NOW() FROM system.local;"
 until cqlsh -e "$CQL"; do
   echo "Unavailable: sleeping at $(date)"
   sleep 1
