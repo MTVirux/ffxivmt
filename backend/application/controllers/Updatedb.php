@@ -228,7 +228,7 @@ class Updatedb extends MY_Controller {
 
 	public function update_worlds(){
 
-		$this->load->model('Scylla/World_model', 'Scylla_worlds');
+		$this->load->model('Scylla/Scylla_World_model', 'Scylla_worlds');
 		$worlds = universalis_get_all_worlds();
 
 		$total_worlds = count($worlds);

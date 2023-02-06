@@ -1,5 +1,5 @@
 <?php
-class World_model extends CI_Model {
+class Scylla_World_model extends CI_Model {
 
 	function __construct(){
 		//parent::__construct();	

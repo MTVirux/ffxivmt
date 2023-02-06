@@ -39,7 +39,7 @@ class updatedb extends RestController{
         $consolidated_gilflux_data = array();
 
         $this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
-        $this->load->model('Scylla/World_model', 'Scylla_Worlds');
+        $this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
         $names_array = $this->Scylla_Items->get_all_names();
         $worlds_info = $this->Scylla_Worlds->get();
         $worlds_formatted_info = [];
