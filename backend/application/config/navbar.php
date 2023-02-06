@@ -4,7 +4,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 $config['navbar_structure'] = 
 [
-    "Home" => "home",
     "Gil Flux" => [
         "All Items" => [
 
