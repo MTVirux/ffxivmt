@@ -39,9 +39,7 @@
                             </select>
 
                             <select class="form-select" aria-label="Default select example" id="location_select">
-                                <option value="none" selected>Select a DC for which profits will be calculated:</option>
-                                <option value="Chaos">Chaos</option>
-                                <option value="Light">Light</option>
+                                <option value="none" selected disabled>Select a location for which profits will be calculated:</option>
                             </select>
                         </div>
                     </div>
@@ -65,23 +63,45 @@
             $(document).ready(function () {
                 //randomize_placeholder_text();
                 //animate_loading_text();
-                ident_options();
+                createWorldOptions($("#location_select")[0]);
+                ident_currency_options()
             });
 
-            function ident_options(){
-                $('option').each(function() {
-                    if ($(this).val() !== "none") {
+            function ident_currency_options(){
+                $('#currency_select').find('option').each(function() {
+                    if ($(this).is(':disabled') == false && $(this).value !== "none") {
                         $(this).text("\u00a0\u00a0\u00a0\u00a0" + $(this).text());
                     }
                 });
             }
 
+            function ident_world_options(){
+                $('option.datacenter').each(function() {
+                    if ($(this).val() !== "none") {
+                        $(this).text("\u00a0\u00a0\u00a0\u00a0" + $(this).text());
+                    }
+                });
+
+                $('option.world').each(function() {
+                    if ($(this).val() !== "none") {
+                        $(this).text("\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0" + $(this).text());
+                    }
+                });
+
+            }
+
             $("#submit_request_button").click(function () {
 
-                if($("#location_select").val() == "none"){
+                if($("#currency_select").val() == "none" || $("#currency_select").val() == null){
+                    alert("Please select a currency");
+                    return;
+                }
+
+                if($("#location_select").val() == "none" || $("#location_select").val() == null){
                     alert("Please select a location");
                     return;
                 }
+
 
                 $(".message-row").html("");                
 
@@ -138,31 +158,48 @@
                                 .replaceAll("PLACEHOLDER_ID", data.request_id)
                         );
 
-                        console.log("Updating content")
                         
-                        var table = $("<table class='table table-striped table-bordered table-hover'>");
+                        var table = $("<table class='table table-striped table-bordered table-hover' id='table-"+data.request_id+"'>");
                         var headers = $('<thead>');
-                        headers.append($('<tr>'))
-                        headers.append($('<th>ID</th>'));
-                        headers.append($('<th>Name</th>'));
-                        headers.append($('<th>Min Price</th>'));
-                        headers.append($('<th>Regular Sale Velocity</th>'));
-                        headers.append($('<th>FFMT Score</th>'));
-                        headers.append($('</tr>'));
+                        headers.append($('<th> ID </th>'));
+                        headers.append($('<th> Item Name</th>'));
+                        headers.append($('<th> Currency Cost (?)</th>').attr("tooltip-text", "The cost of the item in the currency you selected"));
+                        headers.append($('<th> MSS (?)</th>').attr("tooltip-text", "The median stack size of the item"));
+                        headers.append($('<th> Min MB Price</th>'));
+                        headers.append($('<th> RSV (?)</th>').attr("tooltip-text", "Regular Sale Velocity, the number of times the item has been sold in the last 24h"));
+                        headers.append($('<th> DMC (?)</th>').attr("tooltip-text", "Daily Market Cap, the total amount gil moved in the last 24h"));
+                        headers.append($('<th> DMC% (?)</th>').attr("tooltip-text", "Daily Market Cap Percent, the percentage of the total market cap for all items of this currency that the item represents"));
+                        headers.append($('<th> RDA (?)</th>').attr("tooltip-text", "Recommended Daily Amount, the amount of the item you should try to sell daily to maximize your profit"));
+                        headers.append($('<th> FFMT Score (?)</th>').attr("tooltip-text", "The score of the item based on the FFMT algorithm (higher is better)"));
                         headers.append($('</thead>'));
-
 
                         table.append(headers);
                         table.append($("<tbody>"));
 
                         $.each(data.data, function(index, item){
-                            console.log(item);
                             var row = $("<tr></tr>");
-                            row.append($("<td>"+item.id+"</td>"));
-                            row.append($("<td>"+item.name+"</td>"));
-                            row.append($("<td>"+item.minPrice+"</td>"));
-                            row.append($("<td>"+item.regularSaleVelocity+"</td>"));
-                            row.append($("<td>"+item.mtvirux_score+"</td>"));
+
+                            id = item.id
+                            name = item.name
+                            price = item.price
+                            medianStackSize = item.medianStackSize
+                            minPrice = item.minPrice
+                            regularSaleVelocity = item.regularSaleVelocity
+                            dailyMarketCap = item.dailyMarketCap
+                            dailyMarketCapPercent = item.dailyMarketCapPercent
+                            recommendedAmountToCraftDaily = Math.round(item.dailyMarketCap/item.minPrice)
+                            mtvirux_score = item.mtvirux_score
+
+                            row.append($("<td>"+id+"</td>"));
+                            row.append($("<td>"+name+"</td>"));
+                            row.append($("<td>"+price+"</td>"));
+                            row.append($("<td>"+medianStackSize+"</td>"));
+                            row.append($("<td>"+minPrice+"</td>"));
+                            row.append($("<td>"+regularSaleVelocity+"</td>"));
+                            row.append($("<td>"+dailyMarketCap+"</td>"));
+                            row.append($("<td>"+dailyMarketCapPercent+"%</td>"));
+                            row.append($("<td>"+recommendedAmountToCraftDaily+"</td>"));
+                            row.append($("<td>"+mtvirux_score+"</td>"));
                             table.append(row);
                         });
 
@@ -182,4 +219,37 @@
                     }
                 });
             }); 
+
+            function createWorldOptions(parent_element){
+                //AJAX GET REQUEST
+                $.ajax({
+                    url: "https://mtvirux.app/api/v1/worlds",
+                    type: "GET",
+                    success: function (data) {
+
+                        if(data.status != true){
+                            $(".message-row").html(data.message);
+                            return;
+                        }
+                        options_string = "";
+
+                        $.each(data.data, function(index, region_data){
+                            options_string = options_string + "<option class='region' value='"+index+"'>"+index+"</option>";
+                            $.each(region_data, function(index, datacenter_data){
+                                options_string = options_string + "<option class='datacenter' value='"+index+"'>"+index+"</option>";
+                                $.each(datacenter_data, function(index, world){
+                                    options_string = options_string + "<option class='world' value='"+world+"'>"+world+"</option>";
+                                });
+                            });
+                        });
+                        
+                        original_html = jQuery(parent_element).html()
+                        jQuery(parent_element).html(original_html + options_string);
+                        ident_world_options();
+                    },
+                    error: function (data) {
+                        console.log(data);
+                    }
+                });
+            }
         </script>
