@@ -41,7 +41,7 @@ class Item_product_profit_calculator extends RestController{
             $request_id = bin2hex(random_bytes(16));
         }
 
-        logger("API_INFO", "api/v1/item_product_profit_calculator --- Request [".$request_id."] for ".$search_term." on ".$location." received");
+        logger("API_INFO", "api/v1/item_product_profit_calculator --- GET REQUEST [".$request_id."] for ".$search_term." on ".$location." received");
         $this->load->model("Scylla/Scylla_Item_model", "Item");
         $this->load->model("Elastic/Elastic_Item_model", "Elastic_Item");
         $response = $this->Elastic_Item->get($search_term);
