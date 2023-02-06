@@ -76,6 +76,20 @@ class Scylla_Item_model extends MY_Scylla_Model{
         return $results;
 	}
 
+    public function get_marketable_items(){
+        $result = $this->scylla->query("Select * from items where marketable = true");
+        return $result;
+    }
+
+    public function get_marketable_ids(){
+        $result = $this->scylla->query("Select id from items where marketable = true");
+        $ids = [];
+        foreach($result as $row){
+            $ids[] = $row['id'];
+        }
+        return $ids;
+    }
+
     public function get_name($id = null){
         if(!empty($id) && !is_null($id) && is_numeric($id)){
             $cql = 'SELECT id, name FROM items WHERE id = ?';
