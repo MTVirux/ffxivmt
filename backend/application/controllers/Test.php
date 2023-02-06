@@ -73,6 +73,8 @@ class Test extends MY_Controller {
 
 
 	public function currency_efficiency_calculator(){
+		$this->load->model("Scylla/Scylla_Item_model", "Scylla_Item");
+		$this->load->model("Elastic/Elastic_Item_model", "Elastic_Item");
 		if(!array_key_exists("currency_id", $_POST) || !array_key_exists("location", $_POST) || !array_key_exists("request_id", $_POST)){
 			$this->load_view_template('tools/currency_efficiency_calculator');
 			return;
@@ -81,24 +83,24 @@ class Test extends MY_Controller {
 		if(empty($_POST["currency_id"])){
 			echo "POST_ERROR: No currency id provided.";
 			return;
+		}else{
+			$currency_id = intval($this->Elastic_Item->get($_POST["currency_id"])["hits"]["hits"][0]["_id"]);
 		}
 
 		if(empty($_POST["location"])){
 			echo "POST_ERROR: No location provided.";
 			return;
+		}else{
+			$worldDcRegion = $_POST["location"];
 		}
 
 		if(empty($_POST["request_id"])){
-			echo "POST_ERROR: No request_id provided.";
+			$request_id = bin2hex(random_bytes(16));
 			return;
+		}else{
+			$request_id = $_POST["request_id"];
 		}
-
-		$this->load->model("Scylla/Scylla_Item_model", "Scylla_Item");
-		$this->load->model("Elastic/Elastic_Item_model", "Elastic_Item");
-
-		$currency_id = intval($this->Elastic_Item->get($_POST["currency_id"])["hits"]["hits"][0]["_id"]);
-		$worldDcRegion = $_POST["location"];
-		$request_id = $_POST["request_id"];
+		
 
 		$item_data = garland_db_get_items($currency_id);
 
@@ -131,8 +133,11 @@ class Test extends MY_Controller {
 		$keys = array_keys($final_data);
 		
 		//Filter out untradable
-		$marketable_ids = universalis_get_marketable_item_ids();
-
+		$marketable_items = $this->Scylla_Item->get_marketable_items();
+		$marketable_ids = [];
+		foreach($marketable_items as $marketable_item){
+			$marketable_ids[] = $marketable_item["id"];
+		}
 		foreach($keys as $index => $key){
 			if(!in_array($key, $marketable_ids)){
 				unset($keys[$index]);
@@ -146,17 +151,31 @@ class Test extends MY_Controller {
 		//Var to be populated with all the API results
 		$full_mb_data = [];
 
+		$total_gil_moved = 0;
+
 		foreach($keys_array as $key_array){
 			//Implode
 			$keys_to_send = implode(",", $key_array);
 			//Get the data from the API
 			$mb_data = universalis_get_mb_data($worldDcRegion, $keys_to_send);
 			//Add the data to the full data array
-
 			foreach($mb_data["items"] as $item_id => $item_data){
-				$final_data[$item_id]["minPrice"] = floatval($item_data["minPrice"]);
-				$final_data[$item_id]["regularSaleVelocity"] = $item_data["regularSaleVelocity"];
-				$final_data[$item_id]["mtvirux_score"] = floatval($final_data[$item_id]["minPrice"]) * floatval($final_data[$item_id]["regularSaleVelocity"]);
+				
+				$extensive_stack_array = [];
+
+				//Pre-calcs
+				foreach($item_data["stackSizeHistogram"] as $stack_size => $stack_size_occurences){
+					for($i = 0; $i < $stack_size_occurences; $i++){
+						$extensive_stack_array[] = $stack_size;
+					}
+				}
+
+				//Final Cals
+				$final_data[$item_id]["minPrice"] = round(floatval($item_data["minPrice"]),2);
+				$final_data[$item_id]["regularSaleVelocity"] = round($item_data["regularSaleVelocity"],2);
+				$final_data[$item_id]["medianStackSize"] = array_key_exists(intval(count($extensive_stack_array)/2), $extensive_stack_array) ? $extensive_stack_array[intval(count($extensive_stack_array) / 2)] : 0;
+				$final_data[$item_id]["dailyMarketCap"] = round($final_data[$item_id]["regularSaleVelocity"] * $final_data[$item_id]["medianStackSize"] * $final_data[$item_id]["minPrice"],0);
+				$final_data[$item_id]["mtvirux_score"] = round((floatval($final_data[$item_id]["minPrice"]) * floatval($final_data[$item_id]["regularSaleVelocity"])) / floatval($final_data[$item_id]["price"]),2);
 			}
 		}
 
@@ -164,6 +183,18 @@ class Test extends MY_Controller {
 			if(!isset($item_data["mtvirux_score"])){
 				unset($final_data[$item_id]);
 			}
+		}
+
+		foreach($final_data as $item_id => $item_data){
+			$total_gil_moved += $item_data["dailyMarketCap"];
+		}
+
+		foreach($final_data as $item_id => $item_data){
+			$final_data[$item_id]["dailyMarketCapPercent"] = round(($item_data["dailyMarketCap"] / $total_gil_moved) * 100,2);
+		}
+
+		foreach($final_data as $item_id => $item_data){
+			$final_data[$item_id]["mtvirux_score"] = round($final_data[$item_id]["mtvirux_score"] * $final_data[$item_id]["dailyMarketCapPercent"],2);
 		}
 
 		//Sort final data by mtvirux score
@@ -180,7 +211,10 @@ class Test extends MY_Controller {
 		);
 		return $final_data;
 
+        logger("API_INFO", "api/v1/item_product_profit_calculator --- GET REQUEST [".$request_id."] for ".$search_term." on ".$location." received");
 		
+	}
+
 	}
 
 }
