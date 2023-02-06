@@ -22,6 +22,7 @@ class updatedb extends RestController{
 
     public function python_request_post(){
 
+        set_time_limit(0);
         $sales_data = json_decode($this->input->raw_input_stream, true);
 
         logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => sizeof($sales_data["items"]))));
