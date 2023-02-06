@@ -117,11 +117,11 @@ php_request_threads = []
 url_queue = queue.Queue()
 response_queue = queue.Queue()
 
-items_per_request = 10
+items_per_request = 2
 
 response_queue_limit = 25 #Each queue entry should consume about 50 ~ 100 MB of RAM
 max_request_threads = 25
-php_concurrent_request_limit = 40
+php_concurrent_request_limit = 10
 
 #Make combos of region and item id
 external_region_list = external.get_region_list()
