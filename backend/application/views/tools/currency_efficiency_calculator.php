@@ -124,13 +124,12 @@
                             `<div id='collapse-`+`PLACEHOLDER_ID`+`' class='accordion-collapse collapse show' aria-labelledby='headingOne' data-bs-parent='#item_product_profit_accordion'>`+
                                 `<div class='accordion-body' id="accordion-body-`+`PLACEHOLDER_ID`+`">`+
                                  `<div class="loading-div">`+
-                                    `Fetching data<span class="loading-text"></span>`+
                                  `</div>`+
                                 `</div>`+
                             `</div>`+
                         `</div>`;
-
                 $("div#item_product_profit_accordion").prepend(accordion_item);
+                createProgressBar($("div#item_product_profit_accordion")[0]);
 
 
                 $.ajax({
@@ -143,7 +142,6 @@
                     },
                     success: function (data) {
                         var data = JSON.parse(data);
-                        console.log(data);
 
                         if(data.status != "success"){
                             $(".message-row").html(data.message);
@@ -207,9 +205,16 @@
 
                         table.append("</table>");
 
-                        console.log($("#accordion-body-"+data.request_id))
-
                         $("#accordion-body-"+data.request_id).html(table);
+
+                        $("#table-"+data.request_id).find("[tooltip-text]").each(function(index,element){
+                            new bootstrap.Tooltip(element, {
+                                title: $(element).attr("tooltip-text"),
+                                placement: "top",
+                                trigger: "hover"
+                            });
+                        });
+
 
                     },
                     error: function (data) {
@@ -219,6 +224,25 @@
                     }
                 });
             }); 
+
+            function createProgressBar(parent_element) {
+                var progressBar = $('<div>', { class: 'progress' });
+                var progressBarInner = $('<div>', { class: 'progress-bar progress-bar-striped progress-bar-animated', role: 'progressbar', 'aria-valuenow': '0', 'aria-valuemin': '0', 'aria-valuemax': '100' });
+                progressBar.append(progressBarInner);
+                jQuery(parent_element).children().find("div.loading-div").html(progressBar);
+
+                currentValue = 0;
+                intervalId = setInterval(function() {
+                    currentValue += 1;
+                    progressBarInner.css('width', currentValue + '%');
+                    progressBarInner.css('background-color', '#990099');
+                    progressBarInner.css('color', '#FF00FF');
+                    progressBarInner.attr('aria-valuenow', currentValue);
+                    if (currentValue >= 99) {
+                        clearInterval(intervalId);
+                    }
+                }, 40);
+            }
 
             function createWorldOptions(parent_element){
                 //AJAX GET REQUEST
