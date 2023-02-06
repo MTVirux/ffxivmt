@@ -10,9 +10,7 @@
                         <span class="input-group-text" id="basic-addon1">Item To Use In Craft</span>
                             <input id="search_term_text_input" type="text" class="form-control" placeholder="Shinryu's Wing" aria-label="Username" aria-describedby="basic-addon1">
                             <select class="form-select" aria-label="Default select example" id="location_select">
-                                <option value="none" selected>Select a DC</option>
-                                <option value="Chaos">Chaos</option>
-                                <option value="Light">Light</option>
+                                <option value="none" selected disabled>Select a Region</option>
                             </select>
                         </div>
                     </div>
@@ -57,6 +55,7 @@
             $(document).ready(function () {
                 randomize_placeholder_text();
                 animate_loading_text();
+                createWorldOptions($("#location_select")[0]);
             });
 
             $("#submit_request_button").click(function () {
@@ -94,9 +93,6 @@
                         `</div>`;
 
                 $("div#item_product_profit_accordion").prepend(accordion_item);
-
-                console.log(request_id);
-
 
                 $.ajax({
                     url: "https://mtvirux.app/api/v1/tools/item_product_profit_calculator",
@@ -171,4 +167,52 @@
                     }
                 });
             }); 
-        </script>
+
+            function createWorldOptions(parent_element){
+                //AJAX GET REQUEST
+                $.ajax({
+                    url: "https://mtvirux.app/api/v1/worlds",
+                    type: "GET",
+                    success: function (data) {
+
+                        if(data.status != true){
+                            $(".message-row").html(data.message);
+                            return;
+                        }
+                        options_string = "";
+
+                        $.each(data.data, function(index, region_data){
+                            options_string = options_string + "<option class='region' value='"+index+"'>"+index+"</option>";
+                            $.each(region_data, function(index, datacenter_data){
+                                options_string = options_string + "<option class='datacenter' value='"+index+"'>"+index+"</option>";
+                                $.each(datacenter_data, function(index, world){
+                                    options_string = options_string + "<option class='world' value='"+world+"'>"+world+"</option>";
+                                });
+                            });
+                        });
+                        
+                        original_html = jQuery(parent_element).html()
+                        jQuery(parent_element).html(original_html + options_string);
+                        ident_world_options();
+                    },
+                    error: function (data) {
+                        console.log(data);
+                    }
+                });
+            };
+
+            function ident_world_options(){
+                $('option.datacenter').each(function() {
+                    if ($(this).val() !== "none") {
+                        $(this).text("\u00a0\u00a0\u00a0\u00a0" + $(this).text());
+                    }
+                });
+
+                $('option.world').each(function() {
+                    if ($(this).val() !== "none") {
+                        $(this).text("\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0" + $(this).text());
+                    }
+                });
+
+            }
+</script>
