@@ -26,3 +26,13 @@ def get_item_name_dict():
     return item_name_dict
 
 ITEM_NAME_DICT = get_item_name_dict()
+
+def get_world_info_dict():
+    result = database.SCYLLA_DB.execute("SELECT id, name, datacenter, region FROM worlds");
+    world_dict = {}
+    for row in result:
+        world_dict[row.id] = {"id": row.id, "name": row.name, "datacenter": row.datacenter, "region": row.region}
+    
+    return world_dict;
+
+WORLD_INFO_DICT = get_world_info_dict()

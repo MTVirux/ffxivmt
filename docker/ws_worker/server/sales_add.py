@@ -95,16 +95,22 @@ def handle_add_sale(hash, value):
                 "worldName":        str(value['worldName']),
                 "itemID":           int(value['itemID']),
                 "itemName":         str(external.ITEM_NAME_DICT[int(value['itemID'])]),
+                "datacenter":       str(external.WORLD_INFO_DICT[int(value['worldID'])]["datacenter"]),
+                "region":           str(external.WORLD_INFO_DICT[int(value['worldID'])]["region"]),
         }
+
     except Exception as e:
         log.error("Error while creating sale object")
-        log.error(type(external.ITEM_NAME_DICT))
-        log.error(str(external.ITEM_NAME_DICT[int(value['itemID'])]))
+        log.error(e)
+        log.error(type(external.WORLD_INFO_DICT))
+        log.error(str(external.WORLD_INFO_DICT[int(value['worldID'])]["datacenter"]))
+        log.error(str(external.WORLD_INFO_DICT[int(value['worldID'])]["region"]))
         exit();
         return
 
     #hset(hash, field, value)
     add_entry(hash, field, sale_object)
+    add_gilflux_entry(hash, field, sale_object)
     
     return
 
