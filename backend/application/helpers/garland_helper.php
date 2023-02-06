@@ -52,3 +52,55 @@ function garland_db_get_items($item_id){
     
     return $item;
 }
+
+
+function garland_db_get_instances($instance_id = null){
+
+    if(is_null($instance_id) || empty($instance_id) || $instance_id == 'ALL'){
+
+        $instance_id_array = [];
+        $range_string = 'ALL';
+        $base_url = 'https://www.garlandtools.org/db/doc/browse/en/2/instance';
+
+    }else{ 
+        if(is_string($instance_id)){
+            $exploded_instance_id = explode(',', $instance_id);
+            if(count($exploded_instance_id) > 1){ //String of multiple ids
+                $instance_id_array = $exploded_instance_id;
+            }
+        }else if(is_numeric($instance_id)){ //Is single id String
+            $instance_id_array = [];
+            $instance_id_array[] = intval($instance_id);
+        }else if(is_array($instance_id)){
+            $instance_id_array = [$instance_id];
+        }else{
+            logger("GARLAND_DB", "[ERROR] Getting instance data from Garland DB for instances: " . $instance_id);
+            logger("GARLAND_DB", "ERROR: Invalid instance_id type: " . gettype($instance_id));
+            return False;
+        }
+        $base_url = 'https://www.garlandtools.org/db/doc/instance/en/2/';
+        $url = $base_url . $instance_id . '.json';
+    }
+
+    logger("GARLAND_DB", "Getting instance data from Garland DB for instance(s): " . $instance_id);
+
+    //GET request to garlandtools.org
+    $url = $base_url . $instance_id . '.json';
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $output = curl_exec($ch);
+    $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $instances = json_decode($output, true);
+
+    if($httpcode == 200){
+        logger("GARLAND_DB", "[SUCCESS] Getting instance data from Garland DB for instances: " . $instance_id);
+    }else{
+        logger("GARLAND_DB", "[ERROR - " . $httpcode . "] Getting item data from Garland DB for items: " . $instance_id);
+        logger("GARLAND_DB", "ERROR_URL: " . $url);
+        return False;
+    }
+    
+    return $instances;
+}
