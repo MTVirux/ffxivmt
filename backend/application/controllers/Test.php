@@ -166,7 +166,7 @@ class Test extends MY_Controller {
 					}
 				}
 
-				//Final Cals
+				//Final Calcs
 				$final_data[$item_id]["minPrice"] = round(floatval($item_data["minPrice"]),2);
 				$final_data[$item_id]["regularSaleVelocity"] = round($item_data["regularSaleVelocity"],2);
 				$final_data[$item_id]["medianStackSize"] = array_key_exists(intval(count($extensive_stack_array)/2), $extensive_stack_array) ? $extensive_stack_array[intval(count($extensive_stack_array) / 2)] : 0;
