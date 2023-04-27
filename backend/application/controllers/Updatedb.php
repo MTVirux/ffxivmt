@@ -302,6 +302,7 @@ class Updatedb extends MY_Controller {
 				'advanced_melding'      =>	boolval(	$item[88-$element_offset]		),
 				'craftable'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 				'marketable'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
+				'from_scrips'       	=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 			);
 		
 			// Print the data for this item for debugging purposes
