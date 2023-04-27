@@ -2,11 +2,11 @@ import os
 
 #API CONFIG
 
-ENTRIES_TO_RETURN = 999999                                          #Max number of entries to return (Max: 999999)
+ENTRIES_TO_RETURN = 1000                                          #Max number of entries to return (Max: 999999)
 
-IMPORT_ALL_TIME = True                                              #Set to true to import all time, false to import the time set in TIME_TO_IMPORT_SALES
+IMPORT_ALL_TIME = False                                              #Set to true to import all time, false to import the time set in TIME_TO_IMPORT_SALES
 
-TIME_AGO_TO_IMPORT_SALES = 7776000000                               #Time in milliseconds to import sales for, only used if IMPORT_ALL_TIME is false
+TIME_AGO_TO_IMPORT_SALES = 86000000                               #Time in milliseconds to import sales for, only used if IMPORT_ALL_TIME is false
 
 UNIVERSALIS_URL = "https://universalis.app/api/v2/"
 UNIVERSALIS_SALES_ENDPOINT = "history/"
