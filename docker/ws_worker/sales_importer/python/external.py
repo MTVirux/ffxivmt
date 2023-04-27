@@ -65,7 +65,7 @@ def send_sales_to_php(response_item):
             log.error(f"PHP response error --- {response.text}")
             FAILED_REQUEST_URLS.put(url)
 
-    except e as Exception:
+    except Exception as e:
         log.error(e)
         log.error(f"Error sending sales to PHP --- {response_item['json']}")
         FAILED_REQUEST_URLS.put(url)
