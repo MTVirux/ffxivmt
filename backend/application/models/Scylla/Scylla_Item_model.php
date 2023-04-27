@@ -65,15 +65,29 @@ class Scylla_Item_model extends MY_Scylla_Model{
         return $ids;
     }
 
-    public function get_craftable_items(){
-		$result = $this->scylla->query("Select * from items where crafted = true");
+    public function get_craftable_items($just_ids = false){
+        if($just_ids == true){
+            $result = $this->scylla->query("Select id from items where craftable = True");
+            //Make new array
+            $ids = [];
+            foreach($result as $row){
+                $ids[] = $row['id'];
+            }
+            
+            //Sort array by values
+            sort($ids);
 
-        //Sort $result by id value
-        usort($result, function($a, $b) {
-            return $a['id'] <=> $b['id'];
-        });
+            return $ids;
+        }else{
+		    $result = $this->scylla->query("Select * from items where craftable = True");
+                    //Sort $result by id value
+            usort($result, function($a, $b) {
+                return $a['id'] <=> $b['id'];
+            });
 
-        return $results;
+            return $result;
+        }
+
 	}
 
     public function get_marketable_items(){
