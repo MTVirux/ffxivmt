@@ -119,7 +119,7 @@ response_queue = queue.Queue()
 
 items_per_request = 2
 
-response_queue_limit = 25 #Each queue entry should consume about 50 ~ 100 MB of RAM
+response_queue_limit = 10
 max_request_threads = 25
 php_concurrent_request_limit = 10
 
