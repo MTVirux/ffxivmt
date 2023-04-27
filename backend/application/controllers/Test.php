@@ -133,11 +133,7 @@ class Test extends MY_Controller {
 		$keys = array_keys($final_data);
 		
 		//Filter out untradable
-		$marketable_items = $this->Scylla_Item->get_marketable_items();
-		$marketable_ids = [];
-		foreach($marketable_items as $marketable_item){
-			$marketable_ids[] = $marketable_item["id"];
-		}
+		$marketable_ids = $this->Scylla_Item->get_marketable_ids();
 		foreach($keys as $index => $key){
 			if(!in_array($key, $marketable_ids)){
 				unset($keys[$index]);
