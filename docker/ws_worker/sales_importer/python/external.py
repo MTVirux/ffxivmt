@@ -30,6 +30,15 @@ def get_region_list():
 
 REGION_LIST = get_region_list()
 
+def get_world_list():
+    result = database.SCYLLA_DB.execute("SELECT name FROM worlds");
+    world_list = []
+    for row in result:
+        world_list.append(row.name)
+    return world_list
+
+WORLD_LIST = get_world_list()
+
 def get_item_name_dict():
     result = database.SCYLLA_DB.execute("SELECT id, name FROM items WHERE marketable = true");
     item_name_dict = {}
