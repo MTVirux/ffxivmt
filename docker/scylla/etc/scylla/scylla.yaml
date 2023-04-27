@@ -411,9 +411,9 @@ native_transport_max_frame_size_in_mb: 256
 # compaction_rows_count_warning_threshold: 100000
 
 # How long the coordinator should wait for seq or index scans to complete
-range_request_timeout_in_ms: 100000
+range_request_timeout_in_ms: 10000000
 # How long the coordinator should wait for writes to complete
-counter_write_request_timeout_in_ms: 50000
+counter_write_request_timeout_in_ms: 5000000
 # How long a coordinator should continue to retry a CAS operation
 # that contends with other proposals for the same row
 # cas_contention_timeout_in_ms: 1000
@@ -422,7 +422,7 @@ counter_write_request_timeout_in_ms: 50000
 # we need to flush first so we can snapshot before removing the data.)
 # truncate_request_timeout_in_ms: 60000
 # The default timeout for other, miscellaneous operations
-request_timeout_in_ms: 60000
+request_timeout_in_ms: 60000000
 
 # Enable or disable inter-node encryption. 
 # You must also generate keys and provide the appropriate key and trust store locations and passwords. 
@@ -554,5 +554,11 @@ force_schema_commit_log: true
 api_ui_dir: /opt/scylladb/swagger-ui/dist/
 api_doc_dir: /opt/scylladb/api/api-doc/
 
-max_memory_for_unlimited_query_soft_limit: 2147483648 # 2GB
-max_memory_for_unlimited_query_hard_limit: 4294967296 # 4GB
+
+max_memory_for_unlimited_query_soft_limit: 2147483648 
+max_memory_for_unlimited_query_hard_limit: 4294967296 
+request_timeout: 600000
+range_request_timeout_in_ms : 6000000
+slow_query_log_timeout: 600000
+read_request_timeout_in_ms: 600000
+write_request_timeout_in_ms: 20000
