@@ -4,6 +4,7 @@ docker/ws_worker/server/logs/*.log
 docker/ws_worker/server/logs/action/*.log
 docker/ws_worker/server/logs/error/*.log
 docker/ws_worker/server/logs/system/*.log
+docker/ws_worker/sales_importer/python/__pycache__/*
 
 docker/redis/server/__pycache__/*
 docker/redis/server/logs/*.log
