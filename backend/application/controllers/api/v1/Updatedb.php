@@ -25,7 +25,7 @@ class updatedb extends RestController{
         set_time_limit(0);
         $sales_data = json_decode($this->input->raw_input_stream, true);
 
-        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => sizeof($sales_data["items"]))));
+        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => count($sales_data["items"]))));
         
         if(empty($sales_data)){
             $this->response([
@@ -84,7 +84,7 @@ class updatedb extends RestController{
         }
 
 
-        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => sizeof($sales_data))));
+        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => count($sales_data["items"]))));
 
         $this->load->model('Scylla/Sale_model', 'Scylla_Sales');
         $this->load->model('Scylla/Scylla_Gilflux_model', 'Scylla_Gilflux');
