@@ -15,7 +15,8 @@ class Updatedb extends MY_Controller {
 		$this->item_array = $this->parse_csv();
 		$this->update_items();
 		$this->update_elastic_items();
-		$this->update_craft_recipes(true, 0, 999999999);
+		$this->update_items_from_garland();
+		$this->update_shops_from_garland();
 		$this->update_marketability();
 		$this->update_worlds();
 	}
@@ -105,51 +106,140 @@ class Updatedb extends MY_Controller {
 		}
 	}
 
-	public function update_craft_recipes(){
+	public function update_items_from_garland(){
 
 		$this->load->model('Scylla/Scylla_Item_model', 'Scylla_items');
+		$this->load->model('Scylla/Scylla_Shop_model', 'Scylla_shops');
 		$all_ids = $this->Scylla_items->get_all_ids();
+		sort($all_ids);
+		//get last entry from all_ids
+		$last_id = end($all_ids);
+
 		$ids_to_request = array();
 
 		$total_items = 0;
 		$items_with_crafting = 0;
+		$shop_entries = 0;
 		
 		foreach($all_ids as $id){
 
 			$total_items++;
 
 			$ids_to_request[] = $id;
-			if(count($ids_to_request) == 100 || $id == 39000){
+			if(count($ids_to_request) == 100 || $id == $last_id){
 
 				$json = file_get_contents('https://www.garlandtools.org/db/doc/item/en/3/' . implode(',', $ids_to_request). '.json');
 				$json_decoded = json_decode($json, true);
 				$ids_to_request = array();
 
 				foreach($json_decoded as $item){
+					/**
+					 * Update crafting recipes and craftable status
+					 */
 					if(isset($item["obj"]["item"]["craft"])){
-
+					
 						$items_with_crafting++;
-
+					
 						$craftingComplexity = array();
 						$current_item = $this->Scylla_items->get($item["id"])[0];
-
+					
 						foreach($item["obj"]["item"]["craft"] as $key=>$recipe){
 							$craftingComplexity[$key] = $recipe["complexity"];
 						};
-
+					
 						unset($item["obj"]["item"]["craft"][0]["complexity"]);
 						$current_item["craftable"]	=	!empty($item["obj"]["item"]["craft"][0]) ? true : false;
-
+					
 						if($this->Scylla_items->update($current_item)){
 							logger("SCYLLA_DB" , "Item recipe updated: " . $current_item["id"] . ' - ' . $current_item['name']);
 						}
 					}
+
+			
 				}
 			}
 		}
 
-		logger("SCYLLA_DB" , json_encode(array("message" => "Item craftability updated", "craftable_items" => $items_with_crafting)));
+		logger("SCYLLA_DB" , json_encode(array("message" => "Item craftability updated", "craftable_items" => $items_with_crafting, "shop_entries" => $shop_entries, "total_items" => $total_items)));
 
+	}
+
+	public function update_shops_from_garland(){
+
+		$this->load->model("Scylla/Scylla_Shop_model", "Scylla_shops");
+		$this->load->model("Scylla/Scylla_Item_model", "Scylla_items");
+
+		//Get all NPCs from Garland
+		$all_npcs = json_decode(file_get_contents('https://www.garlandtools.org/db/doc/browse/en/2/npc.json'),true)["browse"];
+
+		$shops = [];
+		$all_npc_ids = [];
+
+		foreach($all_npcs as $npc){
+			$all_npc_ids[] = $npc["i"];
+		}
+
+
+		//Break the ids into sets of 100
+		$npc_id_chunks = array_chunk($all_npc_ids, 100);
+		//$npc_id_chunks = array($npc_id_chunks[3]);
+
+
+		foreach($npc_id_chunks as $npc_id_chunk){
+			$npcs_from_chunk = json_decode(file_get_contents('https://www.garlandtools.org/db/doc/npc/en/2/' . implode(',', $npc_id_chunk) . '.json'),true);
+			
+			
+			foreach($npcs_from_chunk as $npc){
+				if(isset($npc["obj"]["npc"]["shops"])){
+
+					$shop["npc_id"] = $npc["id"];
+					$shop["npc_name"] = $npc["obj"]["npc"]["name"];
+
+					foreach($npc["obj"]["npc"]["shops"] as $npc_shop_id => $npc_shop){
+
+
+						$shop["shop_id"] = $npc_shop_id;
+						$shop["shop_name"] = $npc_shop["name"];
+
+						foreach($npc_shop["entries"] as $npc_shop_entry){
+
+							if(gettype($npc_shop_entry) === "array"){
+								$shop["item_id"] = $npc_shop_entry["item"][0]["id"];
+								$shop["amount"] = $npc_shop_entry["item"][0]["amount"];
+								$shop["currency_id"] = $npc_shop_entry["currency"][0]["id"];
+								$shop["price"] = $npc_shop_entry["currency"][0]["amount"];
+								
+								if(!is_numeric($shop["currency_id"])){
+									$shop["currency_name"] = $shop["currency_id"];
+								}else{
+									$shop["currency_name"] = $this->Scylla_items->get($shop["currency_id"])[0]["name"];
+								}
+								$shop["item_name"] = $this->Scylla_items->get($shop["item_id"])[0]["name"];
+
+								$shops[] = $shop;
+							}else if(gettype($npc_shop_entry) === "integer"){
+								//$shop["item_id"] = $npc_shop_entry["item"][0]["id"];
+								//$shop["amount"] = $npc_shop_entry["item"][0]["amount"];
+								//$shop["currency_id"] = $npc_shop_entry["currency"][0]["id"];
+								//$shop["price"] = $npc_shop_entry["currency"][0]["amount"];
+								//logger("SCYLLA_DB" , json_encode(array("message" => "shop_record_updated", "shop_name" => $shop["shop_name"], "shop_id" => $shop["shop_id"], "npc_name" => $shop["npc_name"], "npc_id" => $shop["npc_id"], "item_id" => $shop["item_id"], "currency_id" => $shop["currency_id"], "price" => $shop["price"], "amount" => $shop["amount"])));
+								//$shops[] = $shop;
+							}else{
+								pretty_dump($npc_shop);die();
+							}
+						}
+
+					}
+				}
+				foreach($shops as $shop_entry){
+					$this->Scylla_shops->add_entry($shop_entry);
+					logger("SCYLLA_DB" , json_encode(array("message" => "shop_record_updated", "shop_name" => $shop_entry["shop_name"], "shop_id" => $shop_entry["shop_id"], "npc_name" => $shop_entry["npc_name"], "npc_id" => $shop_entry["npc_id"], "item_id" => $shop_entry["item_id"], "item_name" => $shop_entry["item_name"], "currency_id" => $shop_entry["currency_id"], "currency_name" => $shop_entry["currency_name"], "price" => $shop_entry["price"], "amount" => $shop_entry["amount"])));
+				}
+				$shops = [];
+
+			}
+
+		}
 	}
 	function parse_csv() {
 
