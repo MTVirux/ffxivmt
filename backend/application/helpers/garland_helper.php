@@ -104,3 +104,31 @@ function garland_db_get_instances($instance_id = null){
     
     return $instances;
 }
+
+//TODO: Test garland_db_get_items_from_currency
+function garland_db_get_items_from_currency($currency_id){
+
+    $item_data = garland_db_get_items($currency_id);
+
+    $shops = $item_data["item"]["tradeCurrency"];
+
+    $final_data = [];
+
+    foreach($shops as $shop_index => $shop){
+        $listings = $item_data["item"]["tradeCurrency"][$shop_index]["listings"];
+        //pretty_dump($shop_index);
+        foreach($listings as $listing){
+            //pretty_dump($listing);die();
+            $final_data[$listing["item"][0]["id"]] = [
+                "name" => $this->Scylla_Item->get($listing["item"][0]["id"])[0]["name"],
+                "id" => $listing["item"][0]["id"],
+                "price" => $listing["currency"][0]["amount"],
+                "currency_id" => $listing["currency"][0]["id"],
+                "currency_name" => $this->Scylla_Item->get($listing["currency"][0]["id"])[0]["name"],
+            ];
+        }
+    }
+
+    pretty_dump($final_data);die();
+
+}
