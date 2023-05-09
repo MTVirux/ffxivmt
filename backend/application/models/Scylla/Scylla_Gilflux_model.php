@@ -75,11 +75,14 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
         return array("parsed_sales" => $parsed_sales, "time" => microtime(true) - $start_time);
     }
 
-    public function get_by_world($item_id, $world_name = null, $from = null - 86400, $to = null){
+
+//TODO: Test gilflux get functions
+
+    public function get_by_world($world_name, $item_id, $from = null, $to = null){
 
         //If times are not set, set them from 24 hours ago to now
         if(is_null($from)){
-            $from = time() - 86400;
+            $from = time()*1000 - 86400 * 1000;
         }
 
         if(is_null($to)){
@@ -89,10 +92,14 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
 
         //If datacenter is not set, get all datacenters
         if(is_null($world_name)){
-            $stmt = $this->scylla->prepare("SELECT sum(total) FROM gilflux WHERE item_id = ? AND sale_time >= ? ALLOW FILTERING");
+            $stmt = $this->scylla->prepare("SELECT item_id, item_name, world_id, world_name, CAST(SUM(total) AS BIGINT) as gilflux 
+            FROM gilflux 
+            WHERE item_id = ? AND sale_time >= ? GROUP BY item_id, world_id, datacenter, region ALLOW FILTERING");
             $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "sale_time" =>$from));
         }else if (!is_null($world_name)){
-            $stmt = $this->scylla->prepare("SELECT sum(total) FROM gilflux WHERE item_id = ? AND world_name = ? AND sale_time >= ? ALLOW FILTERING");
+            $stmt = $this->scylla->prepare("SELECT item_id, item_name, world_id, world_name, CAST(SUM(total) AS BIGINT) as gilflux 
+            FROM gilflux 
+            WHERE item_id = ? AND world_name = ? AND sale_time >= ? GROUP BY item_id, world_id, datacenter, region ALLOW FILTERING");
             $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "world_name" => $world_name, "sale_time" => $from));
         }
 
@@ -100,24 +107,28 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
         return $result;
     }
 
-    public function get_by_region($item_id, $region = null, $from = null - 86400, $to = null){
+    public function get_by_region($item_id, $region = null, $from = null, $to = null){
 
         //If times are not set, set them from 24 hours ago to now
         if(is_null($from)){
-            $from = time() - 86400;
+            $from = (time() * 1000) - (86400 *1000);
         }
 
         if(is_null($to)){
             $to = time();
         }
-
-
         //If region is not set, get all regions
         if(is_null($region)){
-            $stmt = $this->scylla->prepare("SELECT sum(total) FROM gilflux WHERE item_id = ? AND sale_time >= ? ALLOW FILTERING");
+            $stmt = $this->scylla->prepare("SELECT item_id, item_name, world_id, world_name, CAST(SUM(total) AS BIGINT) as gilflux 
+            FROM gilflux 
+            WHERE item_id = ? AND sale_time >= ? GROUP BY item_id, world_id, datacenter, region ALLOW FILTERING");
             $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "sale_time" =>$from));
         }else if (!is_null($region)){
-            $stmt = $this->scylla->prepare("SELECT sum(total) FROM gilflux WHERE item_id = ? AND region = ? AND sale_time >= ? ALLOW FILTERING");
+            $stmt = $this->scylla->prepare(
+                "SELECT item_id, item_name, world_id, world_name, CAST(SUM(total) AS BIGINT) as gilflux 
+                FROM gilflux 
+                WHERE item_id = ? AND region = ? AND sale_time >= ? GROUP BY item_id, world_id, datacenter, region ALLOW FILTERING"
+            );
             $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "region" => $region, "sale_time" => $from));
         }
 
@@ -137,10 +148,14 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
         
         //If datacenter is not set, get all datacenters
         if(is_null($datacenter)){
-            $stmt = $this->scylla->prepare("SELECT sum(total) FROM gilflux WHERE item_id = ? AND sale_time >= ? ALLOW FILTERING");
+            $stmt = $this->scylla->prepare("SELECT item_id, item_name, world_id, world_name, CAST(SUM(total) AS BIGINT) as gilflux 
+            FROM gilflux 
+            WHERE item_id = ? AND sale_time >= ? GROUP BY item_id, world_id, datacenter, region ALLOW FILTERING");
             $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "sale_time" =>$from));
         }else if (!is_null($datacenter)){
-            $stmt = $this->scylla->prepare("SELECT sum(total) FROM gilflux WHERE item_id = ? AND datacenter = ? AND sale_time >= ? ALLOW FILTERING");
+            $stmt = $this->scylla->prepare("SELECT item_id, item_name, world_id, world_name, CAST(SUM(total) AS BIGINT) as gilflux 
+            FROM gilflux 
+            WHERE item_id = ? AND datacenter = ? AND sale_time >= ? GROUP BY item_id, world_id, datacenter, region ALLOW FILTERING");
             $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "datacenter" => $datacenter, "sale_time" => $from));
         }
 
