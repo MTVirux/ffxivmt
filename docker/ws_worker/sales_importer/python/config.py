@@ -2,7 +2,7 @@ import os
 
 #API CONFIG
 
-ENTRIES_TO_RETURN = 1000                                          #Max number of entries to return (Max: 999999)
+ENTRIES_TO_RETURN = 999999                                          #Max number of entries to return (Max: 999999)
 
 IMPORT_ALL_TIME = False                                              #Set to true to import all time, false to import the time set in TIME_TO_IMPORT_SALES
 
