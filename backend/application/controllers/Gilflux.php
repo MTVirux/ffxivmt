@@ -70,7 +70,7 @@ class GilFlux extends MY_Controller{
 		}
 
 		array_multisort(array_column($gilflux_ranking, "ranking_1h"), SORT_DESC, $gilflux_ranking);
-
+		// TODO: Proper return
 		pretty_dump($gilflux_ranking);
 		
 
