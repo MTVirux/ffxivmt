@@ -6,7 +6,9 @@ class GilFlux extends MY_Controller{
 	public function __construct(){
 		parent::__construct();
 		$this->load->helper('url');
-		$this->load->model('/Redis/Redis_timeseries_model', 'Redis_ts');
+		$this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
+		$this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
+		$this->load->model('Scylla/Scylla_Gilflux_Ranking_model', 'Scylla_gilflux_ranking');
 	}
 
 	public function gilflux(){
@@ -14,91 +16,66 @@ class GilFlux extends MY_Controller{
 	}
 
 
-    public function index($world, $craft = null, $limit = null, $page = null){
+    public function index($target_location, $craft = null, $limit = null, $page = null){
 
-		if(is_null($limit)) $limit = 50;
-		if(is_null($page)) $page = 0;
+		$target_type = "world";
 
-		$this->load->model('Views_model', 'Views');
-		$this->load->library('table');
+		$worlds = $this->Scylla_Worlds->get();
 
-		if(!empty($world)){
-			$world = ucfirst($world);
-		}else{
-			echo 'No world name provided';
-			return;
-		}
+		$locations = [];
 
-		if(!empty($craft)){
-			$table_name = $world . '_Craft_Daily';
-		}else{
-			$table_name = $world . '_Daily';
+		foreach($worlds as $world){
+			$locations[$world["region"]][$world["datacenter"]][] = $world["name"];
 		}
 
 
-		do{
-
-			$refresh_grace_period_seconds = 60*5; # 5 minutes
-
-			$current_results = ($this->Views->get($table_name, $limit, $page));
-			$current_results_ids = array_column($current_results, 'item_id');
-
-			//update the item score for each of the results
-			foreach($current_results as $current_result){
-				//if timestamp shows updated_at is older than 30 minutes, update the score
-				if(strtotime($current_result['updated_at']) < (time() - $refresh_grace_period_seconds)){
-					$this->Redis_ts->calc_item_score($current_result['item_id'], $world);
+		foreach($locations as $region => $datacenter_data){
+			if(strtolower($target_location) == strtolower($region)){
+				$target_type = "region";
+			}else{
+				foreach($locations[$region] as $datacenter => $worlds){
+					if(strtolower($target_location) == strtolower($datacenter)){
+						$target_type = "datacenter";
+					}
 				}
 			}
-
-			$updated_results = ($this->Views->get($table_name, $limit, $page));
-			$updated_results_ids = array_column($updated_results, 'item_id');
-
-		}while($current_results_ids != $updated_results_ids);
-
-		$results = $updated_results;
-
-		if(!empty($results) && !is_null($results) && count($results) > 0){
-
-			//Add Universalis Link
-			foreach($results as &$row){
-				$row["universalis_market_link"] = "<a target='_blank' href='https://universalis.app/market/". $row["item_id"]. "'>Link</a>";
-			}
-			
-			
-			//Change Headers to Readable Format
-			$headers_to_change = [
-				"name" 				=> "Name",
-				"item_id" 			=> "Item ID",
-				"updated_at" 		=> "Updated At",
-				"latest_sale" 		=> "Most Recent Sale",
-				"universalis_market_link" 	=> "Universalis Market Link" 
-			];
-
-			$encoded_results = json_encode($results);
-
-			foreach($headers_to_change as $key => $value){
-				$encoded_results = str_replace($key, $value, $encoded_results);
-			}
-			$human_results = json_decode($encoded_results);
-
-			$this->table->set_heading(array_keys((array)$human_results[0]));
-			$this->table->set_template(array('table_open' => '<table class="table table-striped table-bordered table-hover">'));
-			foreach($results as $row){
-				$this->table->add_row(array_values((array)$row));
-			}
-
-			//add bootstrap
-			$data['data'] = $this->table->generate();
-			$data['raw_data'] = $results;
-			$data['world'] = $world;
-			$this->load_view_template('test/graph', $data);
-
-			//pretty_dump($results);	
-			return $results;
 		}
 
-		return;
+		if($target_type == "world"){
+
+			//Get ID
+			$world = $this->Scylla_Worlds->get_by_name($target_location);
+			$target_location = $world[0]["id"];
+			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_world($target_location);
+
+		}else if($target_type == "datacenter"){
+
+			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_datacenter($target_location);
+
+		}else if($target_type == "region"){
+
+			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_region($target_location);
+
+		}
+
+		if($craft){
+			//Get all crafted item ids
+			$craftable_item_ids = $this->Scylla_Items->get_craftable_items(TRUE);
+
+			foreach($gilflux_ranking as $gilflux_ranking_item_id => $gilflux_ranking_item){
+				if(!in_array($gilflux_ranking_item["item_id"], $craftable_item_ids)){
+					unset($gilflux_ranking[$gilflux_ranking_item_id]);
+				}
+			}
+		}
+
+		array_multisort(array_column($gilflux_ranking, "ranking_1h"), SORT_DESC, $gilflux_ranking);
+
+		pretty_dump($gilflux_ranking);
+		
+
+
+
 	}
 
 }
