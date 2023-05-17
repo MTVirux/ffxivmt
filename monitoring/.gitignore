@@ -11,3 +11,4 @@ docker/grafana/data/file-collections
 docker/grafana/data/png
 docker/grafana/data/provisioning
 !docker/grafana/plugins/*
+scylla-monitoring-scylla-monitoring-4.3.4
