@@ -14,7 +14,7 @@
 # one logical cluster from joining another.
 # It is recommended to change the default value when creating a new cluster.
 # You can NOT modify this value for an existing cluster
-#cluster_name: 'Test Cluster'
+cluster_name: 'ffmt_cluster'
 
 # This defines the number of tokens randomly assigned to this node on the ring
 # The more tokens, relative to other nodes, the larger the proportion of data
@@ -78,7 +78,7 @@ seed_provider:
           # In an existing cluster, specify the address of at least one existing node.
           # If you specify addresses of more than one node, use a comma to separate them.
           # For example: "<IP1>,<IP2>,<IP3>"
-          - seeds: "127.0.0.1"
+          - seeds: "10.0.0.3"
 
 # Address to bind to and tell other Scylla nodes to connect to.
 # You _must_ change this if you want multiple nodes to be able to communicate!
@@ -203,8 +203,8 @@ endpoint_snitch: SimpleSnitch
 # you can specify which should be chosen using rpc_interface_prefer_ipv6. If false the first ipv4
 # address will be used. If true the first ipv6 address will be used. Defaults to false preferring
 # ipv4. If there is only one address it will be selected regardless of ipv4/ipv6.
-rpc_address: localhost
-# rpc_interface: eth1
+#rpc_address: localhost
+rpc_interface: eth0
 # rpc_interface_prefer_ipv6: false
 
 # port for Thrift to listen for clients on
@@ -507,7 +507,7 @@ request_timeout_in_ms: 60000000
 # internal communication. If the monitoring node is not in this internal
 # network, you can override prometheus_address explicitly - e.g., setting
 # it to 0.0.0.0 to listen on all interfaces.
-# prometheus_address: 1.2.3.4
+prometheus_address: 0.0.0.0
 
 # Distribution of data among cores (shards) within a node
 #
