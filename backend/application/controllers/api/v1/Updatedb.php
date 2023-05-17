@@ -71,15 +71,21 @@ class updatedb extends RestController{
                 $consolidated_sales_data[] = $sale;
 
                 //Gilflux Sale
-                $gilflux_sale["item_id"] = $item_id;
-                $gilflux_sale["item_name"] = $names_array[$item_id];
-                $gilflux_sale["world_id"] = $sale["world_id"];
-                $gilflux_sale["world_name"] = $sale["world_name"];
-                $gilflux_sale["region"] = $worlds_formatted_info[$sale["world_id"]]["region"];
-                $gilflux_sale["datacenter"] = $worlds_formatted_info[$sale["world_id"]]["datacenter"];
-                $gilflux_sale["sale_time"] = $sale["sale_time"];
-                $gilflux_sale["total"] = $sale["total"];
-                $consolidated_gilflux_data[] = $gilflux_sale;
+
+                //Ignore sales that are on mannequins
+                if($sale["on_mannequin"] == False){
+                    $gilflux_sale["item_id"] = $item_id;
+                    $gilflux_sale["item_name"] = $names_array[$item_id];
+                    $gilflux_sale["world_id"] = $sale["world_id"];
+                    $gilflux_sale["world_name"] = $sale["world_name"];
+                    $gilflux_sale["region"] = $worlds_formatted_info[$world_id]["region"];
+                    $gilflux_sale["datacenter"] = $worlds_formatted_info[$world_id]["datacenter"];
+                    $gilflux_sale["sale_time"] = $sale["sale_time"];
+                    $gilflux_sale["total"] = $sale["total"];
+                    $consolidated_gilflux_data[] = $gilflux_sale;
+                }
+
+                
             }
         }
 
