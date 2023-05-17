@@ -10,6 +10,7 @@ import time
 import log
 import external
 import pprint
+import requests
 from concurrent.futures import ThreadPoolExecutor, Future
 
 
@@ -20,11 +21,15 @@ ITEM_NAME_DICT = external.get_item_name_dict()
 ###########################
 def on_message(ws_sales_add, message):
     #prepare vars
-
     decoded_message = (bson.decode(message))
     world = str(decoded_message['world'])
     item_id = str(decoded_message['item'])
-    world_name = str(config.WORLDS[int(world)]["name"])
+    
+    try:
+        world_name = str(config.WORLDS[int(world)]["name"])
+    except Exception as e:
+        print(e)
+        return
 
     #Set hash and sales
     hash = str(world_name + "_" + item_id)
@@ -37,32 +42,31 @@ def on_message(ws_sales_add, message):
         sale['worldName'] = world_name
         sale['itemID'] = item_id
         handle_add_sale(hash, sale)
+    
+    update_gilflux_ranking_entry(world, item_id)
     return
 
 
 def subscribe(ws_sales_add):
-    world_ids_to_use = []
+    worlds_to_use = []
 
-    for world in config.WORLDS:
-        for world_to_use in config.WORLDS_TO_USE:
-            if(config.WORLDS[world]["name"] == config.WORLDS_TO_USE[world_to_use]):
-                world_ids_to_use.append(world)
+    for world_id in config.WORLDS:
+        if (config.WORLDS[world_id]["name"] in config.WORLDS_TO_USE):
+            worlds_to_use.append(config.WORLDS[world_id])
+        
+        if (config.WORLDS[world_id]["datacenter"] in config.DCS_TO_USE):
+            worlds_to_use.append(config.WORLDS[world_id])
+        
+        if (config.WORLDS[world_id]["region"] in config.REGIONS_TO_USE):
+            worlds_to_use.append(config.WORLDS[world_id])
 
-    for world in config.WORLDS:
-        for dc_to_use in config.DCS_TO_USE:
-            if(config.WORLDS[world]["datacenter"] == config.DCS_TO_USE[dc_to_use]):
-                world_ids_to_use.append(world)
-
-    for world in config.WORLDS:
-        for region_to_use in config.REGIONS_TO_USE:
-            if(config.WORLDS[world]["region"] == config.REGIONS_TO_USE[region_to_use]):
-                world_ids_to_use.append(world)
-
-    for world_id in world_ids_to_use:
-        world_subscribe(ws_sales_add, config.WORLDS[world_id]["name"], str(world_id))
+    
+    for world in worlds_to_use:
+        world_subscribe(ws_sales_add, str(world["name"]), str(world["id"]), str(world["datacenter"]), str(world["region"]))
 
 
-def world_subscribe(ws_sales_add, world_name, world_id):
+def world_subscribe(ws_sales_add, world_name, world_id, world_datacenter, world_region):
+    print("Subscribed to " + world_id + ": " + world_name + " (" + world_region + ", " + world_datacenter + ")")
     ws_sales_add.send(bson.encode({"event": "subscribe", "channel": "sales/add{world=" + str(world_id)+"}"}))
 
 
@@ -105,13 +109,13 @@ def handle_add_sale(hash, value):
         log.error(type(external.WORLD_INFO_DICT))
         log.error(str(external.WORLD_INFO_DICT[int(value['worldID'])]["datacenter"]))
         log.error(str(external.WORLD_INFO_DICT[int(value['worldID'])]["region"]))
-        exit();
         return
 
     #hset(hash, field, value)
     add_entry(hash, field, sale_object)
-    add_gilflux_entry(hash, field, sale_object)
-    
+    if(sale_object['onMannequin'] == False):
+        add_gilflux_entry(hash, field, sale_object)
+
     return
 
 ###########################
@@ -228,3 +232,22 @@ def add_gilflux_entry(hash, field, new_entry):
         log.error(e)
         log.error(formatted_query)
         return False
+    
+def update_gilflux_ranking_entry(world_id, item_id):
+
+    #send POST request to ffmt_backend/api/v1/gilflux_ranking_update/[worldID]/[itemID]
+    #with no data, just the request
+
+    url = "http://mtvirux.app/api/v1/updatedb/gilflux_ranking_update/" + str(world_id) + "/" + str(item_id)
+    pprint.pprint(url);
+
+    # Make the POST request
+    response = requests.get(url)
+
+    # Check the response status code
+    if response.status_code == 200:
+        print("Ranking updated successfully!")
+    else:
+        print(f"Error updating ranking: {response.text}")
+
+
