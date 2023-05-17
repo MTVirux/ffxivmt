@@ -124,27 +124,18 @@ max_request_threads = 25
 php_concurrent_request_limit = 10
 
 #Make combos of region and item id
-external_region_list = external.get_region_list()
 external_world_list = external.get_world_list()
 external_item_id_list = external.get_item_id_list()
 external_item_name_dict = external.get_item_name_dict()
 
 
-for region in external_region_list:
-    query_list[region] = []
+for world in external_world_list:
+    query_list[world] = []
     chunk_size = items_per_request
     # Split the sorted item id list into sublists of {chunk_size} item ids
     for i in range(0, len(external_item_id_list), chunk_size):
         sublist = external_item_id_list[i:i+chunk_size]
-        query_list[region].append(sublist)
-
-#for world in external_world_list:
-#    query_list[world] = []
-#    chunk_size = items_per_request
-#    # Split the sorted item id list into sublists of {chunk_size} item ids
-#    for i in range(0, len(external_item_id_list), chunk_size):
-#        sublist = external_item_id_list[i:i+chunk_size]
-#        query_list[world].append(sublist)
+        query_list[world].append(sublist)
 
 #Make url list
 for region in query_list:
