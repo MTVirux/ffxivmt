@@ -46,25 +46,26 @@ services:
       - ffmt_network
 
 # DATABASES
-  ffmt_scylla:
+  ffmt_scylla_node:
     container_name: ${SCYLLADB_CONTAINER_NAME}
     build: 
       context: .
       dockerfile: ${SCYLLADB_DOCKERFILE}
     image: ffmt_scylla
     restart: "unless-stopped"
-    command: --memory 8G
-    deploy:
-      resources:
-        limits:
-          cpus: '6'
     ports:
       - 9042:9042
+      - 9142:9142
       - 7000:7000
       - 7001:7001
       - 7199:7199
-      - 9180:9180
       - 10000:10000
+      - 10001:10001
+      - 9180:9180
+      - 9100:9100
+      - 9160:9160
+      - 19042:19042
+      - 19142:19142
     volumes:
       - ./docker/scylla/persistent/data:/var/lib/scylla
       - ./docker/scylla/persistent/commitlog:/var/lib/scylla/commitlog
