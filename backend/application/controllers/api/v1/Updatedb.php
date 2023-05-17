@@ -123,4 +123,10 @@ class updatedb extends RestController{
             'data' => $result
         ], 200);
     }
+
+    //TODO: Make it its own controller
+    public function gilflux_ranking_update_get($world_id, $item_id){
+        $this->load->model('Scylla/Scylla_Gilflux_Ranking_model', 'Scylla_Gilflux');
+        $this->Scylla_Gilflux->update_ranking($world_id, $item_id);
+    }
 }
