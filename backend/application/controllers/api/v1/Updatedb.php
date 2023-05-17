@@ -47,8 +47,25 @@ class updatedb extends RestController{
             $worlds_formatted_info[$world_info["id"]] = $world_info;
         }
 
+        //Set $world_id regardless if it is a world or region import
+        if(array_key_exists("worldID", $sales_data)){ 
+            $world_id = $sales_data["worldID"];
+        }else if(array_key_exists("worldId", $sales_data["items"])){
+            $world_id = $sales_data["items"][0]["worldId"];
+        }
+        if(array_key_exists("itemID", $sales_data)){ 
+            $item_id = $sales_data["itemID"];
+        }else if(array_key_exists("itemId", $sales_data["items"])){
+            $item_id = $sales_data["items"][0]["itemId"];
+        }
+        
+
         foreach($sales_data["items"] as $item_id => $sale_data){
             foreach($sale_data["entries"] as $sale){
+
+                $sale["worldID"] = $world_id;
+                $sale["worldName"] = $worlds_formatted_info[$world_id]["name"];
+
 
                 //Regular Sale
                 $sale["buyer_name"] = $sale["buyerName"];
