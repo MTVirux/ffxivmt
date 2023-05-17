@@ -63,7 +63,8 @@ class updatedb extends RestController{
                 unset($sale["pricePerUnit"]);
                 $sale["world_id"] = $sale["worldID"];
                 unset($sale["worldID"]);
-                
+
+                $sale["hq"] = $sale["hq"] == 1 ? True : False;
                 $sale["item_id"] = $item_id;
                 $sale["total"] = $sale["quantity"] * $sale["unit_price"];
                 $sale["item_name"] = $names_array[$item_id];
