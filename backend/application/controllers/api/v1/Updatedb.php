@@ -20,6 +20,7 @@ class updatedb extends RestController{
         echo "GET_request";
     }   
 
+    //TODO: Make it its own controller
     public function python_request_post(){
 
         set_time_limit(0);
@@ -68,6 +69,8 @@ class updatedb extends RestController{
 
 
                 //Regular Sale
+                
+                //Rename keys
                 $sale["buyer_name"] = $sale["buyerName"];
                 unset($sale["buyerName"]);
                 $sale["on_mannequin"] = $sale["onMannequin"];
