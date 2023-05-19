@@ -22,17 +22,10 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
         $world_name = $result_world[0]["name"];
         $datacenter = $result_world[0]["datacenter"];
         $region = $result_world[0]["region"];
+        $this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
+        $stmt_item = $this->scylla->prepare("SELECT name FROM items WHERE id = ?");
+        $result_item = $this->scylla->execute($stmt_item, array("id" => $item_id));
 
-        logger("debug", json_encode(array("world_id" => $world_id, "item_id" => $item_id)));
-
-        //Get gilflux for the different times
-        
-        //Alltime
-        //$stmt_alltime = $this->scylla->prepare("SELECT item_id, world_id, item_name, world_name, datacenter, region, CAST(SUM(total) AS BIGINT) as gilflux 
-        //FROM gilflux 
-        //WHERE item_id = ? AND world_id = ? ALLOW FILTERING");
-        //$result_alltime = $this->scylla->execute($stmt_alltime, array("item_id" => $item_id, "world_id" => $world_id));
-        //var_dump($result_alltime);die();
 
         //1 hour
         $stmt_1h = $this->scylla->prepare("SELECT item_id, world_id, item_name, world_name, datacenter, region, CAST(SUM(total) AS BIGINT) as gilflux
@@ -105,7 +98,7 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
             "world_id" => $world_id,
             "datacenter" => $datacenter,
             "region" => $region,
-            "item_name" => $result_1d[0]["item_name"],
+            "item_name" => $result_item[0]["name"],
             "world_name" => $world_name,
             "ranking_alltime" => 0, 
             "ranking_1h"    =>  isset($result_1h[0]["gilflux"])     ?     $result_1h[0]["gilflux"] : 0,
