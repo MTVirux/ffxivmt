@@ -29,6 +29,7 @@ class Sale_model extends MY_Scylla_Model{
 
     public function add_sale($sale){
         ini_set('memory_limit', '2048M');
+        
         //Make whatever var we get into an array
         $sales_array = [];
         if(gettype($sale) == 'array'){
