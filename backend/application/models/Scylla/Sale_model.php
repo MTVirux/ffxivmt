@@ -14,6 +14,18 @@ class Sale_model extends MY_Scylla_Model{
         echo 'sale_model_test';
     }
 
+    public function get_by_item($item_id){
+        $stmt = $this->scylla->prepare("SELECT * FROM sales WHERE item_id = ?");
+        $result = $this->scylla->execute($stmt, array("item_id" => $item_id));
+        return $result;
+    }
+
+    public function get_by_world($world_name, $item_id){
+        $stmt = $this->scylla->prepare("SELECT * FROM sales WHERE world_name = ? AND item_id = ?");
+        $result = $this->scylla->execute($stmt, array("world_name" => $world_name, "item_id" => $item_id));
+        return $result;
+
+    }
 
     public function add_sale($sale){
         ini_set('memory_limit', '2048M');
