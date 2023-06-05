@@ -16,7 +16,8 @@ ranking_1d bigint,
 ranking_3d bigint,
 ranking_7d bigint,
 updated_at timestamp,
-PRIMARY KEY ((item_id, world_id, datacenter, region))
+last_sale_time timestamp,
+PRIMARY KEY (item_id, world_id)
 );"
 
 cqlsh -e "CREATE INDEX gilflux_ranking_item_name    ON ffmt.gilflux_ranking (item_name);"
