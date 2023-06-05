@@ -4,14 +4,17 @@ rm -rf ./docker/ws_worker/server/logs/
 rm -rf ./docker/ws_worker/sales_importer/logs/
 
 echo "Spinning up Scylla..."
-docker-compose up -d ffmt_scylla
+#docker-compose up -d ffmt_scylla
+./prep_scylla_clusters.sh
 
 echo "Spinning up PHP backend..."
 docker-compose up -d ffmt_backend
 
-#Wait for scylla to be ready
-while ! docker exec ffmt_scylla test -f "/.ffmt_scylla_ready"; do
-echo -en "\r$(date) - Waiting for file '/.ffmt_scylla_ready' to exist inside the container..." 
+docker-compose up -d ffmt_elastic
+
+#Wait for backend to be ready
+while ! docker exec ffmt_backend test -f "/.ffmt_backend_ready"; do
+echo -en "\r$(date) - Waiting for file '/.ffmt_backend_ready' to exist inside the container..." 
 sleep 1
 done
 
