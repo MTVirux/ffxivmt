@@ -22,6 +22,7 @@ PRINT_TO_LOG = {
 "DEBUG":False,
 "ERROR":True,
 "ACTION":False,
+"REQUEST":False,
 }
 
 #Line limit on each type of log
@@ -29,6 +30,8 @@ LIMIT_LOGS = {
 "DEBUG":0,
 "ERROR":0,
 "ACTION":0,
+"REQUEST":0,
+
 }
 
 
@@ -37,6 +40,7 @@ PRINT_TO_SCREEN = {
 "DEBUG":True,
 "ERROR":True,
 "ACTION":False,
+"REQUEST":False,
 }
 
 
