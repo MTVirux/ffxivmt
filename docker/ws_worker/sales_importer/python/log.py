@@ -11,6 +11,8 @@ import time
 #########################################
 
 def error(message = "None", print_stack = True):
+    if(config.PRINT_TO_LOG['ERROR'] == False):
+        return
 
     caller_filename = str(inspect.stack()[1][0].f_code.co_filename).split("/")[-1].split(".")[0]
     log_filename = config.LOGS_DIR+"error/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
@@ -38,6 +40,9 @@ def error(message = "None", print_stack = True):
 
 
 def action(message = "None"):
+    if(config.PRINT_TO_LOG['ACTION'] == False):
+        return
+    
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
     log_file_name = config.LOGS_DIR+"action/" + caller_filename + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
 
@@ -54,6 +59,8 @@ def action(message = "None"):
 #########################################
 
 def debug(message = "None"):
+    if(config.PRINT_TO_SCREEN['DEBUG'] == False):
+        return
     log_file_name = config.LOGS_DIR+"debug/" + "debug" + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
 
@@ -69,6 +76,9 @@ def debug(message = "None"):
 #             REQUEST LOG               #
 #########################################
 def request(message = "None"):
+    if config.PRINT_TO_LOG['REQUEST'] == False:
+        return
+    
     log_file_name = config.LOGS_DIR+"requests/" + "requests" + "_" + str(datetime.datetime.now().strftime("%Y-%m-%d")) + ".log"
     caller_filename = inspect.stack()[1][0].f_code.co_filename.split("/")[-1].split(".")[0]
 
