@@ -20,7 +20,7 @@ class Home extends MY_Controller {
 
 	function search(){
         $item = ($this->Items->get($_POST['item_id'])[0]);
-		$item->prices = $this->get_universallis_prices($item->id);
+		$item->prices = $this->get_universalis_prices($item->id);
         $data['item'] = $item;
 		$data['retainer_array'] = $this->get_retainers();
         $this->load_view_template('item_info', $data);
@@ -32,7 +32,7 @@ class Home extends MY_Controller {
 		$items = $this->Items->get_by_name(array("Craftsman's", "Materia", "X"));
 		//foreach item populate prices
 		foreach($items as $item){
-			$item->prices = $this->get_universallis_prices($item->id);
+			$item->prices = $this->get_universalis_prices($item->id);
 		}
 		//pretty print itemn
 		echo '<pre>';
@@ -40,8 +40,8 @@ class Home extends MY_Controller {
 		echo '</pre>';
 	}
 
-	function get_universallis_prices($item_id){
-		//get item price from universallis api
+	function get_universalis_prices($item_id){
+		//get item price from universalis api
 		$url = "https://universalis.app/api/v2/chaos/".$item_id."?entries=10&noGst=1";
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $url);
