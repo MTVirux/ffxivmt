@@ -244,7 +244,7 @@ class Updatedb extends MY_Controller {
 	function parse_csv() {
 
 		// Set the file to be read
-		$file = 'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/Item.csv';
+		$file = 'https://raw.githubusercontent.com/mtvirux/ffxiv-datamining/master/csv/Item.csv';
 		
 		// Open the file for reading
 		$file_handle = fopen($file, 'r');
