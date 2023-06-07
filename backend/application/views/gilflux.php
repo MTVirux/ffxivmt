@@ -223,7 +223,7 @@
                 var progressBar = $('<div>', { class: 'progress' });
                 var progressBarInner = $('<div>', { class: 'progress-bar progress-bar-striped progress-bar-animated', role: 'progressbar', 'aria-valuenow': '0', 'aria-valuemin': '0', 'aria-valuemax': '100' });
                 progressBar.append(progressBarInner);
-                jQuery(parent_element).children().find("div.loading-div").html(progressBar).append("<i>Calculating gilflux is a process that might take between 1s and 10min. The duration is inversely proportional to the traffic of the Unviersalis websocket. <br>Yes, <b>INVERSELY</b>. No, I'm not crazy.</i>");
+                jQuery(parent_element).children().find("div.loading-div").html(progressBar).append("<i>Calculating gilflux is a process that might take between 1s and 10min. The duration is inversely proportional to the traffic of the Universalis websocket. <br>Yes, <b>INVERSELY</b>. No, I'm not crazy.</i>");
 
                 currentValue = 0;
                 intervalId = setInterval(function() {
