@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the list of IPs to connect to
-IP_LIST=("10.0.0.3" "10.0.0.4" "10.0.0.5" "10.0.0.6")
+IP_LIST=("10.0.0.3" "10.0.0.4")
 #IP_LIST=("10.0.0.3")
 
 #Get the first element on the list
