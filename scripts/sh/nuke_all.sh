@@ -2,14 +2,12 @@
 
 docker-compose down
 
-docker volume rm $(docker volume ls -q)
+docker container rm -f ffmt_ws_worker
+docker container rm -f ffmt_elastic
+docker container rm -f ffmt_backend
 
-docker rmi -f $(docker images -aq)
+docker rmi $(docker image ls -q)
 
-docker volume rm ffmt_mariadb_data
-docker volume rm ffmt_redis_data
-docker volume rm ffmt_redisinsight_data
+docker volume rm -f $(docker volume ls -q)
 
-docker volume create ffmt_mariadb_data
-docker volume create ffmt_redis_data
-docker volume create ffmt_redisinsight_data
+docker network rm ffmt_network
