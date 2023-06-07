@@ -16,7 +16,7 @@ class Updatedb extends MY_Controller {
 		$this->update_items();
 		$this->update_elastic_items();
 		$this->update_items_from_garland();
-		$this->update_shops_from_garland();
+		//$this->update_shops_from_garland();
 		$this->update_marketability();
 		$this->update_worlds();
 	}
