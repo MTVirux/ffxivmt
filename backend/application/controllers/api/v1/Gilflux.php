@@ -71,9 +71,10 @@ class Gilflux extends RestController{
 		//Get gilflux ranking based on the location requested
 		if($target_type == "world"){
 
-			//Get ID
+			//Convert world to ID
 			$world = $this->Scylla_Worlds->get_by_name($target_location);
 			$target_location = $world[0]["id"];
+			
 			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_world($target_location);
 
 		}else if($target_type == "datacenter"){
@@ -86,41 +87,22 @@ class Gilflux extends RestController{
 
 		}
 
-		$ordered_gilflux_ranking = [];
 
-		//If the target wasn't world, conglomerate results by the target_type
-		foreach($gilflux_ranking as $gilflux_ranking_item_key => $gilflux_ranking_item){
-			if(!isset($ordered_gilflux_ranking[$gilflux_ranking_item["item_id"]])){
-				$ordered_gilflux_ranking[$gilflux_ranking_item["item_id"]] = $gilflux_ranking_item;
-			}else{
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_alltime"] 	+= 	intval($gilflux_ranking_item["ranking_alltime"] );
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_1h"] 		+=  intval($gilflux_ranking_item["ranking_1h"] 		);
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_3h"] 		+=  intval($gilflux_ranking_item["ranking_3h"] 		);
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_6h"] 		+=  intval($gilflux_ranking_item["ranking_6h"] 		);
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_12h"]		+=  intval($gilflux_ranking_item["ranking_12h"]		);
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_1d"] 		+=  intval($gilflux_ranking_item["ranking_1d"] 		);
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_3d"] 		+=  intval($gilflux_ranking_item["ranking_3d"] 		);
-				$ordered_gilflux_ranking[intval($gilflux_ranking_item["item_id"])]["ranking_7d"] 		+=  intval($gilflux_ranking_item["ranking_7d"] 		);
-			}
-		}
-		$gilflux_ranking = $ordered_gilflux_ranking;
+
+		//Remove outdated gilflux ranking times
+		$gilflux_ranking = $this->remove_outdated_gilflux_ranking_times($gilflux_ranking);
+		//pretty_dump($gilflux_ranking);die();
 
 		//Filter out non-craftable items based on request
 		if($craft){
 			//Get all crafted item ids
 			$craftable_item_ids = $this->Scylla_Items->get_craftable_items(TRUE);
 			foreach($gilflux_ranking as $gilflux_ranking_item_id => $gilflux_ranking_item){
-				if(!in_array($gilflux_ranking_item_id, $craftable_item_ids)){
+				if(!in_array($gilflux_ranking_item["item_id"], $craftable_item_ids)){
 					unset($gilflux_ranking[$gilflux_ranking_item_id]);
 				}
 			}
 		}
-
-		//order by gilflux_1h
-		usort($gilflux_ranking, function($a, $b) {
-			return $b['ranking_1h'] <=> $a['ranking_1h'];
-		});
-
 
 		$this->response([
 			"status" => true,
