@@ -160,21 +160,17 @@
                         $.each(JSON.parse(data.data), function(index, item){
                             var row = $("<tr></tr>");
 
-
+                            //Separate numbers with commas
                             item_id = item.item_id;
-                            item_name = item.item_name
-                            datacenter = item.datacenter;
-                            region = item.region;
-                            world_id = item.world_id;
-                            world_name = item.world_name;
-                            updated_at = item.updated_at;
-                            ranking_1h = item.ranking_1h;
-                            ranking_3h = item.ranking_3h;
-                            ranking_6h = item.ranking_6h;
-                            ranking_12h = item.ranking_12h;
-                            ranking_1d = item.ranking_1d;
-                            ranking_3d = item.ranking_3d;
-                            ranking_7d = item.ranking_7d;
+                            item_name = item.item_name;
+                            //updated_at = item.updated_at
+                            ranking_1h = item.ranking_1h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            ranking_3h = item.ranking_3h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            ranking_6h = item.ranking_6h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            ranking_12h = item.ranking_12h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            ranking_1d = item.ranking_1d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            ranking_3d = item.ranking_3d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            ranking_7d = item.ranking_7d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             //ffmt_score = 0;
 
                             row.addClass(item_id)
