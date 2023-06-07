@@ -25,9 +25,7 @@ class updatedb extends RestController{
 
         set_time_limit(0);
         $sales_data = json_decode($this->input->raw_input_stream, true);
-
-        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => count($sales_data["items"]))));
-        
+                
         if(empty($sales_data)){
             $this->response([
                 'status' => false,
@@ -37,7 +35,7 @@ class updatedb extends RestController{
         }
 
         $consolidated_sales_data = array();
-        $consolidated_gilflux_data = array();
+        $updated_items = array();
 
         $this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
         $this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
@@ -66,6 +64,7 @@ class updatedb extends RestController{
 
                 $sale["worldID"] = $world_id;
                 $sale["worldName"] = $worlds_formatted_info[$world_id]["name"];
+                $updated_items[$item_id] = $world_id;
 
 
                 //Regular Sale
@@ -89,37 +88,31 @@ class updatedb extends RestController{
                 $sale["total"] = $sale["quantity"] * $sale["unit_price"];
                 $sale["item_name"] = $names_array[$item_id];
                 $sale["sale_time"] = $sale["sale_time"]*1000;
+
+                $sale["region"] = $worlds_formatted_info[$world_id]["region"];
+                $sale["datacenter"] = $worlds_formatted_info[$world_id]["datacenter"];
+
                 $consolidated_sales_data[] = $sale;
-
-                //Gilflux Sale
-
-                //Ignore sales that are on mannequins
-                if($sale["on_mannequin"] == False){
-                    $gilflux_sale["item_id"] = $item_id;
-                    $gilflux_sale["item_name"] = $names_array[$item_id];
-                    $gilflux_sale["world_id"] = $sale["world_id"];
-                    $gilflux_sale["world_name"] = $sale["world_name"];
-                    $gilflux_sale["region"] = $worlds_formatted_info[$world_id]["region"];
-                    $gilflux_sale["datacenter"] = $worlds_formatted_info[$world_id]["datacenter"];
-                    $gilflux_sale["sale_time"] = $sale["sale_time"];
-                    $gilflux_sale["total"] = $sale["total"];
-                    $consolidated_gilflux_data[] = $gilflux_sale;
-                }
 
                 
             }
         }
 
 
-        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/python_request_post", "function" => "python_request_post", "post_size" => count($sales_data["items"]))));
+        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb/", "function" => "python_request_post")));
 
         $this->load->model('Scylla/Sale_model', 'Scylla_Sales');
-        $this->load->model('Scylla/Scylla_Gilflux_model', 'Scylla_Gilflux');
     
+        //Add sales
         $sale_result = $this->Scylla_Sales->add_sale($consolidated_sales_data);
-        $gilflux_result = $this->Scylla_Gilflux->add_sale($consolidated_gilflux_data);
+        
+        //Update rankings
+        foreach($updated_items as $item_id => $world_id){
+            $this->gilflux_ranking_update_get($world_id, $item_id);
+        }
 
-        $result = array("parsed_sales" => $sale_result["parsed_sales"], "parsed_gilflux" => $gilflux_result["parsed_sales"], "time" => $sale_result["time"] + $gilflux_result["time"]);
+
+        $result = array("parsed_sales" => is_null($sale_result["parsed_sales"]) ? 0 : $sale_result["parsed_sales"], "time" => is_null($sale_result["time"]) ? 0 : $sale_result["time"]);
         
         $this->response([
             'status' => true,
@@ -129,7 +122,8 @@ class updatedb extends RestController{
 
     //TODO: Make it its own controller
     public function gilflux_ranking_update_get($world_id, $item_id){
-        $this->load->model('Scylla/Scylla_Gilflux_Ranking_model', 'Scylla_Gilflux');
-        $this->Scylla_Gilflux->update_ranking($world_id, $item_id);
+        $this->load->model('Scylla/Scylla_Gilflux_Ranking_model', 'Scylla_Gilflux_Ranking');
+        $this->Scylla_Gilflux_Ranking->update_ranking($world_id, $item_id);
+        logger("SCYLLA_DB", json_encode(array("controller" => "api/v1/updatedb", "function" => "gilflux_ranking_update_get", "world_id" => $world_id, "item_id" => $item_id)));
     }
 }
