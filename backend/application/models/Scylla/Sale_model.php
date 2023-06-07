@@ -39,7 +39,8 @@ class Sale_model extends MY_Scylla_Model{
         }
 
         if(count($sales_array) == 0){
-            return;
+            logger('SCYLLA_SALES', "No sales to insert, skipping");
+            return array("parsed_sales" => 0, "time" => 0);
         }
 
         $parsed_sales = 0;
@@ -55,7 +56,7 @@ class Sale_model extends MY_Scylla_Model{
 
         foreach($sales_array as $sale_data_to_insert){
 
-            $stmt = $this->scylla->prepare("INSERT INTO sales (buyer_name, hq, on_mannequin, quantity, sale_time, world_id, item_id, world_name, unit_price, item_name, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $this->scylla->prepare("INSERT INTO sales (buyer_name, hq, on_mannequin, quantity, sale_time, world_id, item_id, world_name, unit_price, item_name, datacenter, region, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
             $batch->add_prepared($stmt, $sale_data_to_insert);
             $batch_statement_count ++;
 
@@ -65,10 +66,9 @@ class Sale_model extends MY_Scylla_Model{
                 $result = $this->scylla->batch($batch, 1); //5 is consistency across all clusters
                 $batch = new CassandraNative\BatchStatement($this->scylla, 1);
                 if($result[0]["result"] != "success"){
-                    logger('SCYLLA_DB', "Error inserting sale into ScyllaDB: " . $result[0]["result"]);
+                    logger('SCYLLA_SALES_ERROR', "Error inserting sale into ScyllaDB: " . $result[0]["result"]);
                     die();
                 }else{
-                    logger('SCYLLA_DB', "Inserted " . $parsed_sales . " out of " . $total_sales_to_parse . " sales in " . (microtime(true) - $start_time) . " seconds");
                     $batch_statement_count = 0;
                 }
             }
@@ -77,10 +77,9 @@ class Sale_model extends MY_Scylla_Model{
             //Insert the last batch
             $result = $this->scylla->batch($batch, 5);
             if($result[0]["result"] != "success"){
-                logger('SCYLLA_SALES', "Error inserting sale into ScyllaDB: " . $result[0]["result"]);
+                logger('SCYLLA_SALES_ERROR', "Error inserting sale into ScyllaDB: " . $result[0]["result"]);
                 die();
             }else{
-                logger('SCYLLA_DB', "Inserted " . $parsed_sales . " out of " . $total_sales_to_parse . " sales in " . (microtime(true) - $start_time) . " seconds");
             }
         }
 

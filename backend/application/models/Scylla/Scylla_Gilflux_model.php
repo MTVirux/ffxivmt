@@ -55,7 +55,6 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
                     logger('SCYLLA_GILFLUX', "Error inserting sale into ScyllaDB: " . $result[0]["result"]);
                     die();
                 }else{
-                    logger('SCYLLA_GILFLUX', "Inserted " . $parsed_sales . " out of " . $total_sales_to_parse . " sales in " . (microtime(true) - $start_time) . " seconds");
                     $batch_statement_count = 0;
                 }
             }
@@ -67,11 +66,10 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
                 logger('SCYLLA_SALES', "Error inserting sale into ScyllaDB: " . $result[0]["result"]);
                 die();
             }else{
-                logger('SCYLLA_GILFLUX', "Inserted " . $parsed_sales . " out of " . $total_sales_to_parse . " sales in " . (microtime(true) - $start_time) . " seconds");
             }
         }
 
-        logger('SCYLLA_GILFLUX', "Inserted " . $parsed_sales . " sales in " . microtime(true) - $start_time . " seconds");
+        logger('SCYLLA_GILFLUX', "Parsed " . $parsed_sales . " gilflux records in " . microtime(true) - $start_time . " seconds");
         return array("parsed_sales" => $parsed_sales, "time" => microtime(true) - $start_time);
     }
 
