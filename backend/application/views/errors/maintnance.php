@@ -1,12 +1,12 @@
-<h2> Website cannot function due to Universallis being down</h2>
+<h2> Website cannot function due to Universalis being down</h2>
 <br>
-<h2> Back in November the Universallis service suffered a catastrophic crash</h2>
+<h2> Back in November the Universalis service suffered a catastrophic crash</h2>
 <br>
 <h2> This website could work while the API is in this state but it'd provide a unacceptable level of service</h2>
 <br>
-<h2> Due to the API stress caused by running this project it has been put on halt until the issues with the Universallis API subsides</h2>
+<h2> Due to the API stress caused by running this project it has been put on halt until the issues with the Universalis API subsides</h2>
 <br>
-<h2> Once Universallis has been fixed, development and maintnance of the tools will resume</h2>
+<h2> Once Universalis has been fixed, development and maintnance of the tools will resume</h2>
 <br>
 <h2> Thank you for your understanding</h2>
 <br>
