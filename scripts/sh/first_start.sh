@@ -4,7 +4,10 @@ rm -rf ./docker/ws_worker/server/logs/
 rm -rf ./docker/ws_worker/sales_importer/logs/
 
 echo "Spinning up Scylla..."
-#docker-compose up -d ffmt_scylla
+#Use if locally hosting scylla
+#docker-compose up -d ffmt_scylla_node
+
+#Use if hosting remote nodes
 ./prep_scylla_clusters.sh
 
 echo "Spinning up PHP backend..."
