@@ -95,7 +95,7 @@
                 $("div#item_product_profit_accordion").prepend(accordion_item);
 
                 $.ajax({
-                    url: "https://mtvirux.app/api/v1/tools/item_product_profit_calculator",
+                    url: "<?=base_url('/api/v1/tools/item_product_profit_calculator')?>",
                     type: "GET",
                     data: {
                         search_term: search_term,
