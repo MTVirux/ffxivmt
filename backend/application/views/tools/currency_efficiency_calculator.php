@@ -186,7 +186,7 @@
                             dailyMarketCap = item.dailyMarketCap
                             dailyMarketCapPercent = item.dailyMarketCapPercent
                             recommendedAmountToCraftDaily = Math.round(item.dailyMarketCap/item.minPrice)
-                            mtvirux_score = item.mtvirux_score
+                            ffmt_score = item.mtvirux_score
 
                             row.append($("<td>"+id+"</td>"));
                             row.append($("<td>"+name+"</td>"));
@@ -197,7 +197,7 @@
                             row.append($("<td>"+dailyMarketCap+"</td>"));
                             row.append($("<td>"+dailyMarketCapPercent+"%</td>"));
                             row.append($("<td>"+recommendedAmountToCraftDaily+"</td>"));
-                            row.append($("<td>"+mtvirux_score+"</td>"));
+                            row.append($("<td>"+ffmt_score+"</td>"));
                             table.append(row);
                         });
 
