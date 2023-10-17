@@ -112,7 +112,7 @@
 
                 //AJAX Rrequest for the data
                 $.ajax({
-                    url: "https://mtvirux.app/api/v1/gilflux",
+                    url: "<?=base_url('api/v1/gilflux')?>",
                     type: "GET",
                     data: {
                         target_location: location,
@@ -241,7 +241,7 @@
             function createWorldOptions(parent_element){
                 //AJAX GET REQUEST
                 $.ajax({
-                    url: "https://mtvirux.app/api/v1/worlds",
+                    url: "<?=base_url('/api/v1/worlds')?>",
                     type: "GET",
                     success: function (data) {
 
