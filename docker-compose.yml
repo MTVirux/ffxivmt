@@ -94,6 +94,10 @@ services:
       - ./docker/scylla/etc/scylla/scylla.yaml:/etc/scylla/scylla.yaml
       - ./docker/scylla/usr/local/bin:/usr/local/bin
       - ./docker/scylla/startup_scripts:/startup_scripts
+    deploy:
+      resources:
+        limits:
+          memory: 8g
 
     networks:
       - ffmt_network
