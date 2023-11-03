@@ -2,6 +2,8 @@
 #Private files
 private/mariadb/retainers.sql
 
+.well-known
+
 #logs & cache
 */logs/log-*.php
 !*/logs/index.html
