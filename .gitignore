@@ -23,6 +23,7 @@ docker/mariadb/var/*
 /*.bat
 /*.sh
 /*.ps1
+.env
 
 ####### FILE TYPES #######
 *.db
