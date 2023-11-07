@@ -2,6 +2,7 @@
 
 for f in /startup_scripts/*.sh; do
   chmod +x "$f"
+  echo Running "$f"
   bash "$f" 
 done
 
