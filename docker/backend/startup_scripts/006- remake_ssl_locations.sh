@@ -5,8 +5,6 @@ directory="/etc/apache2/sites-available"
 
 echo "HOST_SSL_CERT = " ${HOST_SSL_CERT}
 echo "HOST_SSL_PRIVATE_KEY = ${HOST_SSL_PRIVATE_KEY}"
-echo ${HOST_SSL_CERT}
-echo ${HOST_SSL_PRIVATE_KEY}
 
 # Use a loop to iterate through the files in the directory
 for file in "$directory"/*; do
