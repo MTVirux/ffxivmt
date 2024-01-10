@@ -13,7 +13,7 @@
 
                                 <option value="none"disabled>PvE:</option>
                                 <option value="Allagan Tomestone of Causality">Allagan Tomestone of Causality (Green and White)</option>
-                                <option value="Allagan Tomestone of Comedy">Allagan Tomestone of Comedy (Red and Green)</option>
+                                <!--<option value="Allagan Tomestone of Comedy">Allagan Tomestone of Comedy (Red and Green)</option>-->
                                 <option value="Allagan Tomestone of Poetics">Allagan Tomestone of Poetics</option>
 
                                 <option value="none"disabled>Disciples of Hand/Land:</option>
