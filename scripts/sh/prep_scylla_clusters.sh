@@ -85,7 +85,7 @@ do
 
 
         echo "Passing project scripts to seed node @ $SEED_IP"
-        scp -r /root/ffxiv-market-tools/docker/scylla/startup_scripts root@"$SEED_IP":/tmp
+        scp -r ./docker/scylla/startup_scripts root@"$SEED_IP":/tmp
         #Export the the value of $SEED_IP to the CQLSH_HOST env variable on the seed node
         echo "Exporting the the value of $SEED_IP to the CQLSH_HOST env variable on the seed node @ $SEED_IP"
         ssh root@"$SEED_IP" 'echo CQLSH_HOST="'$SEED_IP'" >> /etc/environment && sleep 1 && source /etc/environment'
