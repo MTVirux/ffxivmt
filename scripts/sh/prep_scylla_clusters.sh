@@ -12,6 +12,10 @@ SEED_IP=${IP_LIST[0]}
 for IP in "${IP_LIST[@]}"
 do
 
+    #Fix SSH Keys for rebuilt servers
+    ssh-keygen -R $IP
+    ssh-keyscan -H $IP >> /root/.ssh/known_hosts
+
     #Get last number of the current IP
     IP_LAST_NUMBER=$(echo $IP | cut -d'.' -f 4)
 
