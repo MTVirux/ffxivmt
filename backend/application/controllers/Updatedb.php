@@ -6,6 +6,12 @@ class Updatedb extends MY_Controller {
 	public function __construct(){
 		parent::__construct();
 		$this->load->helper('url');
+
+		if ($_SERVER['SERVER_ADDR'] != $_SERVER['REMOTE_ADDR']){
+			$this->output->set_status_header(400, 'No Remote Access Allowed');
+			redirect();
+		  }
+
 		ini_set('max_execution_time', 0);
 		ini_set('memory_limit', '2048M');
 	}
