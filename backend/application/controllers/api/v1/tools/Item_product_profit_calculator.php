@@ -92,8 +92,8 @@ class Item_product_profit_calculator extends RestController{
             unset($mb_treated_data[$item_id]);
         }
 
-        $prices = array_column($mb_treated_data, 'ffmt_score');
-        array_multisort($prices, SORT_DESC, $mb_treated_data);
+        $scores = array_column($mb_treated_data, 'ffmt_score');
+        array_multisort($scores, SORT_DESC, $mb_treated_data);
 
         //pretty_dump($mb_treated_data);die();
 
