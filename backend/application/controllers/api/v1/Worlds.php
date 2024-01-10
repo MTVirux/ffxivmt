@@ -19,7 +19,16 @@ class worlds extends RestController{
         {   
             $this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
 
+            if($world_structure_array = $this->cache->get('ffxiv_world_structure_array')){
+                $this->response([
+                    'status' => true,
+                    'message' => 'Cached ffxiv_world_structure_array successfully',
+                    'data' => $world_structure_array
+                ], 200);
+            }
+
             $worlds = $this->Scylla_Worlds->get();
+
             if(count($worlds) == 0){
                 $this->response([
                     'status' => false,
@@ -41,6 +50,9 @@ class worlds extends RestController{
                     ksort($world_structure_array[$region][$datacenter]);
                 }
             }
+
+            $this->cache->save('ffxiv_world_structure_array', $world_structure_array, 300);
+            
 
             $this->response([
                 'status' => true,
