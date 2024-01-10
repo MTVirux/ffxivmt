@@ -174,9 +174,13 @@
                         table.append(headers);
                         table.append($("<tbody>"));
 
+                        gil_price_sum = 0;
+                        currency_price_sum = 0;
+
                         $.each(data.data, function(index, item){
                             var row = $("<tr></tr>");
 
+                            //Prepare table data
                             id = item.id
                             name = item.name
                             price = item.price
@@ -188,6 +192,11 @@
                             recommendedAmountToCraftDaily = Math.round(item.dailyMarketCap/item.minPrice)
                             ffmt_score = item.mtvirux_score
 
+                            //Stat vars
+                            gil_price_sum = gil_price_sum + minPrice
+                            currency_price_sum = currency_price_sum + price
+
+                            //Append table data
                             row.append($("<td>"+id+"</td>"));
                             row.append($("<td>"+name+"</td>"));
                             row.append($("<td>"+price+"</td>"));
@@ -200,12 +209,15 @@
                             row.append($("<td>"+ffmt_score+"</td>"));
                             table.append(row);
                         });
-
                         table.append($("</tbody>"));
+                        table.append($("</table>"));
 
-                        table.append("</table>");
+                        //currency_info = ($("<span class=\"currency-unit-average-value-title\">Currency Unit Average Value: </span> <span class=\"currency-unit-average-value-value\">"+((gil_price_sum / currency_price_sum))+"</span>"));
 
-                        $("#accordion-body-"+data.request_id).html(table);
+                        currency_info = $("<span>Currency Unit Average Value: " + (gil_price_sum / currency_price_sum)+"</span>")
+
+
+                        $("#accordion-body-"+data.request_id).html(currency_info[0].outerHTML + table[0].outerHTML);
 
                         $("#table-"+data.request_id).find("[tooltip-text]").each(function(index,element){
                             new bootstrap.Tooltip(element, {
