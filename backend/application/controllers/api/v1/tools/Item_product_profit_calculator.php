@@ -75,6 +75,8 @@ class Item_product_profit_calculator extends RestController{
             return;
         }
         $mb_treated_data = [];
+        //var_dump($mb_data);die();
+        if(array_key_exists('items', $mb_data)){
         foreach($mb_data["items"] as $item_id => $mb_item_data){
             $mb_treated_data[$item_id]["minPrice"] = $mb_item_data["minPrice"];
             $mb_treated_data[$item_id]["regularSaleVelocity"] = $mb_item_data["regularSaleVelocity"];
