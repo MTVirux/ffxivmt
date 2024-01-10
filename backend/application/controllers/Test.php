@@ -47,12 +47,25 @@ class Test extends MY_Controller {
 			$request_id = $_POST["request_id"];
 		}
 		
+		$item_name = $this->Scylla_Item->get($currency_id)[0]["name"];
 
+		if($final_data = $this->cache->get('currency_efficiency_calculator_'.$currency_id.'_'.$worldDcRegion)){
+			echo "here";die();
+			echo json_encode(array(
+				"status" => "success", 
+				"data" => $final_data, 
+				"request_id" => $request_id, 
+				"item_name" => $this->Scylla_Item->get($currency_id)[0]["name"], 
+				"item_id" => $currency_id, 
+				"location" => $worldDcRegion)
+			);
+			logger("API_INFO", "api/v1/item_product_profit_calculator --- GET REQUEST [".$request_id."] for ".$currency_id." on ".$location." handled through cache");
+			return $final_data;
+		}
+
+		if(!$item_data = $this->cache->get('garland_db_get_items_'.$currency_id)){
 		$item_data = garland_db_get_items($currency_id);
-
-		//pretty_dump($item_data);die();
-
-		//pretty_dump(($item_data["item"]["tradeCurrency"][0]["listings"]));
+		}
 
 		$shops = $item_data["item"]["tradeCurrency"];
 
@@ -147,13 +160,16 @@ class Test extends MY_Controller {
 			"status" => "success", 
 			"data" => $final_data, 
 			"request_id" => $request_id, 
-			"item_name" => $this->Scylla_Item->get($currency_id)[0]["name"], 
+			"item_name" => $item_name, 
 			"item_id" => $currency_id, 
 			"location" => $worldDcRegion)
 		);
 		return $final_data;
 
-        logger("API_INFO", "api/v1/item_product_profit_calculator --- GET REQUEST [".$request_id."] for ".$search_term." on ".$location." received");
+        logger("API_INFO", "api/v1/item_product_profit_calculator --- GET REQUEST [".$request_id."] for [".$currency_id."]".$item_name." on ".$location." received");
+		
+	}
+
 		
 	}
 
