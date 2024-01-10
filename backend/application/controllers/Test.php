@@ -46,7 +46,7 @@ class Test extends MY_Controller {
 		}else{
 			$request_id = $_POST["request_id"];
 		}
-		
+
 		$item_name = $this->Scylla_Item->get($currency_id)[0]["name"];
 
 		if($final_data = $this->cache->get('currency_efficiency_calculator_'.$currency_id.'_'.$worldDcRegion)){
@@ -64,7 +64,7 @@ class Test extends MY_Controller {
 		}
 
 		if(!$item_data = $this->cache->get('garland_db_get_items_'.$currency_id)){
-		$item_data = garland_db_get_items($currency_id);
+			$item_data = garland_db_get_items($currency_id);
 		}
 
 		$shops = $item_data["item"]["tradeCurrency"];
