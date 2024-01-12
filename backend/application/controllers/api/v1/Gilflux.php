@@ -134,7 +134,7 @@ class Gilflux extends RestController{
 				//If the last sale time is older than the timeframe, set the ranking for that timeframe and all the ones after to 0
 				if(($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) > $gilflux_timeframe_in_ms ){
 					$gilflux_ranking[$gilflux_ranking_item_key]['ranking_'.$caption] = 0;
-					logger('debug', '['. ($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) . ' > ' .  ($current_time_in_ms - $gilflux_timeframe_in_ms) . '] Gilflux ranking for item '.$item_id.' is outdated on range of '.$caption.'.');
+					//logger('debug', '['. ($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) . ' > ' .  ($current_time_in_ms - $gilflux_timeframe_in_ms) . '] Gilflux ranking for item '.$item_id.' is outdated on range of '.$caption.'.');
 				}else{
 					//logger('debug', 'Gilflux ranking for item '.$item_id.' on world '.$world_id.' is OK on range of '.$caption.'.');
 				}
