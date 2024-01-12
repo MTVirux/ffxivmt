@@ -24,6 +24,7 @@ docker/mariadb/var/*
 /*.sh
 /*.ps1
 .env
+!/swap_scripts.sh
 
 ####### FILE TYPES #######
 *.db
