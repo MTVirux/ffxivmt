@@ -100,9 +100,9 @@ class Gilflux extends RestController{
 
 		}else if($target_type == "region"){
 
-			foreach($locations as $region){
+			foreach($locations as $region_name => $region){
 
-				if($region == $target_location){
+				if($region_name == $target_location){
 
 					foreach($region as $datacenter_name => $datacenter){
 
