@@ -97,9 +97,9 @@ class Gilflux extends RestController{
 		if($craft){
 			//Get all crafted item ids
 			$craftable_item_ids = $this->Scylla_Items->get_craftable_items(TRUE);
-			foreach($gilflux_ranking as $gilflux_ranking_item_id => $gilflux_ranking_item){
+			foreach($gilflux_ranking as $gilflux_ranking_item_array_index => $gilflux_ranking_item){
 				if(!in_array($gilflux_ranking_item["item_id"], $craftable_item_ids)){
-					unset($gilflux_ranking[$gilflux_ranking_item_id]);
+					unset($gilflux_ranking[$gilflux_ranking_item_array_index]);
 				}
 			}
 		}
