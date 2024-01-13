@@ -176,7 +176,6 @@
                             ranking_7d = item.ranking_7d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             //ffmt_score = 0;
 
-                            row.addClass(item_id)
 
                             row.append($("<td>"+item_id+"</td>"));
                             row.append($("<td>"+item_name+"</td>"));
