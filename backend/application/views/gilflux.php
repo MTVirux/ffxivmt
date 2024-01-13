@@ -121,11 +121,15 @@
                     },
                     success: function (data) {
 
+                        //Present error message if error occurered
                         if(data.status != "success" && data.status !== true){
                             $(".message-row").html(data.message);
                             return;
                         }
 
+
+
+                        //Form the accordion item
                         $("div.accordion-item[request_id='"+data.request_id+"']").attr("id", data.request_id);
                         $("div.accordion-item[request_id='"+data.request_id+"']").html(
                             $("div.accordion-item[request_id='"+data.request_id+"']").html()
@@ -134,7 +138,7 @@
                                 .replaceAll("PLACEHOLDER_ID", data.request_id)
                         );
 
-                        
+                        //Create table
                         var table = $("<table class='table' id='table-"+data.request_id+"'>");
                         var headers = $('<thead>');
                         var headers_row = $('<tr>');
@@ -151,9 +155,11 @@
                         headers_row.append($('<th> Universalis </th>'));
                         //headers.append($('<th> FFMT Score </th>'));
 
+                        //Append headers row and close table head
                         headers.append(headers_row);
                         headers.append($('</thead>'));
 
+                        //Append headers row and close table head
                         table.append(headers);
                         table.append($("<tbody>"));
 
@@ -163,10 +169,9 @@
                         $.each(data.data, function(index, item){
                             var row = $("<tr></tr>");
 
-                            //Separate numbers with commas
                             item_id = item.item_id;
                             item_name = item.item_name;
-                            //updated_at = item.updated_at
+                            //Separate numbers with commas
                             ranking_1h = item.ranking_1h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             ranking_3h = item.ranking_3h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             ranking_6h = item.ranking_6h.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -174,7 +179,7 @@
                             ranking_1d = item.ranking_1d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             ranking_3d = item.ranking_3d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             ranking_7d = item.ranking_7d.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                            //ffmt_score = 0;
+
 
 
                             row.append($("<td>"+item_id+"</td>"));
@@ -187,11 +192,9 @@
                             row.append($("<td>"+ranking_3d+"</td>"));
                             row.append($("<td>"+ranking_7d+"</td>"));
                             row.append($("<td><a href='https://universalis.app/market/"+item_id+"' target='_blank'>Link</a></td>"));
-                            //row.append($("<td>"+ffmt_score+"</td>"));
 
                             table.append(row);
 
-                            //
                         });
 
                         table.append($("</tbody>"));
