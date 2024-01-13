@@ -49,11 +49,12 @@ class Gilflux extends RestController{
 		$target_type = "world";
 		$worlds = $this->Scylla_Worlds->get();
 		$locations = [];
+		$gilflux_ranking = [];
 
 
 		//Structure worlds by region and datacenter
 		foreach($worlds as $world){
-			$locations[$world["region"]][$world["datacenter"]][] = $world["name"];
+			$locations[$world["region"]][$world["datacenter"]][$world["id"]] = $world["name"];
 		}
 		//Assert target_location
 		foreach($locations as $region => $datacenter_data){
@@ -77,17 +78,44 @@ class Gilflux extends RestController{
 			
 			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_world($target_location);
 
+
 		}else if($target_type == "datacenter"){
 
-			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_datacenter($target_location);
+			foreach($locations as $region_name => $region){
+
+				foreach($region as $datacenter_name => $datacenter){
+
+					if($datacenter_name == $target_location){
+
+						foreach($datacenter as $world_id => $world_name){
+
+							$world_gilflux = $this->Scylla_gilflux_ranking->get_by_world($world_id);
+							$gilflux_ranking = array_merge($gilflux_ranking, $world_gilflux);
+
+						}
+					}
+				}
+			}
+		
 
 		}else if($target_type == "region"){
 
-			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_region($target_location);
+			foreach($locations as $region){
 
+				if($region == $target_location){
+
+					foreach($region as $datacenter_name => $datacenter){
+
+						foreach($datacenter as $world_id => $world_name){
+
+							$world_gilflux = $this->Scylla_gilflux_ranking->get_by_world($world_id);
+							$gilflux_ranking = array_merge($gilflux_ranking, $world_gilflux);
+
+						}
+					}
+				}
+			}
 		}
-
-
 
 		//Remove outdated gilflux ranking times
 		$gilflux_ranking = $this->remove_outdated_gilflux_ranking_times($gilflux_ranking);
