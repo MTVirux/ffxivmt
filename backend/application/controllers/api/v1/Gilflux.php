@@ -116,11 +116,7 @@ class Gilflux extends RestController{
 				}
 			}
 		}
-
-		//Remove outdated gilflux ranking times
-		$gilflux_ranking = $this->remove_outdated_gilflux_ranking_times($gilflux_ranking);
-		//pretty_dump($gilflux_ranking);die();
-
+		
 		//Filter out non-craftable items based on request
 		if($craft){
 			//Get all crafted item ids
@@ -142,37 +138,37 @@ class Gilflux extends RestController{
 
 	}
 
-	private function remove_outdated_gilflux_ranking_times($gilflux_ranking){
-
-		$gilflux_timeframes_in_ms = $this->config->item('gilflux_timeframes_ms');
-		$current_time_in_ms = time() * 1000;
-		$total_entries_count = count($gilflux_ranking);
-
-		//Check if they're updated
-		foreach($gilflux_ranking as $gilflux_ranking_item_key => $gilflux_ranking_item){
-			$item_id = $gilflux_ranking_item["item_id"];
-			$skip  = false;
-
-			foreach($gilflux_timeframes_in_ms as $caption => $gilflux_timeframe_in_ms){
-				
-				//If the last sale time is null, set it to the updated_at time
-				if(!isset($gilflux_ranking_item["last_sale_time"]) || is_null($gilflux_ranking_item["last_sale_time"] || empty($gilflux_ranking_item["last_sale_time"]) || ($gilflux_ranking_item["last_sale_time"] == 0))){
-					$gilflux_ranking_item["last_sale_time"] = $gilflux_ranking_item['updated_at'];
-				}
-
-				//If the last sale time is older than the timeframe, set the ranking for that timeframe and all the ones after to 0
-				if(($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) > $gilflux_timeframe_in_ms ){
-					$gilflux_ranking[$gilflux_ranking_item_key]['ranking_'.$caption] = 0;
-					//logger('debug', '['. ($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) . ' > ' .  ($current_time_in_ms - $gilflux_timeframe_in_ms) . '] Gilflux ranking for item '.$item_id.' is outdated on range of '.$caption.'.');
-				}else{
-					//logger('debug', 'Gilflux ranking for item '.$item_id.' on world '.$world_id.' is OK on range of '.$caption.'.');
-				}
-			}
-			
-		}
-
-		return $gilflux_ranking;
-
-	}
+	//private function remove_outdated_gilflux_ranking_times($gilflux_ranking){
+	//
+	//	$gilflux_timeframes_in_ms = $this->config->item('gilflux_timeframes_ms');
+	//	$current_time_in_ms = time() * 1000;
+	//	$total_entries_count = count($gilflux_ranking);
+	//
+	//	//Check if they're updated
+	//	foreach($gilflux_ranking as $gilflux_ranking_item_key => $gilflux_ranking_item){
+	//		$item_id = $gilflux_ranking_item["item_id"];
+	//		$skip  = false;
+	//
+	//		foreach($gilflux_timeframes_in_ms as $caption => $gilflux_timeframe_in_ms){
+	//			
+	//			//If the last sale time is null, set it to the updated_at time
+	//			if(!isset($gilflux_ranking_item["last_sale_time"]) || is_null($gilflux_ranking_item["last_sale_time"] || empty($gilflux_ranking_item["last_sale_time"]) || ($gilflux_ranking_item["last_sale_time"] == 0))){
+	//				$gilflux_ranking_item["last_sale_time"] = $gilflux_ranking_item['updated_at'];
+	//			}
+	//
+	//			//If the last sale time is older than the timeframe, set the ranking for that timeframe and all the ones after to 0
+	//			if(($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) > $gilflux_timeframe_in_ms ){
+	//				$gilflux_ranking[$gilflux_ranking_item_key]['ranking_'.$caption] = 0;
+	//				//logger('debug', '['. ($current_time_in_ms - $gilflux_ranking_item["last_sale_time"]) . ' > ' .  ($current_time_in_ms - $gilflux_timeframe_in_ms) . '] Gilflux ranking for item '.$item_id.' is outdated on range of '.$caption.'.');
+	//			}else{
+	//				//logger('debug', 'Gilflux ranking for item '.$item_id.' on world '.$world_id.' is OK on range of '.$caption.'.');
+	//			}
+	//		}
+	//		
+	//	}
+	//
+	//	return $gilflux_ranking;
+	//
+	//}
 
 }

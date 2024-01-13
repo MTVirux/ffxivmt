@@ -157,7 +157,10 @@
                         table.append(headers);
                         table.append($("<tbody>"));
 
-                        $.each(JSON.parse(data.data), function(index, item){
+                        //Parse response Data
+                        data.data = prep_gilflux_data(JSON.parse(data.data), JSON.parse(data.gilflux_timeframe_in_ms));
+
+                        $.each(data.data, function(index, item){
                             var row = $("<tr></tr>");
 
                             //Separate numbers with commas
@@ -218,6 +221,53 @@
                     }
                 });
             }); 
+
+            function prep_gilflux_data(gilflux_data, gilflux_timeframe_in_ms){
+                //Filter out outdated entries
+
+                var filtered_gilflux_data = []
+                var current_time_in_ms = new Date().getTime();
+
+                $.each(gilflux_data, function(index, item){
+                    last_sale_time = item.last_sale_time ? item.last_sale_time : item.updated_at
+                    should_delete_entry = true
+                    $.each(gilflux_timeframe_in_ms, function(timeframe_caption, gilflux_timeframe_in_ms){
+                        if(current_time_in_ms - last_sale_time > gilflux_timeframe_in_ms){
+                            item["ranking_"+timeframe_caption] = 0
+                        }else{
+                            should_delete_entry = false
+                        }
+                    })
+
+                    //If entry has any gilflux data then add it to the filtered array
+                    if(!should_delete_entry){
+                        //Create filtered array entry for item if it doesn't exist
+
+                        if(!filtered_gilflux_data[item.item_id]){
+                            filtered_gilflux_data[item.item_id] = {
+                                item_id: item.item_id,
+                                item_name: item.item_name
+                            }
+                            //Populate ranking with zeroes for new entries
+                            $.each(gilflux_timeframe_in_ms, function(timeframe_caption, gilflux_timeframe_in_ms){
+                                filtered_gilflux_data[item.item_id]["ranking_"+timeframe_caption] = 0
+                            })
+                        }
+
+                        //Sum gilflux values to the appropriate timeframe rankings
+                        $.each(gilflux_timeframe_in_ms, function(timeframe_caption, gilflux_timeframe_in_ms){
+                            filtered_gilflux_data[item.item_id]["ranking_"+timeframe_caption] += parseInt(item["ranking_"+timeframe_caption]);
+                        })
+
+                    }
+                    
+                });
+
+                //Returned filtered data without undefined entries
+                return filtered_gilflux_data.filter(function(element){
+                    return element !== undefined;
+                });
+            }
 
             function createProgressBar(parent_element) {
                 var progressBar = $('<div>', { class: 'progress' });
