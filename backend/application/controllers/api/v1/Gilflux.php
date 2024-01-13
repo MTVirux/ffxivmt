@@ -108,6 +108,7 @@ class Gilflux extends RestController{
 			"status" => true,
 			"message" => "Success",
 			"data" => json_encode($gilflux_ranking),
+			"gilflux_timeframe_in_ms" => json_encode($this->config->item('gilflux_timeframes_ms')),
 			"request_id" => isset($_GET["request_id"]) ? $_GET["request_id"] : null
 		]);
 
