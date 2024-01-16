@@ -40,6 +40,19 @@ class Gilflux extends RestController{
 			$craft = FALSE;
 		}
 
+		$cache_string = 'gilflux_ranking_'.$target_location;
+		$cache_type = '_'.($craft ? 'crafted_only' : 'all');
+
+		if($gilflux_ranking = $this->cache->get($cache_string.$cache_type)){
+			$this->response([
+				'status' => true,
+				'message' => $cache_string . $cache_type . ' retrieved from cache',
+				'data' => json_encode($gilflux_ranking),
+				"gilflux_timeframe_in_ms" => json_encode($this->config->item('gilflux_timeframes_ms')),
+				"request_id" => isset($_GET["request_id"]) ? $_GET["request_id"] : null
+			], 200);
+		}
+
 		//Load models
 		$this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
 		$this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
@@ -89,7 +102,12 @@ class Gilflux extends RestController{
 
 						foreach($datacenter as $world_id => $world_name){
 
-							$world_gilflux = $this->Scylla_gilflux_ranking->get_by_world($world_id);
+							//Fetch world_gilflux if it isn't in cache from another request
+							if(!($world_gilflux = $this->cache->get('gilflux_ranking_'.$world_name.'_all'))){
+								$world_gilflux = $this->Scylla_gilflux_ranking->get_by_world($world_id);
+							}
+
+							//Merge with gilflux_ranking array
 							$gilflux_ranking = array_merge($gilflux_ranking, $world_gilflux);
 
 						}
@@ -106,10 +124,23 @@ class Gilflux extends RestController{
 
 					foreach($region as $datacenter_name => $datacenter){
 
-						foreach($datacenter as $world_id => $world_name){
+						if($datacenter_gilflux = ($this->cache->get('gilflux_ranking_'.$datacenter_name.'_all'))){
+						
+							$gilflux_ranking = array_merge($gilflux_ranking, $datacenter_gilflux)
 
-							$world_gilflux = $this->Scylla_gilflux_ranking->get_by_world($world_id);
-							$gilflux_ranking = array_merge($gilflux_ranking, $world_gilflux);
+						}else{
+
+							foreach($datacenter as $world_id => $world_name){
+
+								//Fetch world_gilflux if it isn't in cache from another request
+								if(!($world_gilflux = $this->cache->get('gilflux_ranking_'.$world_name.'_all'))){
+									$world_gilflux = $this->Scylla_gilflux_ranking->get_by_world($world_id);
+								}
+
+								//Merge with gilflux_ranking array
+								$gilflux_ranking = array_merge($gilflux_ranking, $world_gilflux);
+
+							}
 
 						}
 					}
@@ -117,6 +148,8 @@ class Gilflux extends RestController{
 			}
 		}
 		
+		$this->cache->save($cache_string.'_all', $gilflux_ranking, $this->config->item('cache_timers')['gilflux_ranking']);
+
 		//Filter out non-craftable items based on request
 		if($craft){
 			//Get all crafted item ids
@@ -127,6 +160,9 @@ class Gilflux extends RestController{
 				}
 			}
 		}
+
+		$this->cache->save($cache_string.'_crafted_only', $gilflux_ranking, $this->config->item('cache_timers')['gilflux_ranking']);
+
 
 		$this->response([
 			"status" => true,
