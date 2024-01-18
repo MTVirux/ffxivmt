@@ -22,7 +22,7 @@ class worlds extends RestController{
             if($world_structure_array = $this->cache->get('ffxiv_world_structure_array')){
                 $this->response([
                     'status' => true,
-                    'message' => 'Cached ffxiv_world_structure_array successfully',
+                    'message' => 'Worlds retrieved from cache successfully',
                     'data' => $world_structure_array
                 ], 200);
             }
