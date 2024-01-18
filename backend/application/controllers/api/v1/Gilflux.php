@@ -126,7 +126,7 @@ class Gilflux extends RestController{
 
 						if($datacenter_gilflux = ($this->cache->get('gilflux_ranking_'.$datacenter_name.'_all'))){
 						
-							$gilflux_ranking = array_merge($gilflux_ranking, $datacenter_gilflux)
+							$gilflux_ranking = array_merge($gilflux_ranking, $datacenter_gilflux);
 
 						}else{
 
