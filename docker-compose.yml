@@ -31,7 +31,7 @@ services:
       - HOST_SSL_CERT=${HOST_SSL_CERT}
       - HOST_SSL_PRIVATE_KEY=${HOST_SSL_PRIVATE_KEY}
     extra_hosts:
-      - ffmt_scylla_node=${SCYLLA_NODE_IP}
+      - "ffmt_scylla_node:${SCYLLA_NODE_IP}"
     volumes:
       - ./backend:/var/www/html/
     networks:
