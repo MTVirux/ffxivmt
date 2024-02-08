@@ -54,6 +54,17 @@ MARIADB_HOST_PORT=3306
 #DB Management
 PMA_HOST_PORT=8001
 
+# ######################## SCYLLA NODES CONFIG ######################## #
+
+#IP of the seed node
+SCYLLA_CLUSTER_SEED_IP=10.0.0.1
+#Comma separated list of local IPs of the nodes in the order they should be initialized in
+#If the script is prepping the seed node, it is HIGHLY recommended it's the first one on this list
+SCYLLA_NODE_IPS=10.0.0.1,10.0.0.2,10.0.0.3
+#Scylla SSH user
+SCYLLA_NODE_SSH_USER=scylla_user
+#Scylla SSH identity file path, empty for none
+SCYLLA_NODE_SSH_IDENTITY_FILE="/root/.ssh/id_rsa.pem"
 
 
 # ######################## SSL CERT CONFIG ######################## #
