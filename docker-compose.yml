@@ -9,6 +9,8 @@ services:
       dockerfile: ${BACKEND_DOCKERFILE}
     image: ffmt_backend
     restart: "always"
+    extra_hosts:
+      - "ffmt_scylla_node:${SCYLLA_CLUSTER_SEED_IP}"
     ports:
       - "${BACKEND_HOST_PORT}:80"
       - "${BACKEND_HOST_SSL_PORT}:443"
@@ -30,8 +32,6 @@ services:
       
       - HOST_SSL_CERT=${HOST_SSL_CERT}
       - HOST_SSL_PRIVATE_KEY=${HOST_SSL_PRIVATE_KEY}
-    extra_hosts:
-      - "ffmt_scylla_node:${SCYLLA_NODE_IP}"
     volumes:
       - ./backend:/var/www/html/
     networks:
