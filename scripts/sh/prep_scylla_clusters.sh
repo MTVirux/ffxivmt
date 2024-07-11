@@ -11,17 +11,19 @@ SEED_IP=${IP_LIST[0]}
 
 for IP in "${IP_LIST[@]}"
 do
-
+    echo "Attempting to connect to $IP..."
+    ssh root@"$IP" 'touch /root/.ssh/known_hosts'
     #Fix SSH Keys for rebuilt servers
     ssh-keygen -R $IP
-    ssh-keyscan -H $IP >> /root/.ssh/known_hosts
+    ssh-keyscan -H $IP > /root/.ssh/known_hosts
 
     #Get last number of the current IP
     IP_LAST_NUMBER=$(echo $IP | cut -d'.' -f 4)
 
-    ssh root@"$IP" 'sudo sudo gpg --homedir /tmp --no-default-keyring --keyring /etc/apt/keyrings/scylladb.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys d0a112e067426ab2'
-    ssh root@"$IP" 'sudo wget -O /etc/apt/sources.list.d/scylla.list http://downloads.scylladb.com/deb/debian/scylla-5.2.list'
-    ssh root@"$IP" 'sudo apt-get update && sudo apt-get install -y scylla'
+    #Update the server
+    ssh root@"$IP" 'apt-get update && apt-get upgrade -y'
+    #Install Scylla with web install script: https://github.com/scylladb/scylladb-web-install
+    ssh root@"$IP" 'curl -sSf https://get.scylladb.com/server | sudo bash'
 
     #Setup the seed node
     echo "Reforging the seed node @ $IP"
