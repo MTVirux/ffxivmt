@@ -17,10 +17,10 @@
                                 <option value="Allagan Tomestone of Poetics">Allagan Tomestone of Poetics</option>
 
                                 <option value="none"disabled>Disciples of Hand/Land:</option>
-                                <option value="White Crafters' Scrip">  White Crafters' Scrip</option>
-                                <option value="Purple Crafters' Scrip"> Purple Crafters' Scrip</option>
-                                <option value="White Gatherers' Scrip"> White Gatherers' Scrip</option>
-                                <option value="Purple Gatherers' Scrip">Purple Gatherers' Scrip</option>
+                                <option value="Purple Crafters' Scrip">Orange Crafters' Scrip</option>
+                                <option value="White Crafters' Scrip">Purple Crafters' Scrip</option>
+                                <option value="Purple Gatherers' Scrip">Orange Gatherers' Scrip</option>
+                                <option value="White Gatherers' Scrip">Purple Gatherers' Scrip</option>
                                 <option value="Skybuilders' Scrip">Skybuilders' Scrip</option>
 
                                 <option value="none"disabled>The Hunt:</option>
