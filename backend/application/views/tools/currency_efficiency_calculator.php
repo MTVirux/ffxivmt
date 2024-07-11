@@ -106,6 +106,7 @@
                 $(".message-row").html("");                
 
                 var currency_id = $("#currency_select").val();
+                var currency_name = $("#currency_select option:selected").text();
                 var location = $("#location_select").val();
                 var request_id = (currency_id + location)   .split("")
                                                             .map(c => c.charCodeAt(0).toString(16).padStart(2, "0"))
@@ -118,7 +119,7 @@
                 var accordion_item = `<div class='accordion-item' request_id='`+request_id+`'id='`+`PLACEHOLDER_ID`+`'>`+
                             `<h2 class='accordion-header' id='heading-`+`PLACEHOLDER_ID`+`'>`+
                                 `<button class='accordion-button' type='button' data-bs-toggle='collapse' data-bs-target='#collapse-`+`PLACEHOLDER_ID`+`' aria-expanded='true' aria-controls='collapseOne'>`+
-                                    currency_id + `-[` + location + `]`+
+                                    currency_name + `-[` + location + `]`+
                                 `</button>`+
                             `</h2>`+
                             `<div id='collapse-`+`PLACEHOLDER_ID`+`' class='accordion-collapse collapse show' aria-labelledby='headingOne' data-bs-parent='#item_product_profit_accordion'>`+
