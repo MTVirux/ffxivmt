@@ -109,7 +109,7 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
             "ranking_3d"    =>  isset($result_3d[0]["gilflux"])     ?     $result_3d[0]["gilflux"] : 0,
             "ranking_7d"    =>  isset($result_7d[0]["gilflux"])     ?     $result_7d[0]["gilflux"] : 0,
             "updated_at"    =>  time()*1000,
-            "last_sale_time" => $result_7d[0]["last_sale_time"]
+            "last_sale_time" => isset($result_7d[0]["last_sale_time"])     ?     $result_7d[0]["last_sale_time"] : 0,
         );
 
         $stmt_insert = $this->scylla->prepare("
