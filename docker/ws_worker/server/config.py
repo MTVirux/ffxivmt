@@ -21,7 +21,7 @@ WORLDS_TO_USE = []
 DCS_TO_USE = {
 }
 
-REGIONS_TO_USE = ["Europe", "North-America"]
+REGIONS_TO_USE = ["Europe", "North-America", "Japan", "Oceania", "中国", "NA-Cloud-DC"]
 #REGIONS_TO_USE = [];
 
 #LOGGING
