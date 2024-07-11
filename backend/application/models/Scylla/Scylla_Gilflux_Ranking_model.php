@@ -105,7 +105,7 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
             "ranking_3h"    =>  isset($result_3h[0]["gilflux"])     ?     $result_3h[0]["gilflux"] : 0,
             "ranking_6h"    =>  isset($result_6h[0]["gilflux"])     ?     $result_6h[0]["gilflux"] : 0,
             "ranking_12h"   =>  isset($result_12h[0]["gilflux"])    ?     $result_12h[0]["gilflux"] : 0,
-            "ranking_1d"   =>  isset($result_1d[0]["gilflux"])      ?     $result_1d[0]["gilflux"] : 0,
+            "ranking_1d"   =>   isset($result_1d[0]["gilflux"])     ?     $result_1d[0]["gilflux"] : 0,
             "ranking_3d"    =>  isset($result_3d[0]["gilflux"])     ?     $result_3d[0]["gilflux"] : 0,
             "ranking_7d"    =>  isset($result_7d[0]["gilflux"])     ?     $result_7d[0]["gilflux"] : 0,
             "updated_at"    =>  time()*1000,
