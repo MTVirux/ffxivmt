@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the list of IPs to connect to
-IP_LIST=("10.0.0.3" "10.0.0.4")
-#IP_LIST=("10.0.0.3")
+#IP_LIST=("10.0.0.3" "10.0.0.4")
+IP_LIST=("10.0.0.3")
 
 #Get the first element on the list
 SEED_IP=${IP_LIST[0]}
