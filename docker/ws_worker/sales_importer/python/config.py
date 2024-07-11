@@ -6,7 +6,7 @@ ENTRIES_TO_RETURN = 999999                                          #Max number 
 
 IMPORT_ALL_TIME = False                                              #Set to true to import all time, false to import the time set in TIME_TO_IMPORT_SALES
 
-TIME_AGO_TO_IMPORT_SALES = 604800000                               #Time in milliseconds to import sales for, only used if IMPORT_ALL_TIME is false
+TIME_AGO_TO_IMPORT_SALES = 432000000                               #Time in milliseconds to import sales for, only used if IMPORT_ALL_TIME is false
 
 UNIVERSALIS_URL = "https://universalis.app/api/v2/"
 UNIVERSALIS_SALES_ENDPOINT = "history/"
