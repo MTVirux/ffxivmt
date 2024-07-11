@@ -25,8 +25,10 @@ echo -en "\r$(date) - Waiting for file '/.ffmt_backend_ready' to exist inside th
 sleep 1
 done
 
-echo "Updating Item DB (Log Channel SCYLLADB)..."
-curl -X POST localhost/updatedb/ > /dev/null
+chmod +x ./update_db_data.sh
+./update_db_data.sh
 
-echo "Spinning up WS Worker..."
+
+
+#echo "Spinning up WS Worker..."
 docker-compose up -d ffmt_ws_worker

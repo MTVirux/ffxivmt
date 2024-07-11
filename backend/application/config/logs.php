@@ -10,4 +10,5 @@ $config['custom_log_channels'] = [
     //'ALL',
     //'SCYLLA_DB',
     //'DEBUG',
+    //'DB_UPDATE_ACTIVATIONS',
 ];

@@ -3,28 +3,48 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Updatedb extends MY_Controller {
 
+
 	public function __construct(){
 		parent::__construct();
+
+
+		//Set the update id
+		$db_update_id = uniqid();
+		
+		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- DB Update Activated");
+		//Load secrets config
+		$this->config->load('secrets');
+		$config_key = $this->config->item('temp_key');
+		
 		$this->load->helper('url');
 
-		if ($_SERVER['SERVER_ADDR'] != $_SERVER['REMOTE_ADDR']){
-			$this->output->set_status_header(400, 'No Remote Access Allowed');
-			redirect();
-		  }
+		if(empty($config_key) || is_null($config_key) || strlen($config_key) < 1 || !isset($config_key)){
+			logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH ERROR - KEY IS INVALID");
+			die();
+		}
+
+		if($config_key !== $_POST["key"]){
+			logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH ERROR - KEY IS INCORRECT");
+			die();
+		}
+
+		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH SUCCESS");
 
 		ini_set('max_execution_time', 0);
 		ini_set('memory_limit', '2048M');
+
+		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- DB UPDATE STARTED");
 	}
 
 
 	public function index(){
+		$this->update_worlds();
 		$this->item_array = $this->parse_csv();
 		$this->update_items();
 		$this->update_elastic_items();
 		$this->update_items_from_garland();
 		//$this->update_shops_from_garland();
 		$this->update_marketability();
-		$this->update_worlds();
 	}
 
 	public function update_marketability(){
