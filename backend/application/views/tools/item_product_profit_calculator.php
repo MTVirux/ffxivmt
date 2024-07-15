@@ -154,10 +154,15 @@
                             tbody.append(row);
                         }
                         table.append(tbody);
+                        table.DataTable({
+                            order: [[4, 'desc']]
+                        });
                         $("body").append(table);
 
 
                         $("#accordion-body-"+data.request_id).html(table);
+
+
 
                     },
                     error: function (data) {

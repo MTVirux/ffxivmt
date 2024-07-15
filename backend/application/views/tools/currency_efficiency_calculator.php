@@ -228,6 +228,9 @@
                             });
                         });
 
+                        $("#table-" + data.request_id).DataTable({
+                            order: [[9, 'desc']]
+                        });
 
                     },
                     error: function (data) {
