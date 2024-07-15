@@ -13,4 +13,8 @@ class Tools extends MY_Controller {
 		$this->load_view_template('tools/item_product_profit_calculator', $data);
 		return;
 	}
+
+	public function currency_efficiency_calculator(){
+		$this->load_view_template('tools/currency_efficiency_calculator');
+	}
 }
