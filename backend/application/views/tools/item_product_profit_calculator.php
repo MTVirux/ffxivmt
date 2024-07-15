@@ -8,7 +8,7 @@
                     <div class="col-11">
                     <div class="input-group mb-3">
                         <span class="input-group-text" id="basic-addon1">Item To Use In Craft</span>
-                            <input id="search_term_text_input" type="text" class="form-control" placeholder="Shinryu's Wing" aria-label="Username" aria-describedby="basic-addon1">
+                            <input id="search_term_text_input" type="text" class="form-control" placeholder="Shinryu's Scale" aria-label="Username" aria-describedby="basic-addon1">
                             <select class="form-select" aria-label="Default select example" id="location_select">
                                 <option value="none" selected disabled>Select a Region</option>
                             </select>
@@ -33,7 +33,7 @@
 
             function randomize_placeholder_text(){
                 setInterval(() => {
-                    item_selection = ["Shinryu's Wing", "Inferno Horn", "Vortex Feather", "Blissful Shroud", "Namazu Whisker", "Mist Sewage"];
+                    item_selection = ["Shinryu's Scale", "Inferno Horn", "Vortex Feather", "Blissful Shroud", "Namazu Whisker"];
                     random_item = item_selection[Math.floor(Math.random() * item_selection.length)];
                     $("#search_term_text_input").attr("placeholder", random_item);
                 }, 1000);
