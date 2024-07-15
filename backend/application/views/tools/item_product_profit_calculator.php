@@ -146,6 +146,8 @@
                             var minPriceCell = $("<td>").text(data.data[key]["min_price"]);
                             var regularSaleVelocityCell = $("<td>").text(data.data[key]["regularSaleVelocity"]);
                             var UniversalisLink = $("<td>").html('<a href=https://universalis.app/market/'+data.data[key]["id"]+'>Link</a>')
+                            //Truncate to 2 decimal places and pad with 0 if it's under that
+                            data.data[key]["ffmt_score"]= data.data[key]["ffmt_score"].toFixed(2).toString().padEnd(5, "0");
                             var ffmtScoreCell = $("<td>").text(data.data[key]["ffmt_score"]);
 
 
