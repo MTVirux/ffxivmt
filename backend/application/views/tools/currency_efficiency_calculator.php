@@ -163,11 +163,11 @@
                         headers.append($('<th> ID </th>'));
                         headers.append($('<th> Item Name</th>'));
                         headers.append($('<th> Currency Cost (?)</th>').attr("tooltip-text", "The cost of the item in the currency you selected"));
-                        headers.append($('<th> MSS (?)</th>').attr("tooltip-text", "The median stack size of the item"));
+                        headers.append($('<th> MSS (?)</th>').attr("tooltip-text", "The median stack size of the item listings"));
                         headers.append($('<th> Min MB Price</th>'));
                         headers.append($('<th> RSV (?)</th>').attr("tooltip-text", "Regular Sale Velocity, the number of times the item has been sold in the last 24h"));
-                        headers.append($('<th> DMC (?)</th>').attr("tooltip-text", "Daily Market Cap, the total amount gil moved in the last 24h"));
-                        headers.append($('<th> DMC% (?)</th>').attr("tooltip-text", "Daily Market Cap Percent, the percentage of the total market cap for all items of this currency that the item represents"));
+                        headers.append($('<th> DMC (?)</th>').attr("tooltip-text", "Daily Market Cap: The total amount gil moved in the last 24h"));
+                        headers.append($('<th> DMC% (?)</th>').attr("tooltip-text", "Daily Market Cap Percent: The percentage of the total market cap for all items of this currency that the item represents"));
                         headers.append($('<th> RDA (?)</th>').attr("tooltip-text", "Recommended Daily Amount, the amount of the item you should try to sell daily to maximize your profit."));
                         headers.append($('<th> FFMT Score (?)</th>').attr("tooltip-text", "The score of the item based on the FFMT algorithm (higher is better)"));
                         headers.append($('</thead>'));
