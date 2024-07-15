@@ -77,7 +77,7 @@
                     $("div[request_id='"+request_id+"']").remove();
                 }
 
-                var accordion_item = `<div class='accordion-item' request_id='`+request_id+`'id='`+`PLACEHOLDER_ITEM_ID`+`'>`+
+                var accordion_item = `<div class='accordion-item' request_id='`+request_id+`'id='`+`PLACEHOLDER_ID`+`'>`+
                             `<h2 class='accordion-header' id='heading-`+`PLACEHOLDER_ID`+`'>`+
                                 `<button class='accordion-button' type='button' data-bs-toggle='collapse' data-bs-target='#collapse-`+`PLACEHOLDER_ID`+`' aria-expanded='true' aria-controls='collapseOne'>`+
                                     search_term + `-[` + location + `]`+
@@ -124,7 +124,6 @@
                                 .replaceAll("PLACEHOLDER_NAME", data.item_name)
                                 .replaceAll("PLACEHOLDER_LOCATION", data.location)
                                 .replaceAll("PLACEHOLDER_ID", data.request_id)
-                                .replaceAll("PLACEHOLDER_ITEM_ID", data.item_id)
                         );
                         
                         var table = $("<table class='table table-striped table-hover table-bordered'>");
