@@ -20,7 +20,7 @@
                 </div>
 
                 <div class="row message-row">
-                    <?php echo isset($message) ? $message : ''?>
+                    <!--<?php echo isset($message) ? $message : ''?>-->
                 </div>
                 <div class="row content">
                     <div class="accordion" id="item_product_profit_accordion">
@@ -65,7 +65,7 @@
                     return;
                 }
 
-                $(".message-row").html("");                
+                //$(".message-row").html("");                
 
                 var search_term = $("#search_term_text_input").val();
                 var location = $("#location_select").val();
