@@ -160,7 +160,7 @@
                         
                         var table = $("<table class='table table-striped table-bordered table-hover' id='table-"+data.request_id+"'>");
                         var headers = $('<thead>');
-                        headers.append($('<th> ID </th>'));
+                        //headers.append($('<th> ID </th>'));
                         headers.append($('<th> Item Name</th>'));
                         headers.append($('<th> Currency Cost (?)</th>').attr("tooltip-text", "The cost of the item in the currency you selected"));
                         headers.append($('<th> MSS (?)</th>').attr("tooltip-text", "The median stack size of the item listings"));
@@ -200,7 +200,7 @@
                             currency_price_sum = currency_price_sum + price
 
                             //Append table data
-                            row.append($("<td>"+id+"</td>"));
+                            //row.append($("<td>"+id+"</td>"));
                             row.append($("<td>"+name+"</td>"));
                             row.append($("<td>"+price+"</td>"));
                             row.append($("<td>"+medianStackSize+"</td>"));

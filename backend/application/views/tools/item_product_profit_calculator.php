@@ -130,7 +130,7 @@
                         var table = $("<table class='table table-striped table-hover table-bordered'>");
                         var thead = $("<thead>");
                         var headerRow = $("<tr>");
-                        headerRow.append($("<th>").text("ID"));
+                        //headerRow.append($("<th>").text("ID"));
                         headerRow.append($("<th>").text("Name"));
                         headerRow.append($("<th>").text("Min Price"));
                         headerRow.append($("<th>").text("Regular Sale Velocity"));
@@ -142,13 +142,15 @@
                         var tbody = $("<tbody>");
                         for (var key in data.data){
                             var row = $("<tr>");
-                            var idCell = $("<td>").text(data.data[key]["id"]);
+                            //var idCell = $("<td>").text(data.data[key]["id"]);
                             var nameCell = $("<td>").text(data.data[key]["name"]);
                             var minPriceCell = $("<td>").text(data.data[key]["min_price"]);
                             var regularSaleVelocityCell = $("<td>").text(data.data[key]["regularSaleVelocity"]);
                             var UniversalisLink = $("<td>").html('<a href=https://universalis.app/market/'+data.data[key]["id"]+'>Link</a>')
                             var ffmtScoreCell = $("<td>").text(data.data[key]["ffmt_score"]);
-                            row.append(idCell);
+
+
+                            //row.append(idCell);
                             row.append(nameCell);
                             row.append(minPriceCell);
                             row.append(regularSaleVelocityCell);

@@ -143,7 +143,7 @@
                         var headers = $('<thead>');
                         var headers_row = $('<tr>');
         
-                        headers_row.append($('<th> ID </th>'));
+                        //headers_row.append($('<th> ID </th>'));
                         headers_row.append($('<th> Item Name</th>'));
                         headers_row.append($('<th> 1h </th>'));
                         headers_row.append($('<th> 3h </th>'));
@@ -182,7 +182,7 @@
 
 
 
-                            row.append($("<td>"+item_id+"</td>"));
+                            //row.append($("<td>"+item_id+"</td>"));
                             row.append($("<td>"+item_name+"</td>"));
                             row.append($("<td>"+ranking_1h+"</td>"));
                             row.append($("<td>"+ranking_3h+"</td>"));
