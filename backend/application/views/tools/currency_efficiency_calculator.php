@@ -134,8 +134,8 @@
 
 
                 $.ajax({
-                    url: "<?=base_url('/test/currency_efficiency_calculator')?>",
-                    type: "POST",
+                    url: "<?=base_url('/api/v1/tools/currency_profit_calculator')?>",
+                    type: "GET",
                     data: {
                         currency_id: currency_id,
                         location: location,
@@ -218,7 +218,7 @@
 
                         //currency_info = ($("<span class=\"currency-unit-average-value-title\">Currency Unit Average Value: </span> <span class=\"currency-unit-average-value-value\">"+((gil_price_sum / currency_price_sum))+"</span>"));
 
-                        currency_info = $("<span>Currency Unit Average Value: " + (gil_price_sum / currency_price_sum)+"</span>")
+                        currency_info = $('<span style="display:block;margin-bottom:20px;">Currency Unit Average Value: ' + (gil_price_sum / currency_price_sum)+"</span>")
 
 
                         $("#accordion-body-"+data.request_id).html(currency_info[0].outerHTML + table[0].outerHTML);
