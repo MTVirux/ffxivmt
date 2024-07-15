@@ -135,6 +135,7 @@
                         headerRow.append($("<th>").text("Min Price"));
                         headerRow.append($("<th>").text("Regular Sale Velocity"));
                         headerRow.append($("<th>").text("FFMT Score"));
+                        headerRow.append($("<th>").text("Universalis"));
                         thead.append(headerRow);
                         table.append(thead);
 
@@ -145,12 +146,14 @@
                             var nameCell = $("<td>").text(data.data[key]["name"]);
                             var minPriceCell = $("<td>").text(data.data[key]["min_price"]);
                             var regularSaleVelocityCell = $("<td>").text(data.data[key]["regularSaleVelocity"]);
+                            var UniversalisLink = $("<td>").html('<a href=https://universalis.app/market/'+data.data[key]["id"]+'>Link</a>')
                             var ffmtScoreCell = $("<td>").text(data.data[key]["ffmt_score"]);
                             row.append(idCell);
                             row.append(nameCell);
                             row.append(minPriceCell);
                             row.append(regularSaleVelocityCell);
                             row.append(ffmtScoreCell);
+                            row.append(UniversalisLink)
                             tbody.append(row);
                         }
                         table.append(tbody);

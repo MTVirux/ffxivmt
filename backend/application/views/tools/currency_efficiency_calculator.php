@@ -170,6 +170,7 @@
                         headers.append($('<th> DMC% (?)</th>').attr("tooltip-text", "Daily Market Cap Percent: The percentage of the total market cap for all items of this currency that the item represents"));
                         headers.append($('<th> RDA (?)</th>').attr("tooltip-text", "Recommended Daily Amount, the amount of the item you should try to sell daily to maximize your profit."));
                         headers.append($('<th> FFMT Score (?)</th>').attr("tooltip-text", "The score of the item based on the FFMT algorithm (higher is better)"));
+                        headers.append($('<th> Universalis</th>'));
                         headers.append($('</thead>'));
 
                         table.append(headers);
@@ -192,6 +193,7 @@
                             dailyMarketCapPercent = item.dailyMarketCapPercent
                             recommendedAmountToCraftDaily = Math.round(item.dailyMarketCap/item.minPrice)
                             ffmt_score = item.mtvirux_score
+                            universalisLink = '<a href=https://universalis.app/market/'+id+'>Link</a>'
 
                             //Stat vars
                             gil_price_sum = gil_price_sum + minPrice
@@ -208,6 +210,7 @@
                             row.append($("<td>"+dailyMarketCapPercent+"%</td>"));
                             row.append($("<td>"+recommendedAmountToCraftDaily+"</td>"));
                             row.append($("<td>"+ffmt_score+"</td>"));
+                            row.append($("<td>"+universalisLink+"</td>"));
                             table.append(row);
                         });
                         table.append($("</tbody>"));
