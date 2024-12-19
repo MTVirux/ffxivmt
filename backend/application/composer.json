@@ -15,7 +15,8 @@
 		"chriskacerguis/codeigniter-restserver": "^3.1",
 		"predis/predis": "^2.0",
 		"uri2x/php-cql": "^1.0",
-		"elasticsearch/elasticsearch": "~7.0"
+		"elasticsearch/elasticsearch": "~7.0",
+		"phpmailer/phpmailer": "^6.9"
 	},
 	"suggest": {
 		"paragonie/random_compat": "Provides better randomness in PHP 5.x"
