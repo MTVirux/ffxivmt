@@ -189,6 +189,7 @@
                             minPrice = item.minPrice
                             regularSaleVelocity = item.regularSaleVelocity
                             dailyMarketCap = item.dailyMarketCap
+                            dailyMarketCap = dailyMarketCap.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                             dailyMarketCapPercent = item.dailyMarketCapPercent
                             recommendedAmountToCraftDaily = Math.round(item.dailyMarketCap/item.minPrice)
                             ffmt_score = item.mtvirux_score
