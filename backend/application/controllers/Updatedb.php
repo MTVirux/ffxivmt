@@ -15,7 +15,7 @@ class Updatedb extends MY_Controller {
 		//Load secrets config
 		$this->config->load('secrets');
 		$config_key = $this->config->item('temp_key');
-		
+
 		$this->load->helper('url');
 
 		if(empty($config_key) || is_null($config_key) || strlen($config_key) < 1 || !isset($config_key)){
