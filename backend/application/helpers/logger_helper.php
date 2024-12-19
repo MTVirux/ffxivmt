@@ -1,10 +1,12 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-function logger($channel, $message, $custom_file = null){
+function logger($channel, $message, $custom_file = null, $override_write = false){
 
-    if(!in_array($channel, config_item('custom_log_channels')) && !in_array('ALL', config_item('custom_log_channels'))){
-        return;
+    if((!in_array($channel, config_item('custom_log_channels')) && !in_array('ALL', config_item('custom_log_channels')))){
+        if($override_write == false){
+            return;
+        }
     }
 
     //Add log timestamp
