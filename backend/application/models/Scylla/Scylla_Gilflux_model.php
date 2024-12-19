@@ -10,10 +10,6 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
     }
     
 
-    public function test(){
-        echo 'sale_model_test';
-    }
-
 
     public function add_sale($sale){
         ini_set('memory_limit', '2048M');
