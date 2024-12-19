@@ -87,16 +87,9 @@ class Sale_model extends MY_Scylla_Model{
         return array("parsed_sales" => $parsed_sales, "time" => microtime(true) - $start_time);
     }
 
-    public function search_buyer($buyer_name, $world = ""){
+    public function search_buyer($buyer_name, $world_id = ""){
         $this->load->helper('ffxiv_worlds');
         $ALLOW_FILTERING_REQUIRED = false;
-        
-        //Get ID if world is not empty string
-        if(empty($world)){
-            $world_id = "";
-        }else{
-            $world_id = get_world_id($world, $this->config->item('ffxiv_worlds'));
-        }
 
         //Start query
         $cql_query = "SELECT * FROM sales";
