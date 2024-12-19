@@ -14,7 +14,8 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales (
     total int,
     datacenter text,
     region text,
-PRIMARY KEY ((item_id,world_id),sale_time, buyer_name))"
+PRIMARY KEY ((item_id,world_id),sale_time, buyer_name))
+WITH default_time_to_live = 691200;"  # 8 days in seconds
 
 #Secondary index the buyer_name column
 cqlsh -e "CREATE INDEX IF NOT EXISTS sales_buyers ON ffmt.sales (buyer_name)"
