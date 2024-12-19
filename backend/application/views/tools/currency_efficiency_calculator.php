@@ -1,6 +1,6 @@
 
-        <div id="page-title" class="row" style="text-align:center">
-        <h1 class="auto">Currency Efficiency Calculator</h1>
+        <div class="page-title" class="row" style="text-align:center">
+            <h1>Currency Efficiency Calculator</h1>
         </div>
         <div class="container" style="max-width:98vw">
             <div class="row">
