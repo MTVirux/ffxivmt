@@ -72,7 +72,7 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
 
 //TODO: Test gilflux get functions
 
-    public function get_by_world($world_name, $item_id, $from = null, $to = null){
+    private function get_by_world($world_name, $item_id, $from = null, $to = null){
 
         //If times are not set, set them from 24 hours ago to now
         if(is_null($from)){
@@ -101,7 +101,7 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
         return $result;
     }
 
-    public function get_by_region($item_id, $region = null, $from = null, $to = null){
+    private function get_by_region($item_id, $region = null, $from = null, $to = null){
 
         //If times are not set, set them from 24 hours ago to now
         if(is_null($from)){
@@ -129,7 +129,7 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
         return $result;
     }
 
-    public function get_by_datacenter($item_id, $datacenter = null, $from = null, $to = null){
+    private function get_by_datacenter($item_id, $datacenter = null, $from = null, $to = null){
 
         //If times are not set, set them from 24 hours ago to now
         if(is_null($from)){
@@ -155,6 +155,8 @@ class Scylla_Gilflux_model extends MY_Scylla_Model{
 
         return $result;
     }
+
+
     
 
     
