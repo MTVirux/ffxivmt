@@ -31,7 +31,7 @@ def get_region_list():
 REGION_LIST = get_region_list()
 
 def get_world_list():
-    result = database.SCYLLA_DB.execute("SELECT name FROM worlds where region in ('Europe', 'North-America') ALLOW FILTERING");
+    result = database.SCYLLA_DB.execute("SELECT name FROM worlds where region in ('Europe') ALLOW FILTERING");
     world_list = [];
     for row in result:
         world_list.append(row.name)
