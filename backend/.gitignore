@@ -15,6 +15,7 @@ private/mariadb/retainers.sql
 application/logs/*
 application/vendor/*
 application/session/*
+application/controller/secrets.php
 !application/logs/index.html
 !application/logs/.htaccess
 !application/vendor/index.htmls
