@@ -9,8 +9,6 @@ class Search_buyer extends RestController{
         
     function __construct() {
         parent::__construct();
-        Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
-        Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
         Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
     }
 
@@ -25,10 +23,18 @@ class Search_buyer extends RestController{
         $this->load->model('Scylla/Sale_model', 'Scylla_sales');
         set_time_limit(300);
         
-        if(!is_null($_GET['world']) && !empty($_GET['world'])){
-            $world = $_GET['world'];
+        if(isset($_GET["world"])){
+            if(!is_null($_GET['world']) && !empty($_GET['world'])){
+                $this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
+                $all_worlds = $this->Scylla_Worlds->get($_GET['world']);
+                foreach($all_worlds as $world){
+                    if ($world["name"] == $_GET['world']){
+                        $purchase_world_id = $world["id"];
+                    }
+                }
+            }
         }else{
-            $world = "";
+            $purchase_world_id = "";
         }
 
 
@@ -41,7 +47,7 @@ class Search_buyer extends RestController{
             $buyer_name = $_GET['buyer_name'];
         }
 
-        $buyer_history = $this->Scylla_sales->search_buyer($buyer_name, $world);
+        $buyer_history = $this->Scylla_sales->search_buyer($buyer_name, $purchase_world_id);
 
         $this->response([
             'status' => true,

@@ -9,9 +9,6 @@ class index extends RestController{
         
         function __construct() {
             parent::__construct();
-            
-            Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
-            Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
             Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
         }
 
@@ -20,8 +17,7 @@ class index extends RestController{
         }
         
         function post_index(){
-            Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
-            Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
+
             Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
             $this->response(array('message' => 'Welcome to the mtvirux.app API. POST request Recieved'), 200);
         }
