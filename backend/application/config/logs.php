@@ -9,6 +9,7 @@ $config['custom_log_channels'] = [
     'ERROR',
     //'ALL',
     //'SCYLLA_DB',
+    //'SCYLLA_ITEMS'
     //'DEBUG',
     //'DB_UPDATE_ACTIVATIONS',
 ];
