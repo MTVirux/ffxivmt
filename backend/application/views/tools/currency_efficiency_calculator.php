@@ -122,15 +122,15 @@
                                     currency_name + `-[` + location + `]`+
                                 `</button>`+
                             `</h2>`+
-                            `<div id='collapse-`+`PLACEHOLDER_ID`+`' class='accordion-collapse collapse show' aria-labelledby='headingOne' data-bs-parent='#item_product_profit_accordion'>`+
+                            `<div id='collapse-`+`PLACEHOLDER_ID`+`' class='accordion-collapse collapse show' aria-labelledby='headingOne' data-bs-parent='#currency_profit_accordion'>`+
                                 `<div class='accordion-body' id="accordion-body-`+`PLACEHOLDER_ID`+`">`+
                                  `<div class="loading-div">`+
                                  `</div>`+
                                 `</div>`+
                             `</div>`+
                         `</div>`;
-                $("div#item_product_profit_accordion").prepend(accordion_item);
-                createProgressBar($("div#item_product_profit_accordion")[0]);
+                $("div#currency_profit_accordion").prepend(accordion_item);
+                createProgressBar($("div#currency_profit_accordion")[0]);
 
 
                 $.ajax({
@@ -157,7 +157,6 @@
                                 .replaceAll("PLACEHOLDER_ID", data.request_id)
                         );
 
-                        
                         var table = $("<table class='table table-striped table-bordered table-hover' id='table-"+data.request_id+"'>");
                         var headers = $('<thead>');
                         //headers.append($('<th> ID </th>'));
