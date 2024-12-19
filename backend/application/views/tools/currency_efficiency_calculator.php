@@ -52,7 +52,7 @@
                     <?php echo isset($message) ? $message : ''?>
                 </div>
                 <div class="row content">
-                    <div class="accordion" id="item_product_profit_accordion">
+                    <div class="accordion" id="currency_profit_accordion">
 
                     </div>
                 </div>
