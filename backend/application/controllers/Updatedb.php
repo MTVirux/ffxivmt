@@ -45,6 +45,7 @@ class Updatedb extends MY_Controller {
 		$this->update_items_from_garland();
 		//$this->update_shops_from_garland();
 		$this->update_marketability();
+		$this->fix_gilflux_ranking_missing_names();
 	}
 
 	public function update_marketability(){
@@ -413,5 +414,39 @@ class Updatedb extends MY_Controller {
 
 		logger("SCYLLA_DB", json_encode(array("message" => "Added " . $worlds_added . " of " . $total_worlds . " worlds")), $override_write = true);
 
+	}
+
+	public function fix_gilflux_ranking_missing_names(){
+		$this->load->model('Scylla/Scylla_Gilflux_Ranking_model', "Gilflux_Ranking");
+		$this->load->model('Scylla/Scylla_World_model', "Worlds");
+		$this->load->model('Scylla/Scylla_Item_model', "Items");
+		$worlds = $this->Worlds->get();
+
+		while (true){
+			try {
+				logger("SCYLLA_DB", json_encode(array("message" => "Trying to identify a gilflux ranking with a missing name")), $override_write = true);
+				$gilflux_missing_name_query = $this->Gilflux_Ranking->get_a_ranking_with_missing_name();
+				var_dump($gilflux_missing_name_query);die();
+				if(count($gilflux_missing_name_query) == 0){
+					break;
+				}else{
+					$item_id_of_ranking_with_missing_names = $gilflux_missing_name_query[0]["item_id"];
+				}
+	
+				$item_name = $this->Items->get($item_id_of_ranking_with_missing_names)[0]["name"];
+	
+				foreach($worlds as $world){
+					logger("SCYLLA_DB", json_encode(array("message" => "Fixing Gilflux Ranking item name for item " . $item_name . " on " . $world["name"])), $override_write = true);
+	
+					$world_id = $world["id"];
+					$this->Gilflux_Ranking->update_ranking($world_id, $item_id_of_ranking_with_missing_names);
+				}
+			} catch (\Throwable $th) {
+				var_dump($th);
+				sleep (10);
+			}
+
+
+		}
 	}
 }
