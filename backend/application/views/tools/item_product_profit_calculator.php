@@ -226,4 +226,25 @@
                 });
 
             }
+
+            function createProgressBar(parent_element) {
+                var progressBar = $('<div>', { class: 'progress' });
+                var progressBarInner = $('<div>', { class: 'progress-bar progress-bar-striped progress-bar-animated', role: 'progressbar', 'aria-valuenow': '0', 'aria-valuemin': '0', 'aria-valuemax': '100' });
+                var progressBarMessage = "<span class='progress-bar-message'><i>Fetching Data From Universalis...</i></span>"
+                progressBar.append(progressBarInner);
+                $($(parent_element).children()[0]).find("div.loading-div").html(progressBar).after(progressBarMessage);
+                $($(parent_element).children()[0]).find(".progerss-bar").after("<br> <span class='loading_bar_message'> Getting data from Universalis... </span>");
+
+                currentValue = 0;
+                intervalId = setInterval(function() {
+                    currentValue += 1;
+                    progressBarInner.css('width', currentValue + '%');
+                    progressBarInner.css('background-color', '#990099');
+                    progressBarInner.css('color', '#FF00FF');
+                    progressBarInner.attr('aria-valuenow', currentValue);
+                    if (currentValue >= 99) {
+                        clearInterval(intervalId);
+                    }
+                }, 40);
+            }
 </script>
