@@ -42,6 +42,11 @@ class Currency_profit_calculator extends RestController{
 			$request_id = $_GET["request_id"];
 		}
 
+		//Set cookies
+		$this->load->library('session');
+		$_SESSION["last_location"] = $_GET["location"];
+		$_SESSION["last_currency_id"] = $_GET["currency_id"];
+
 		$item_name = $this->Scylla_Item->get($currency_id)[0]["name"];
 
 		if($final_data = $this->cache->get('currency_efficiency_calculator_'.$currency_id.'_'.$worldDcRegion)){
