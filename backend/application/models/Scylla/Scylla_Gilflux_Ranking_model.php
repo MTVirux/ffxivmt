@@ -204,4 +204,12 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
 
         return $result;
     }
+
+
+    public function get_a_ranking_with_missing_name(){
+        $stmt = $this->scylla->prepare("SELECT item_id FROM gilflux_ranking WHERE item_name like '' LIMIT 1 ALLOW FILTERING;");
+        $result = $this->scylla->execute($stmt, array());
+        var_dump($result);die();
+        return $result;
+    }
 }
