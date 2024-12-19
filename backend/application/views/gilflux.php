@@ -230,6 +230,9 @@
                 var current_time_in_ms = new Date().getTime();
 
                 $.each(gilflux_data, function(index, item){
+                    if(item.item_name == ""){
+                        console.log("Item " + item.item_id + " is missing a name")
+                    }
                     last_sale_time = item.last_sale_time ? item.last_sale_time : item.updated_at
                     should_delete_entry = true
                     $.each(gilflux_timeframe_in_ms, function(timeframe_caption, gilflux_timeframe_in_ms){
