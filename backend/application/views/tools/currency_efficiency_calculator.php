@@ -12,15 +12,15 @@
                                 <option value="none" selected disabled>Select a currency:</option>
 
                                 <option value="none"disabled>PvE:</option>
-                                <option value="Allagan Tomestone of Causality">Allagan Tomestone of Causality (Green and White)</option>
-                                <!--<option value="Allagan Tomestone of Comedy">Allagan Tomestone of Comedy (Red and Green)</option>-->
+                                <option value="Allagan Tomestone of Aesthetics">Allagan Tomestone of Aesthetics</option>
+                                <!--<option value="Allagan Tomestone of Heliometry">Allagan Tomestone of Heliometry (Weekly)</option>-->
                                 <option value="Allagan Tomestone of Poetics">Allagan Tomestone of Poetics</option>
 
                                 <option value="none"disabled>Disciples of Hand/Land:</option>
-                                <option value="Purple Crafters' Scrip">Orange Crafters' Scrip</option>
-                                <option value="White Crafters' Scrip">Purple Crafters' Scrip</option>
-                                <option value="Purple Gatherers' Scrip">Orange Gatherers' Scrip</option>
-                                <option value="White Gatherers' Scrip">Purple Gatherers' Scrip</option>
+                                <option value="Orange Crafters' Scrip">Orange Crafters' Scrip</option>
+                                <option value="Purple Crafters' Scrip">Purple Crafters' Scrip</option>
+                                <option value="Orange Gatherers' Scrip">Orange Gatherers' Scrip</option>
+                                <option value="Purple Gatherers' Scrip">Purple Gatherers' Scrip</option>
                                 <option value="Skybuilders' Scrip">Skybuilders' Scrip</option>
 
                                 <option value="none"disabled>The Hunt:</option>
