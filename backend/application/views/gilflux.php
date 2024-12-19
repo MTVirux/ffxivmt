@@ -13,8 +13,8 @@
                             <div class="input-group-append">
                                 <div class="input-group-text">
                                     <input class="form-check-input" type="checkbox" id="crafted_only_checkbox" checked>
-                                    <label class="form-check-label" for="checkbox">
-                                        Crafted only
+                                    <label class="form-check-label" for="checkbox" style="margin-left: 5px;padding-top:2px;">
+                                         Crafted Items Only
                                     </label>
                                 </div>
                             </div>
