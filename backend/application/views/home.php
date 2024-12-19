@@ -1,13 +1,3 @@
-<style>
-    .card {
-        height: 100%;
-    }
-    .card-body {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-</style>
 <body>
     <div class="container mt-5">
         <div class="row" id="navbar-container">
