@@ -15,7 +15,7 @@
                         </div>
                     </div>
                     <div class="col-1">
-                        <button id="submit_request_button">Submit</button>
+                        <button type="button" class="btn btn-primary" id="submit_request_button">Submit</button>
                     </div>
                 </div>
 

@@ -14,8 +14,8 @@
 
 
 
-<title>Chart</title>
+<title>FFXIV Market Tools</title>
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" style="max-width:100%; padding:0px;">

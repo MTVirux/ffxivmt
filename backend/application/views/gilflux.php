@@ -1,6 +1,6 @@
 
- <div id="page-title" class="row" style="text-align:center">
-        <h1 class="auto">Gilflux</h1>
+ <div id="page-title" class="row" style="text-align:center; max-width:100%">
+        <h1>Gilflux</h1>
         </div>
         <div class="container" style="max-width:98vw">
             <div class="row">

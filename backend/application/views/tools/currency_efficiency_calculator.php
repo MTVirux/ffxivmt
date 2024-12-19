@@ -1,6 +1,6 @@
 
         <div id="page-title" class="row" style="text-align:center">
-        <h1 class="auto">Currency Profit Calculator</h1>
+        <h1 class="auto">Currency Efficiency Calculator</h1>
         </div>
         <div class="container" style="max-width:98vw">
             <div class="row">
@@ -44,7 +44,7 @@
                         </div>
                     </div>
                     <div class="col-1">
-                        <button id="submit_request_button">Submit</button>
+                        <button type="button" class="btn btn-primary" id="submit_request_button">Submit</button>
                     </div>
                 </div>
 

@@ -1,14 +1,48 @@
-<html>
-    <h1>PLEASE USE THE NAVBAR TO ACCESS THE ACTUAL TOOLS</h1>
+<style>
+    .card {
+        height: 100%;
+    }
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+</style>
+<body>
+    <div class="container mt-5">
+        <div class="row" id="navbar-container">
+            <!-- Cards will be injected here -->
+        </div>
+    </div>
 
-    <br>    <br>
-    <h1> Gil Flux Ranking</h1>
-    Show's the top items that moved the most gil in the past 24 hours for the selected DC/World.
-    <br>    <br>
-    <h1> Item Product Profit Solver </h1>
-    This tool will help you find the best way to make money from a given item.
-    <br>
-    Calculations are made based on lowest price on the market board on your region and Universalis Sale Velocity (USV) data.
-    <br>    <br>
-    <h1> Questions or Feedback </h1>
-    For any questions please contact me via Discord: @Jojo#1337
+    <script>
+        $(document).ready(function() {
+            // Assuming the array structure is passed from PHP to JavaScript
+            const navbarStructure = <?php echo json_encode($this->config->item('navbar_structure')); ?>;
+
+            const createCard = (name, link, description) => {
+                return `
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">${name}</h5>
+                                <p class="card-text">${description}</p>
+                                <a href="${link}" class="btn btn-primary">Go to ${name}</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            $.each(navbarStructure, function(key, value) {
+                if ($.isArray(value)) {
+                    $.each(value, function(index, subItem) {
+                        $('#navbar-container').append(createCard(subItem.name, subItem.link, subItem.description));
+                    });
+                } else {
+                    $('#navbar-container').append(createCard(value.name, value.link, value.description));
+                }
+            });
+        });
+    </script>
+</body>
