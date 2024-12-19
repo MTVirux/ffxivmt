@@ -1,5 +1,5 @@
 
-        <div id="page-title" class="row" style="text-align:center">
+        <div class="page-title" class="row" style="text-align:center">
         <h1 class="auto">Item Product Profit Calculator</h1>
         </div>
         <div class="container" style="max-width:98vw">
