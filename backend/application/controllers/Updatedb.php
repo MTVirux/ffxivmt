@@ -11,7 +11,7 @@ class Updatedb extends MY_Controller {
 		//Set the update id
 		$db_update_id = uniqid();
 		
-		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- DB Update Activated");
+		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- DB Update Activated", $override_write = true);
 		//Load secrets config
 		$this->config->load('secrets');
 		$config_key = $this->config->item('temp_key');
@@ -19,21 +19,21 @@ class Updatedb extends MY_Controller {
 		$this->load->helper('url');
 
 		if(empty($config_key) || is_null($config_key) || strlen($config_key) < 1 || !isset($config_key)){
-			logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH ERROR - KEY IS INVALID");
+			logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH ERROR - KEY IS INVALID", $override_write = true);
 			die();
 		}
 
 		if($config_key !== $_POST["key"]){
-			logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH ERROR - KEY IS INCORRECT");
+			logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH ERROR - KEY IS INCORRECT", $override_write = true);
 			die();
 		}
 
-		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH SUCCESS");
+		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- AUTH SUCCESS", $override_write = true);
 
 		ini_set('max_execution_time', 0);
 		ini_set('memory_limit', '2048M');
 
-		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- DB UPDATE STARTED");
+		logger("DB_UPDATE_ACTIVATIONS", $db_update_id . "- DB UPDATE STARTED", $override_write = true);
 	}
 
 
@@ -58,14 +58,14 @@ class Updatedb extends MY_Controller {
 
 			if($this->Scylla_items->update(array("id" => $marketable_item_id, "marketable" => true))){
 				$updated_items++;
-				logger("SCYLLA_DB" , json_encode(array("message" => "Item marketability updated", "item_id" => $marketable_item_id)));
+				logger("SCYLLA_DB" , json_encode(array("message" => "Item marketability updated", "item_id" => $marketable_item_id)), $override_write = true);
 			}else{	
-				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to update item marketability", "item_id" => $marketable_item_id)));
+				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to update item marketability", "item_id" => $marketable_item_id)), $override_write = true);
 				die();
 			}
 		}
 
-		logger("SCYLLA_DB" , json_encode(array("message" => "Item marketability updated", "updated_items" => $updated_items, "total_items" => $marketable_item_count)));
+		logger("SCYLLA_DB" , json_encode(array("message" => "Item marketability updated", "updated_items" => $updated_items, "total_items" => $marketable_item_count)), $override_write = true);
 
 	}
 
@@ -86,15 +86,15 @@ class Updatedb extends MY_Controller {
 
 			if(!isset($item['name'])){
 				var_dump("Culprit: " . $item['id']);
-				logger("SCYLLA_DB", json_encode(array("message" => "Culprit: " . $item['id'], "error")));
+				logger("SCYLLA_DB", json_encode(array("message" => "Culprit: " . $item['id'], "error")), $override_write = true);
 				pretty_dump($item);
 				die();
 			}
 			
 			if($this->Scylla_items->add($item)){
-				logger("SCYLLA_DB" , json_encode(array("message" => "Item added to Scylla", "item_id" => $item["id"], "item_name" => $item['name'])));
+				logger("SCYLLA_DB" , json_encode(array("message" => "Item added to Scylla", "item_id" => $item["id"], "item_name" => $item['name'])), $override_write = true);
 			}else{
-				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to add item to Scylla", "item_id" => $item["id"])));
+				logger("SCYLLA_DB" , json_encode(array("message" => "[ERROR] Failed to add item to Scylla", "item_id" => $item["id"])), $override_write = true);
 				die();
 			}
 		}
@@ -116,7 +116,7 @@ class Updatedb extends MY_Controller {
 
 			if(!isset($elastic_item['name'])){
 				var_dump("Culprit: " . $elastic_item['id']);
-				logger("ELASTIC_DB", json_encode(array("message" => "Culprit: " . $elastic_item['id'], "error")));
+				logger("ELASTIC_DB", json_encode(array("message" => "Culprit: " . $elastic_item['id'], "error")), $override_write = true);
 				pretty_dump($elastic_item);
 				die();
 			}
@@ -124,9 +124,9 @@ class Updatedb extends MY_Controller {
 			$response = $this->Elastic_items->add($elastic_item);
 			
 			if($response["result"] == "updated" || $response["result"] == "created"){
-				logger("ELASTIC_DB" , json_encode(array("message" => "Item added to Elasticsearch", "item_id" => $elastic_item["id"], "item_name" => $elastic_item['name'])));
+				logger("ELASTIC_DB" , json_encode(array("message" => "Item added to Elasticsearch", "item_id" => $elastic_item["id"], "item_name" => $elastic_item['name'])), $override_write = true);
 			}else{
-				logger("ELASTIC_DB" , json_encode(array("message" => "[ERROR] Failed to add item to Elasticsearch", "item_id" => $elastic_item["id"], "response" => json_encode($response))));
+				logger("ELASTIC_DB" , json_encode(array("message" => "[ERROR] Failed to add item to Elasticsearch", "item_id" => $elastic_item["id"], "response" => json_encode($response))), $override_write = true);
 				die();
 			}
 		}
@@ -177,7 +177,7 @@ class Updatedb extends MY_Controller {
 						$current_item["craftable"]	=	!empty($item["obj"]["item"]["craft"][0]) ? true : false;
 					
 						if($this->Scylla_items->update($current_item)){
-							logger("SCYLLA_DB" , "Item recipe updated: " . $current_item["id"] . ' - ' . $current_item['name']);
+							logger("SCYLLA_DB" , "Item recipe updated: " . $current_item["id"] . ' - ' . $current_item['name'], $override_write = true);
 						}
 					}
 
@@ -186,7 +186,7 @@ class Updatedb extends MY_Controller {
 			}
 		}
 
-		logger("SCYLLA_DB" , json_encode(array("message" => "Item craftability updated", "craftable_items" => $items_with_crafting, "shop_entries" => $shop_entries, "total_items" => $total_items)));
+		logger("SCYLLA_DB" , json_encode(array("message" => "Item craftability updated", "craftable_items" => $items_with_crafting, "shop_entries" => $shop_entries, "total_items" => $total_items)), $override_write = true);
 
 	}
 
@@ -248,7 +248,7 @@ class Updatedb extends MY_Controller {
 								//$shop["amount"] = $npc_shop_entry["item"][0]["amount"];
 								//$shop["currency_id"] = $npc_shop_entry["currency"][0]["id"];
 								//$shop["price"] = $npc_shop_entry["currency"][0]["amount"];
-								//logger("SCYLLA_DB" , json_encode(array("message" => "shop_record_updated", "shop_name" => $shop["shop_name"], "shop_id" => $shop["shop_id"], "npc_name" => $shop["npc_name"], "npc_id" => $shop["npc_id"], "item_id" => $shop["item_id"], "currency_id" => $shop["currency_id"], "price" => $shop["price"], "amount" => $shop["amount"])));
+								//logger("SCYLLA_DB" , json_encode(array("message" => "shop_record_updated", "shop_name" => $shop["shop_name"], "shop_id" => $shop["shop_id"], "npc_name" => $shop["npc_name"], "npc_id" => $shop["npc_id"], "item_id" => $shop["item_id"], "currency_id" => $shop["currency_id"], "price" => $shop["price"], "amount" => $shop["amount"])), $override_write = true);
 								//$shops[] = $shop;
 							}else{
 								pretty_dump($npc_shop);die();
@@ -259,7 +259,7 @@ class Updatedb extends MY_Controller {
 				}
 				foreach($shops as $shop_entry){
 					$this->Scylla_shops->add_entry($shop_entry);
-					logger("SCYLLA_DB" , json_encode(array("message" => "shop_record_updated", "shop_name" => $shop_entry["shop_name"], "shop_id" => $shop_entry["shop_id"], "npc_name" => $shop_entry["npc_name"], "npc_id" => $shop_entry["npc_id"], "item_id" => $shop_entry["item_id"], "item_name" => $shop_entry["item_name"], "currency_id" => $shop_entry["currency_id"], "currency_name" => $shop_entry["currency_name"], "price" => $shop_entry["price"], "amount" => $shop_entry["amount"])));
+					logger("SCYLLA_DB" , json_encode(array("message" => "shop_record_updated", "shop_name" => $shop_entry["shop_name"], "shop_id" => $shop_entry["shop_id"], "npc_name" => $shop_entry["npc_name"], "npc_id" => $shop_entry["npc_id"], "item_id" => $shop_entry["item_id"], "item_name" => $shop_entry["item_name"], "currency_id" => $shop_entry["currency_id"], "currency_name" => $shop_entry["currency_name"], "price" => $shop_entry["price"], "amount" => $shop_entry["amount"])), $override_write = true);
 				}
 				$shops = [];
 
@@ -357,7 +357,7 @@ class Updatedb extends MY_Controller {
 			}
 		}
 
-		logger("SCYLLA_DB", json_encode(array("message" => "Added " . $worlds_added . " of " . $total_worlds . " worlds")));
+		logger("SCYLLA_DB", json_encode(array("message" => "Added " . $worlds_added . " of " . $total_worlds . " worlds")), $override_write = true);
 
 	}
 }
