@@ -269,11 +269,65 @@ class Updatedb extends MY_Controller {
 	}
 	function parse_csv() {
 
-		// Set the file to be read
-		$file = 'https://raw.githubusercontent.com/mtvirux/ffxiv-datamining/master/csv/Item.csv';
+		// Set the file sources
+		$item_file_sources = array(
+			'https://raw.githubusercontent.com/MTVirux/ffxiv-datamining/master/csv/Item.csv',
+			'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/Item.csv'
+			// Add more sources as needed
+		);
 		
-		// Open the file for reading
-		$file_handle = fopen($file, 'r');
+		// Array to store file sizes and source names
+		$file_sizes = array();
+		
+		// Open each stream and get the size
+		foreach ($item_file_sources as $item_file_source) {
+			$stream = fopen($item_file_source, "r");
+			
+			if ($stream === false) {
+				echo "Failed to open stream: $item_file_source\n";
+				continue;
+			}
+		
+			// Read the content to calculate size
+			$content = stream_get_contents($stream);
+			if ($content === false) {
+				echo "Failed to read stream: $item_file_source\n";
+				fclose($stream);
+				continue;
+			}
+		
+			$file_sizes[$item_file_source] = strlen($content);
+		
+			// Close the stream
+			fclose($stream);
+		}
+		
+		// Compare and display results
+		if (count($file_sizes) > 0) {
+			arsort($file_sizes); // Sort by size in descending order
+		
+			echo "File sizes (largest to smallest):\n" . "</br>";
+			foreach ($file_sizes as $source => $size) {
+				echo "$source: $size bytes\n" . "</br>" ;
+			}
+		
+			// Determine the largest and smallest files
+			$largest = array_key_first($file_sizes);
+			$smallest = array_key_last($file_sizes);
+		
+			echo "</br>" . '--------------------------------' . "</br>" . "</br>";
+			if ($largest === $smallest) {
+				echo "All files are the same size.\n";
+			} else {
+				echo "Largest file: $largest (" . $file_sizes[$largest] . " bytes)\n" . "</br>";
+				echo "Smallest file: $smallest (" . $file_sizes[$smallest] . " bytes)\n" . "</br>";
+			}
+		} else {
+			echo "No file sizes could be determined.\n";
+		}
+		
+
+		$file_handle = fopen($largest, 'r');
 		
 		// Set the delimiter to be a comma
 		$delimiter = ',';
