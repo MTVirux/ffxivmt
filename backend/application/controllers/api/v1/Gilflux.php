@@ -9,8 +9,6 @@ class Gilflux extends RestController{
 
     public function __construct(){
         parent::__construct();            
-		Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
-		Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
 		Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
     }
 

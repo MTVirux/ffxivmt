@@ -11,8 +11,6 @@ class Test extends MY_Controller {
 	public function index()
 	{
 
-		Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
-		Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
 		Header('Access-Control-Allow-Methods: GET'); //method allowed
 		echo json_encode('ok');
 	}
