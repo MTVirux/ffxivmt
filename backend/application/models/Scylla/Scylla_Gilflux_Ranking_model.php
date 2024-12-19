@@ -22,7 +22,6 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
         $world_name = $result_world[0]["name"];
         $datacenter = $result_world[0]["datacenter"];
         $region = $result_world[0]["region"];
-        $this->load->model('Scylla/Scylla_Item_model', 'Scylla_Items');
         $stmt_item = $this->scylla->prepare("SELECT name FROM items WHERE id = ?");
         $result_item = $this->scylla->execute($stmt_item, array("id" => $item_id));
 
