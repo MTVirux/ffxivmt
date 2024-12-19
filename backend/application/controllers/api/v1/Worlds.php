@@ -10,8 +10,6 @@ class worlds extends RestController{
         function __construct() {
             parent::__construct();
             
-            Header('Access-Control-Allow-Origin: *'); //for allow any domain, insecure
-            Header('Access-Control-Allow-Headers: *'); //for allow any headers, insecure
             Header('Access-Control-Allow-Methods: GET'); //method allowed
         }
         
