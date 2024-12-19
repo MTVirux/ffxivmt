@@ -64,8 +64,21 @@
                 //randomize_placeholder_text();
                 //animate_loading_text();
                 createWorldOptions($("#location_select")[0]);
+                selectLastOptions();
                 ident_currency_options()
             });
+
+            function selectLastOptions(){
+                <?php if(isset($session["last_location"])){ ?>
+                    $("#location_select").find("option").each(function(){
+                        if($(this).val().includes("<?=$session["last_location"]?>")){
+                            $(this).prop("selected", true);
+                        }
+                    });
+                    
+                <?php } ?>
+            }
+
 
             function ident_currency_options(){
                 $('#currency_select').find('option').each(function() {
