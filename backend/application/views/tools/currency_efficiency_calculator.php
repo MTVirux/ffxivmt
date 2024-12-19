@@ -247,8 +247,10 @@
             function createProgressBar(parent_element) {
                 var progressBar = $('<div>', { class: 'progress' });
                 var progressBarInner = $('<div>', { class: 'progress-bar progress-bar-striped progress-bar-animated', role: 'progressbar', 'aria-valuenow': '0', 'aria-valuemin': '0', 'aria-valuemax': '100' });
+                var progressBarMessage = "<span class='progress-bar-message'><i>Fetching Data From Universalis...</i></span>"
                 progressBar.append(progressBarInner);
-                jQuery(parent_element).children().find("div.loading-div").html(progressBar);
+                $($(parent_element).children()[0]).find("div.loading-div").html(progressBar).after(progressBarMessage);
+                $($(parent_element).children()[0]).find(".progerss-bar").after("<br> <span class='loading_bar_message'> Getting data from Universalis... </span>");
 
                 currentValue = 0;
                 intervalId = setInterval(function() {
