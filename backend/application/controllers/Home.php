@@ -15,4 +15,9 @@ class Home extends MY_Controller {
 		$this->load_view_template('home');
 
 	}
+
+	public function redirect_to_git(){
+		$this->load->helper('url');
+		redirect($this->config->item('github_link'), 'refresh');
+	}
 }
