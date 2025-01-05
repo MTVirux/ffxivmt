@@ -36,5 +36,20 @@
 .page-container {
     max-width:100vw; 
     padding:0px;
+    height: 100vh;
 }
 
+.github-logo {
+    width: 25px;
+    height: 25px;
+    margin-bottom: 5px;
+    margin-right: 10px;
+}
+
+div#main_nav{
+    justify-content: space-between;
+}
+
+#page-title {
+    margin-top: 10px;
+}

@@ -25,6 +25,7 @@
 </style>
 <?php
 $navbar = $this->config->item('navbar_structure');
+$github_link = $this->config->item('github_link');
 
 
 
@@ -50,10 +51,23 @@ $navbar_html = '<nav class="navbar navbar-expand-lg navbar-dark bg-primary" styl
     }
 
 $navbar_html .= '</ul>';
+
+#Add Github Link to the right of the navbar
+$navbar_html .= '<ul class="navbar-nav github-nav">';
+$navbar_html .= '<li class="nav-item"> <a class="nav-link" href="'.$github_link.'">';
+$navbar_html .= '<img class="github-logo" src="'.base_url("resources/img/github_logo_25x25.png").'" alt="GitHub">';
+$navbar_html .= '<span class="github-text">Project on Github</span>';
+$navbar_html .= '</a>';
+$navbar_html .= '</li>';
+$navbar_html .= '</ul>';
+
+#Close the navbar
 $navbar_html .= '</div>';
 $navbar_html .= '</div>';
 $navbar_html .= '</nav>';
 
+
+#Print the navbar
 echo $navbar_html;
 
 function get_navbar_handle_array($input){
