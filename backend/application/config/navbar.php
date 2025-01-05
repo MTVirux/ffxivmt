@@ -30,3 +30,5 @@ $config['navbar_structure'] =
 
 
 ];
+
+$config['github_link'] = "https://github.com/MTVirux/ffxivmt";
