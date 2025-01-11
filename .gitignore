@@ -29,6 +29,12 @@ docker/mariadb/var/*
 ####### TERRAFORM #######
 tf/.terraform
 tf/.terraform.lock.hcl
+tf/*.tfvars
+!tf/example.tfvars
+tf/*.tfstate
+tf/*.backup
+tf/*.plan
+tf/*.out
 
 ####### FILE TYPES #######
 *.db
