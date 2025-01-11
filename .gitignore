@@ -26,6 +26,10 @@ docker/mariadb/var/*
 .env
 !/swap_scripts.sh
 
+####### TERRAFORM #######
+tf/.terraform
+tf/.terraform.lock.hcl
+
 ####### FILE TYPES #######
 *.db
 *.rdb
