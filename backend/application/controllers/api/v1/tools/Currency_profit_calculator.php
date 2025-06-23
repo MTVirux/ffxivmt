@@ -99,6 +99,16 @@ class Currency_profit_calculator extends RestController{
 			}
 		}
 
+		//Remove blacklisted IDs
+		$blacklisted_ids = [];
+		if(!empty($blacklisted_ids)){
+			foreach($keys as $index => $key){
+				if(in_array($key, $blacklisted_ids)){
+					unset($keys[$index]);
+				}
+			}
+		}
+
 
 		//Split the keys into arrays of 50 elements
 		$keys_array = array_chunk($keys, 50);
