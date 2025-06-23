@@ -12,16 +12,19 @@
                                 <option value="none" selected disabled>Select a currency:</option>
 
                                 <option value="none"disabled>PvE:</option>
-                                <option value="Allagan Tomestone of Aesthetics">Allagan Tomestone of Aesthetics</option>
-                                <!--<option value="Allagan Tomestone of Heliometry">Allagan Tomestone of Heliometry (Weekly)</option>-->
+                                <option value="Allagan Tomestone of Heliometry">Allagan Tomestone of Heliometry</option>
+                                <option value="Allagan Tomestone of Mathematics">Allagan Tomestone of Mathematics (Weekly)</option>
                                 <option value="Allagan Tomestone of Poetics">Allagan Tomestone of Poetics</option>
+                                <option value="Enlightenment Gold Pieces">Enlightenment Gold Pieces (OC)</option>
+                                <option value="Enlightenment Silver Pieces">Enlightenment Silver Pieces (OC)</option>
 
                                 <option value="none"disabled>Disciples of Hand/Land:</option>
                                 <option value="Orange Crafters' Scrip">Orange Crafters' Scrip</option>
                                 <option value="Purple Crafters' Scrip">Purple Crafters' Scrip</option>
                                 <option value="Orange Gatherers' Scrip">Orange Gatherers' Scrip</option>
                                 <option value="Purple Gatherers' Scrip">Purple Gatherers' Scrip</option>
-                                <option value="Skybuilders' Scrip">Skybuilders' Scrip</option>
+                                <option value="Cosmocredit">Cosmocredit (Cosmic Exploration)</option>
+                                <option value="Skybuilders' Scrip">Skybuilders' Scrip (Firmament)</option>
 
                                 <option value="none"disabled>The Hunt:</option>
                                 <option value="Allied Seal">Allied Seal</option>
