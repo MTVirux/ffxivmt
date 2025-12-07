@@ -9,6 +9,7 @@ class Gilflux extends RestController{
 
     public function __construct(){
         parent::__construct();            
+		set_time_limit(120);
 		Header('Access-Control-Allow-Methods: GET,POST,PUT,DELETE'); //method allowed
     }
 
