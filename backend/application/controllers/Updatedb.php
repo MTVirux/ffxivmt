@@ -272,8 +272,8 @@ class Updatedb extends MY_Controller {
 
 		// Set the file sources
 		$item_file_sources = array(
-			'https://raw.githubusercontent.com/MTVirux/ffxiv-datamining/master/csv/Item.csv',
-			'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/Item.csv'
+			'https://raw.githubusercontent.com/MTVirux/ffxiv-datamining/master/csv/en/Item.csv',
+			'https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/csv/en/Item.csv'
 			// Add more sources as needed
 		);
 		
