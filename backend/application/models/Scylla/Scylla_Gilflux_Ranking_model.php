@@ -206,10 +206,68 @@ class Scylla_Gilflux_Ranking_model extends MY_Scylla_Model{
     }
 
 
+    function get_by_item($item_id){
+
+        $stmt = $this->scylla->prepare(
+        "SELECT 
+        item_id,
+        item_name,
+        world_id,
+        world_name,
+        datacenter,
+        region,
+        CAST(SUM(ranking_alltime) AS BIGINT ) AS ranking_alltime,
+        CAST(SUM(ranking_1h) AS BIGINT ) AS ranking_1h,
+        CAST(SUM(ranking_3h) AS BIGINT ) AS ranking_3h,
+        CAST(SUM(ranking_6h) AS BIGINT ) AS ranking_6h,
+        CAST(SUM(ranking_12h) AS BIGINT ) AS ranking_12h,
+        CAST(SUM(ranking_1d) AS BIGINT ) AS ranking_1d,
+        CAST(SUM(ranking_3d) AS BIGINT ) AS ranking_3d,
+        CAST(SUM(ranking_7d) AS BIGINT ) AS ranking_7d,
+        MAX(updated_at) AS updated_at,
+        MAX(last_sale_time) AS last_sale_time
+        FROM gilflux_ranking 
+        WHERE item_id = ?
+        GROUP BY item_id, world_id
+        ");
+
+        $result = $this->scylla->execute($stmt, array("item_id" => $item_id));
+
+        return $result;
+    }
+
+    function get_by_item_and_world($item_id, $world_id){
+
+        $stmt = $this->scylla->prepare(
+        "SELECT 
+        item_id,
+        item_name,
+        world_id,
+        world_name,
+        datacenter,
+        region,
+        ranking_alltime,
+        ranking_1h,
+        ranking_3h,
+        ranking_6h,
+        ranking_12h,
+        ranking_1d,
+        ranking_3d,
+        ranking_7d,
+        updated_at,
+        last_sale_time
+        FROM gilflux_ranking 
+        WHERE item_id = ? AND world_id = ?
+        ");
+
+        $result = $this->scylla->execute($stmt, array("item_id" => $item_id, "world_id" => $world_id));
+
+        return $result;
+    }
+
     public function get_a_ranking_with_missing_name(){
         $stmt = $this->scylla->prepare("SELECT item_id FROM gilflux_ranking WHERE item_name like '' LIMIT 1 ALLOW FILTERING;");
         $result = $this->scylla->execute($stmt, array());
-        var_dump($result);die();
         return $result;
     }
 }

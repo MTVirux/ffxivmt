@@ -173,6 +173,86 @@ class Gilflux extends RestController{
 
 	}
 
+	public function item_get($item_id = null){
+
+		//Check if item_id is provided
+		if(is_null($item_id) || empty($item_id)){
+			if(isset($_GET['item_id']) && !empty($_GET['item_id'])){
+				$item_id = $_GET['item_id'];
+			}else{
+				$this->response(["status" => false, "message" => "No item_id provided"], 400);
+				return;
+			}
+		}
+
+		//Sanitize item_id to integer
+		$item_id = intval($item_id);
+		if($item_id <= 0){
+			$this->response(["status" => false, "message" => "Invalid item_id"], 400);
+			return;
+		}
+
+		//Optional target_location filter
+		$target_location = isset($_GET['target_location']) ? $_GET['target_location'] : null;
+
+		//Load models
+		$this->load->model('Scylla/Scylla_World_model', 'Scylla_Worlds');
+		$this->load->model('Scylla/Scylla_Gilflux_Ranking_model', 'Scylla_gilflux_ranking');
+
+		$gilflux_ranking = [];
+
+		if(!is_null($target_location) && !empty($target_location)){
+
+			//Determine if target_location is a world, datacenter, or region
+			$worlds = $this->Scylla_Worlds->get();
+			$locations = [];
+			foreach($worlds as $world){
+				$locations[$world["region"]][$world["datacenter"]][$world["id"]] = $world["name"];
+			}
+
+			$target_type = "world";
+			foreach($locations as $region => $datacenter_data){
+				if(strtolower($target_location) == strtolower($region)){
+					$target_type = "region";
+				}else{
+					foreach($locations[$region] as $datacenter => $dc_worlds){
+						if(strtolower($target_location) == strtolower($datacenter)){
+							$target_type = "datacenter";
+						}
+					}
+				}
+			}
+
+			if($target_type == "world"){
+				$world = $this->Scylla_Worlds->get_by_name($target_location);
+				$world_id = $world[0]["id"];
+				$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_item_and_world($item_id, $world_id);
+			}else{
+				//Get all entries for this item, then filter by datacenter/region
+				$all_item_data = $this->Scylla_gilflux_ranking->get_by_item($item_id);
+				foreach($all_item_data as $entry){
+					if($target_type == "datacenter" && strtolower($entry["datacenter"]) == strtolower($target_location)){
+						$gilflux_ranking[] = $entry;
+					}else if($target_type == "region" && strtolower($entry["region"]) == strtolower($target_location)){
+						$gilflux_ranking[] = $entry;
+					}
+				}
+			}
+
+		}else{
+			$gilflux_ranking = $this->Scylla_gilflux_ranking->get_by_item($item_id);
+		}
+
+		$this->response([
+			"status" => true,
+			"message" => "Success",
+			"data" => json_encode($gilflux_ranking),
+			"gilflux_timeframe_in_ms" => json_encode($this->config->item('gilflux_timeframes_ms')),
+			"request_id" => isset($_GET["request_id"]) ? $_GET["request_id"] : null
+		]);
+
+	}
+
 	//private function remove_outdated_gilflux_ranking_times($gilflux_ranking){
 	//
 	//	$gilflux_timeframes_in_ms = $this->config->item('gilflux_timeframes_ms');
