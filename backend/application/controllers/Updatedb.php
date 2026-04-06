@@ -335,58 +335,78 @@ class Updatedb extends MY_Controller {
 		
 		// Read the first line of the file, which contains the field names
 		$field_names = fgetcsv($file_handle, 0, $delimiter);
-		fgetcsv($file_handle, 0, $delimiter);
-		fgetcsv($file_handle, 0, $delimiter);
-		fgetcsv($file_handle, 0, $delimiter);
-		
+		$num_fields = count($field_names);
+
+		// Build a lookup map of column name -> index for validation
+		$field_index = array_flip($field_names);
+
+		// Define the required CSV columns and their mapped schema fields
+		$required_columns = array('#', 'Name', 'Description', 'CanBeHq', 'AlwaysCollectable',
+			'StackSize', 'LevelItem', 'Icon', 'Rarity', 'FilterGroup', 'ItemUICategory',
+			'ItemSearchCategory', 'EquipSlotCategory', 'IsUnique', 'IsUntradable',
+			'IsIndisposable', 'DyeCount', 'AetherialReduce', 'MateriaSlotCount',
+			'IsAdvancedMeldingPermitted');
+
+		// Validate that all required columns exist in the CSV
+		foreach ($required_columns as $col) {
+			if (!isset($field_index[$col])) {
+				logger("SCYLLA_DB", json_encode(array("message" => "[ERROR] Missing required CSV column: " . $col, "available_columns" => $field_names)), $override_write = true);
+				die("Missing required CSV column: $col");
+			}
+		}
+
+		logger("SCYLLA_DB", json_encode(array("message" => "CSV parsed successfully", "num_fields" => $num_fields, "columns" => implode(', ', $field_names))), $override_write = true);
+
 		$final_item_data = [];
 
 		// Loop through each line of the file
 		while (($line = fgetcsv($file_handle, 0, $delimiter)) !== false) {
 			// Create an array to store the data for this line
 			$item = array();
-		
-			// Loop through each field in this line
-			for ($i = 0; $i < 92; $i++) {
+
+			// Loop through each field in this line dynamically
+			$line_field_count = min(count($line), $num_fields);
+			for ($i = 0; $i < $line_field_count; $i++) {
 				// Check if the field is a string, and if so, remove the double quotes from the beginning and end
 				if (is_string($line[$i])) {
 					$line[$i] = trim($line[$i], '"');
 				}
-		
+
 				// Add the data for this field to the item array, using the field name as the key
 				$item[$field_names[$i]] = $line[$i];
 			}
-		
-			// Fit the data for this item into the desired schema
-			$element_offset = 1;
 
+			// Skip rows with no name (e.g. the defaults/empty row with id 0)
+			if (empty($item['Name'])) {
+				continue;
+			}
+
+			// Fit the data for this item into the desired schema using column names
 			$item_data = array(
-				'id'                    =>	intval(		$item[array_key_first($item)]	),
-				'name'                  =>	strval(		$item[10-$element_offset]		),
-				'description'           =>	strval(		$item[9-$element_offset]		),
-				'can_be_hq'             =>	boolval(	$item[28-$element_offset]		),
-				'always_collectible'    =>	strval(		$item[39-$element_offset]		) == "True" ? true : false,
-				'stack_size'            =>	intval(		$item[21-$element_offset]		),
-				'item_level'            =>	intval(		$item[12-$element_offset]		),
-				'icon_image'            =>	intval(		$item[11-$element_offset]		),
-				'rarity'                =>	intval(		$item[13-$element_offset]		),
-				'filter_group'          =>	intval(		$item[14-$element_offset]		),
-				'item_ui_category'      =>	intval(		$item[16-$element_offset]		),
-				'item_search_category'  =>	intval(		$item[17-$element_offset]		),
-				'equip_slot_category'   =>	intval(		$item[18-$element_offset]		),
-				'unique'                =>	boolval(	$item[22-$element_offset]		),
-				'untradable'            =>	boolval(	$item[23-$element_offset]		),
-				'disposable'            =>	boolval(	$item[24-$element_offset]		),
-				'dyable'                =>	boolval(	$item[29-$element_offset]		),
-				'aetherial_reductible'  =>	boolval(	$item[40-$element_offset]		),
-				'materia_slot_count'    =>	intval(		$item[87-$element_offset]		),
-				'advanced_melding'      =>	boolval(	$item[88-$element_offset]		),
+				'id'                    =>	intval(		$item['#']						),
+				'name'                  =>	strval(		$item['Name']					),
+				'description'           =>	strval(		$item['Description']			),
+				'can_be_hq'             =>	strtolower(strval($item['CanBeHq'])) === 'true',
+				'always_collectible'    =>	strtolower(strval($item['AlwaysCollectable'])) === 'true',
+				'stack_size'            =>	intval(		$item['StackSize']				),
+				'item_level'            =>	intval(		$item['LevelItem']				),
+				'icon_image'            =>	intval(		$item['Icon']					),
+				'rarity'                =>	intval(		$item['Rarity']					),
+				'filter_group'          =>	intval(		$item['FilterGroup']			),
+				'item_ui_category'      =>	intval(		$item['ItemUICategory']			),
+				'item_search_category'  =>	intval(		$item['ItemSearchCategory']		),
+				'equip_slot_category'   =>	intval(		$item['EquipSlotCategory']		),
+				'unique'                =>	strtolower(strval($item['IsUnique'])) === 'true',
+				'untradable'            =>	strtolower(strval($item['IsUntradable'])) === 'true',
+				'disposable'            =>	strtolower(strval($item['IsIndisposable'])) === 'true',
+				'dyable'                =>	intval(		$item['DyeCount']				) > 0,
+				'aetherial_reductible'  =>	intval(		$item['AetherialReduce']		) > 0,
+				'materia_slot_count'    =>	intval(		$item['MateriaSlotCount']		),
+				'advanced_melding'      =>	strtolower(strval($item['IsAdvancedMeldingPermitted'])) === 'true',
 				'craftable'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 				'marketable'       		=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 				'from_scrips'       	=> 	false, //Fields got from Garland DB just here to appease the php-cql lib gods
 			);
-		
-			// Print the data for this item for debugging purposes
 
 			$final_item_data[] = $item_data;
 		}
@@ -426,7 +446,6 @@ class Updatedb extends MY_Controller {
 			try {
 				logger("SCYLLA_DB", json_encode(array("message" => "Trying to identify a gilflux ranking with a missing name")), $override_write = true);
 				$gilflux_missing_name_query = $this->Gilflux_Ranking->get_a_ranking_with_missing_name();
-				var_dump($gilflux_missing_name_query);die();
 				if(count($gilflux_missing_name_query) == 0){
 					break;
 				}else{
