@@ -1,9 +1,8 @@
+#!/bin/bash
+# Restart the websocket consumer if it ever exits.
+export PYTHONPATH=/ws_worker:${PYTHONPATH}
 
-#! /bin/bash
-
-while true
-do
-    until /Python-3.10.5/python /server/server.py;do
-	sleep 1
-	done
+while true; do
+    /Python-3.10.5/python /server/server.py
+    sleep 1
 done

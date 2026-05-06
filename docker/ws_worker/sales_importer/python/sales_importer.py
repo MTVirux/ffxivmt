@@ -1,201 +1,269 @@
-import external
-import log
-import metrics
-import config
+"""Bulk historical sales importer (asyncio + aiohttp).
 
-import queue
-import requests
-import time
+Pipeline:
+    URL queue -> N fetcher tasks -> response queue -> M poster tasks.
+
+Two aiohttp sessions: one for Universalis (rate-limited via a token bucket
+sized from config.MAX_REQUESTS_PER_SECOND), one for the backend POSTs. A
+watcher task writes a status snapshot once per second.
+"""
+from __future__ import annotations
+
+import asyncio
 import datetime
-import threading
-from ratelimit import limits, sleep_and_retry
-import os
 import math
-import json
+import os
+import time
+from typing import Iterable
 
-@sleep_and_retry
-@limits(calls=25, period=1)
-def send_request(url):
-    global response_queue
-    log.request(f"Sending request --- {url}")
-    response = requests.get(url)
-    if(response.status_code == 200 and response.text != ""):
-        log.action(f"Request success --- {url}")
-        response_queue.put({"url": url, "json":response.text})
-        return True
+import aiohttp
+
+import config
+import external
+from common import log
+from common import world_data
+from metrics import METRICS
+
+
+###########################
+#       URL BUILDER       #
+###########################
+def build_url_list() -> list[str]:
+    item_ids = world_data.marketable_item_id_list()
+    worlds: list[str] = []
+    for region in config.REGIONS_TO_IMPORT:
+        worlds.extend(world_data.world_names_for_region(region))
+
+    if config.IMPORT_ALL_TIME:
+        within_ms = str(math.floor(time.time() * 1000))
     else:
-        #log.error(f"Request failed --- {response.status_code} --- RETRYING: {url}")
-        external.FAILED_REQUEST_URLS.put(url)
+        within_ms = str(config.TIME_AGO_TO_IMPORT_SALES)
+    entries = str(config.ENTRIES_TO_RETURN)
 
-def watcher():
+    chunk = config.ITEMS_PER_REQUEST
+    urls: list[str] = []
+    for world in worlds:
+        for i in range(0, len(item_ids), chunk):
+            ids = ",".join(str(x) for x in item_ids[i : i + chunk])
+            urls.append(
+                f"{config.UNIVERSALIS_URL}{config.UNIVERSALIS_SALES_ENDPOINT}"
+                f"{world}/{ids}?entriesToReturn={entries}"
+                f"&statsWithin={within_ms}&entriesWithin={within_ms}"
+            )
+    return urls
 
-    #Create a IMPORT.status file if it doesn't exist
-    if not os.path.exists("../IMPORT.status"):
-        open("../IMPORT.status", "w").close()
 
-    os.chmod('../IMPORT.status', 0o666)
+###########################
+#       PIPELINE          #
+###########################
+class Pipeline:
+    """Holds queues and a single in-flight counter so termination is
+    detectable. Single-threaded asyncio = no locks required."""
+
+    def __init__(self) -> None:
+        self.url_queue: asyncio.Queue[str] = asyncio.Queue()
+        self.response_queue: asyncio.Queue[dict] = asyncio.Queue(
+            maxsize=config.RESPONSE_QUEUE_LIMIT
+        )
+        self.failed_urls: asyncio.Queue[str] = asyncio.Queue()
+        self.in_flight: int = 0
+        self.done = asyncio.Event()
 
 
-    global query_list
-    global req_threads
-    global php_request_threads
-    global url_queue
-    global response_queue
-    global php_concurrent_request_limit
-    global items_per_request
+async def fetcher(
+    pipeline: Pipeline,
+    http: aiohttp.ClientSession,
+    bucket: external.TokenBucket,
+) -> None:
+    while True:
+        url = await pipeline.url_queue.get()
+        pipeline.in_flight += 1
+        try:
+            text = await external.fetch_one(http, bucket, url)
+        except Exception as e:
+            log.error(f"fetcher crashed on {url}: {e!r}", exc_info=True)
+            text = None
 
-    while (url_queue.qsize() + response_queue.qsize() + len(req_threads) + len(php_request_threads) + external.FAILED_REQUEST_URLS.qsize()) > 0:
-        #write status to file
-        file = open("../IMPORT.status", "w")
-        file.write("Queue size: " + str(url_queue.qsize()) + " ("+str(items_per_request)+" items per request)")
-        file.write('\n')
-        file.write("Universalis threads: " + str(len(req_threads)))
-        file.write('\n')
-        file.write("PHP request queue size: " + str(response_queue.qsize()))
-        file.write('\n')
-        file.write("PHP request threads: " + str(len(php_request_threads)))
-        file.write('\n')
-        file.write("PHP requests completed: " + str(metrics.PHP_REQUESTS_COMPLETED) + " / " + str(metrics.TOTAL_REQUESTS))
-        file.write('\n')
-        file.write("Sales parsed: " + str(metrics.TOTAL_SALES_PARSED))
-        file.write('\n')
-        file.write("Parity check: " + str((int(metrics.PHP_REQUESTS_COMPLETED) + int(len(req_threads)) + int(len(php_request_threads)) + int(response_queue.qsize()) + int(url_queue.qsize())) == int(metrics.TOTAL_REQUESTS)))
-        file.write('\n')
-        file.write("Requests retried: " + str(metrics.RETRIED_REQUESTS))
-        file.write('\n')
+        if text is None:
+            await pipeline.failed_urls.put(url)
+        else:
+            await pipeline.response_queue.put({"url": url, "json": text})
+
+        pipeline.in_flight -= 1
+        pipeline.url_queue.task_done()
+
+
+async def poster(
+    pipeline: Pipeline,
+    http: aiohttp.ClientSession,
+) -> None:
+    while True:
+        item = await pipeline.response_queue.get()
+        pipeline.in_flight += 1
+        ok = False
+        try:
+            ok = await external.post_response(http, item)
+        except Exception as e:
+            log.error(f"poster crashed on {item.get('url')}: {e!r}", exc_info=True)
+
+        if not ok:
+            await pipeline.failed_urls.put(item["url"])
+
+        pipeline.in_flight -= 1
+        pipeline.response_queue.task_done()
+
+
+###########################
+#         WATCHER         #
+###########################
+async def watcher(pipeline: Pipeline) -> None:
+    if not os.path.exists(config.STATUS_FILE_PATH):
+        open(config.STATUS_FILE_PATH, "w").close()
+    os.chmod(config.STATUS_FILE_PATH, 0o666)
+
+    try:
+        while not pipeline.done.is_set():
+            try:
+                _write_status(pipeline)
+            except Exception as e:
+                log.error(f"watcher write failed: {e!r}")
+            await asyncio.sleep(1)
+    finally:
+        try:
+            _write_status(pipeline)
+        except Exception:
+            pass
+        print("IMPORT FINISHED - WATCHER EXITING")
+
+
+def _write_status(pipeline: Pipeline) -> None:
+    failed = pipeline.failed_urls.qsize()
+    url_size = pipeline.url_queue.qsize()
+    resp_size = pipeline.response_queue.qsize()
+
+    eta = "N/A"
+    try:
+        if METRICS.total_sales_parsed > 0 and METRICS.php_requests_completed > 0:
+            elapsed = time.time() - METRICS.start_time
+            time_per_sale = elapsed / METRICS.total_sales_parsed
+            avg_sales_per_req = METRICS.total_sales_parsed / METRICS.php_requests_completed
+            remaining = METRICS.total_requests - METRICS.php_requests_completed
+            eta_seconds = time_per_sale * avg_sales_per_req * remaining
+            eta = str(datetime.timedelta(seconds=eta_seconds))
+    except Exception:
+        pass
+
+    lines = [
+        f"Queue size: {url_size} ({config.ITEMS_PER_REQUEST} items per request)",
+        f"PHP request queue size: {resp_size}",
+        f"PHP requests completed: {METRICS.php_requests_completed} / {METRICS.total_requests}",
+        f"Sales parsed: {METRICS.total_sales_parsed}",
+        f"Requests retried: {METRICS.retried_requests}",
+        f"Failed (awaiting retry): {failed}",
+        f"In flight: {pipeline.in_flight}",
+        f"ETA: {eta}",
+        "",
+        "------ QUEUE MONITOR ------",
+        "",
+        "Last response sent to PHP:",
+        str(METRICS.last_response)[:500],
+    ]
+    with open(config.STATUS_FILE_PATH, "w") as fh:
+        fh.write("\n".join(lines))
+
+
+###########################
+#         DRIVER          #
+###########################
+async def _drive(pipeline: Pipeline, retry_delay: float = 0.25) -> None:
+    """Drain failed URLs back into the URL queue and detect completion."""
+    while True:
+        # Re-queue any failures.
+        while not pipeline.failed_urls.empty():
+            try:
+                url = pipeline.failed_urls.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            await pipeline.url_queue.put(url)
+            METRICS.inc("retried_requests")
+
+        if (
+            pipeline.url_queue.empty()
+            and pipeline.response_queue.empty()
+            and pipeline.failed_urls.empty()
+            and pipeline.in_flight == 0
+        ):
+            return
+
+        await asyncio.sleep(retry_delay)
+
+
+def _enabled_log_channels(map_: dict[str, bool]) -> list[str]:
+    return [k.lower() for k, v in map_.items() if v]
+
+
+###########################
+#          MAIN           #
+###########################
+async def amain() -> None:
+    log.setup(
+        logs_dir=config.LOGS_DIR,
+        enabled_channels=_enabled_log_channels(config.PRINT_TO_LOG) + ["panic"],
+        print_channels=_enabled_log_channels(config.PRINT_TO_SCREEN),
+    )
+
+    urls = build_url_list()
+    pipeline = Pipeline()
+    for u in urls:
+        pipeline.url_queue.put_nowait(u)
+    METRICS.set("total_requests", len(urls))
+    log.debug(f"queued {len(urls)} url batches for import")
+
+    bucket = external.TokenBucket(
+        rate=config.MAX_REQUESTS_PER_SECOND,
+        capacity=config.MAX_REQUESTS_PER_SECOND_BURST,
+    )
+
+    universalis_conn = aiohttp.TCPConnector(
+        limit=config.UNIVERSALIS_CONN_POOL,
+        limit_per_host=config.UNIVERSALIS_CONN_POOL,
+    )
+    backend_conn = aiohttp.TCPConnector(
+        limit=config.BACKEND_CONN_POOL,
+        limit_per_host=config.BACKEND_CONN_POOL,
+    )
+
+    async with aiohttp.ClientSession(connector=universalis_conn) as univ_http, \
+               aiohttp.ClientSession(connector=backend_conn) as backend_http:
+
+        watcher_task = asyncio.create_task(watcher(pipeline), name="watcher")
+        fetchers = [
+            asyncio.create_task(fetcher(pipeline, univ_http, bucket), name=f"fetch-{i}")
+            for i in range(config.MAX_FETCH_WORKERS)
+        ]
+        posters = [
+            asyncio.create_task(poster(pipeline, backend_http), name=f"post-{i}")
+            for i in range(config.MAX_POST_WORKERS)
+        ]
 
         try:
-            current_time = datetime.datetime.now().timestamp()
-            if(metrics.TOTAL_SALES_PARSED > 0 and metrics.PHP_REQUESTS_COMPLETED > 0):
-                time_per_sale = (time.time() - metrics.START_TIME) / metrics.TOTAL_SALES_PARSED
-                average_sale_per_request = metrics.TOTAL_SALES_PARSED / metrics.PHP_REQUESTS_COMPLETED
-                expected_completion_time = time_per_sale * average_sale_per_request * (metrics.TOTAL_REQUESTS - metrics.PHP_REQUESTS_COMPLETED)
-                time_remaining = datetime.timedelta(seconds=expected_completion_time)
-                file.write("ETA: " + str(time_remaining))
-        except Exception as e:
-            file.write("ETA: N/A")
+            await _drive(pipeline)
+        finally:
+            pipeline.done.set()
+            await _cancel_all(fetchers + posters + [watcher_task])
 
-        file.write('\n')
-        file.write('\n')
-        file.write("------ QUEUE MONITOR ------")
-        file.write('\n')
-        file.write('\n')
-        if(url_queue.qsize() > 0):
-            file.write("Next in URL queue: ")
-            file.write('\n')
-            file.write(str(url_queue.queue[0]))
-            file.write('\n')
-            file.write('\n')
-        file.write('Last response sent to PHP:')
-        file.write('\n')
-        file.write(str(metrics.LAST_RESPONSE))
-        file.write('\n')
-        file.write('\n')
-        if(response_queue.qsize() > 0):
-            file.write("Next in PHP request queue: ")
-            file.write('\n')
-            file.write(str(response_queue.queue[0]["json"]))
-            file.write('\n')
-            file.write('\n')
-        file.close()
-        time.sleep(1)
-    
-    print("IMPORT FINISHED - WATCHER EXITING")
-    file.write
+    log.debug("import complete")
 
 
-
-#   
-#   IMPORT SALES
-#   
-
-url_list = []
-query_list = {}
-req_threads = []
-php_request_threads = []
-
-url_queue = queue.Queue()
-response_queue = queue.Queue()
-
-items_per_request = 2
-
-response_queue_limit = 10
-max_request_threads = 25
-php_concurrent_request_limit = 10
-
-#Make combos of region and item id
-external_world_list = external.get_world_list()
-external_item_id_list = external.get_item_id_list()
-external_item_name_dict = external.get_item_name_dict()
+async def _cancel_all(tasks: Iterable[asyncio.Task]) -> None:
+    for t in tasks:
+        t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
-for world in external_world_list:
-    query_list[world] = []
-    chunk_size = items_per_request
-    # Split the sorted item id list into sublists of {chunk_size} item ids
-    for i in range(0, len(external_item_id_list), chunk_size):
-        sublist = external_item_id_list[i:i+chunk_size]
-        query_list[world].append(sublist)
+def main() -> None:
+    asyncio.run(amain())
 
-#Make url list
-for region in query_list:
-    for item_id_list in query_list[region]:
-        item_id_str = ",".join(str(i) for i in item_id_list)
-        entries_to_return = str(config.ENTRIES_TO_RETURN) #(max 999999)
-                
-        if(config.IMPORT_ALL_TIME == True):
-            current_timestamp_ms = str(math.floor(time.time()*1000))
-        else:
-            current_timestamp_ms = str(config.TIME_AGO_TO_IMPORT_SALES)
-        
-        
-        url = f"{config.UNIVERSALIS_URL}{config.UNIVERSALIS_SALES_ENDPOINT}{region}/{item_id_str}?entriesToReturn={entries_to_return}&statsWithin={current_timestamp_ms}&entriesWithin={current_timestamp_ms}"
-        url_list.append(url)
 
-# Add the urls to the queue
-for url in url_list:
-    url_queue.put(url)
-
-metrics.TOTAL_REQUESTS = url_queue.qsize()
-
-# Start the watcher thread
-t = threading.Thread(target=watcher)
-t.start()
-
-while((url_queue.qsize() + response_queue.qsize() + len(req_threads) + len(php_request_threads) + external.FAILED_REQUEST_URLS.qsize()) > 0):
-
-    if(external.FAILED_REQUEST_URLS.qsize() > 0):
-        for i in range(external.FAILED_REQUEST_URLS.qsize()):
-            url_queue.put(external.FAILED_REQUEST_URLS.get())
-            metrics.RETRIED_REQUESTS += 1
-
-    if(len(req_threads) < max_request_threads and ((response_queue.qsize() + len(req_threads)) < response_queue_limit)):
-        t = threading.Thread(target=send_request, args=(url_queue.get(),))
-        req_threads.append(t)
-        t.start()
-    
-    elif(response_queue.qsize() > 0 and len(php_request_threads) < php_concurrent_request_limit):
-
-        t = threading.Thread(target=external.send_sales_to_php, args=(response_queue.get(),))
-        php_request_threads.append(t)
-        t.start()
-        pass
-    
-    else:
-        # Wait for a thread to finish before starting a new one
-        for thread in req_threads:
-            if not thread.is_alive():
-                req_threads.remove(thread)
-
-        for thread in php_request_threads:
-            if not thread.is_alive():
-                php_request_threads.remove(thread)
-
-while len(req_threads) > 0 or len(php_request_threads) > 0:
-    for thread in req_threads:
-        if not thread.is_alive():
-            req_threads.remove(thread)
-
-    for thread in php_request_threads:
-        if not thread.is_alive():
-            php_request_threads.remove(thread)
+if __name__ == "__main__":
+    main()

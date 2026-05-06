@@ -1,77 +1,54 @@
+"""ws_worker server configuration."""
 import os
-import database
-import pprint
 
-### WORLD CONFIG
-
-def get_world_dict():
-    result = database.SCYLLA_DB.execute("SELECT * FROM worlds");
-    world_dict = {}
-
-    for row in result:
-        # id: row
-        world_dict[row.id] = {"id" : row.id, "name" : row.name, "datacenter" : row.datacenter, "region" : row.region}
-    
-    return world_dict
-
-WORLDS = get_world_dict()
-
-WORLDS_TO_USE = []
-
-DCS_TO_USE = {
-}
-
-#REGIONS_TO_USE = ["Europe", "North-America", "Japan", "Oceania", "中国", "NA-Cloud-DC"]
-REGIONS_TO_USE = ["Europe", "North-America"]
-#REGIONS_TO_USE = [];
-
-#LOGGING
-
-LOGS_DIR = "/server/logs/"
-
-#Should server print to logs
-PRINT_TO_LOG = { 
-"DEBUG":False,
-"ERROR":True,
-"ACTION":False,
-}
-
-#Line limit on each type of log
-LIMIT_LOGS = {
-"DEBUG":0,
-"ERROR":0,
-"ACTION":0,
-}
-
-
-#Should server print to console
-PRINT_TO_SCREEN = {
-"DEBUG":True,
-"ERROR":True,
-"ACTION":False,
-}
-
-### UNIVERSALLIS CONFIG
+### UNIVERSALIS
 
 UNIVERSALLIS_URL = "wss://universalis.app/api/ws"
 
-### BANNED IDs
+# Worlds to subscribe to. A world is included if any of its name, datacenter,
+# or region appears in WORLDS_TO_USE / DCS_TO_USE / REGIONS_TO_USE.
+WORLDS_TO_USE: list[str] = []
+DCS_TO_USE: list[str] = []
+REGIONS_TO_USE: list[str] = ["Europe", "North-America"]
 
-BANNED_LISTING_IDS = ["5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"]
-BANNED_SALE_BUYERS = [""]
+### BANS
 
-### REDIS DB CONFIG
+BANNED_SALE_BUYERS: frozenset[str] = frozenset({""})
 
-REDIS_HOST = "localhost"
-REDIS_PORT = 6379
+### LOGGING
 
-#### REDIS DB INDEXES
+LOGS_DIR = "/server/logs/"
 
-REDIS_SALES_DB = os.environ.get('REDIS_SALES_DB')
-REDIS_LISTINGS_DB = os.environ.get('REDIS_LISTINGS_DB')
-REDIS_RECENT_DB = os.environ.get('REDIS_RECENT_CLEANING_DB')
-REDIS_TIMESERIES_DB = os.environ.get('REDIS_TIMESERIES_DB')
+# Whether to write each channel to its rotating log file.
+PRINT_TO_LOG = {
+    "DEBUG": False,
+    "ERROR": True,
+    "ACTION": False,
+}
+
+# Whether to mirror each channel to stdout/stderr.
+PRINT_TO_SCREEN = {
+    "DEBUG": True,
+    "ERROR": True,
+    "ACTION": False,
+}
 
 ### EXTERNAL CONTAINERS
 
-BACKEND_HOST_CONTAINER = os.environ.get('BACKEND_HOST')
+BACKEND_HOST_CONTAINER = os.environ.get("BACKEND_HOST", "ffmt_backend")
+
+### GILFLUX FAN-OUT
+
+# Coalesce repeated ranking refreshes for the same (world, item): if a sale
+# arrived for that pair within the last N seconds, drop the new request.
+GILFLUX_COALESCE_WINDOW_S: float = 2.0
+
+# Async tasks draining the gilflux update queue.
+GILFLUX_WORKERS: int = 8
+
+# Max queued (world, item) refresh requests. Drop-oldest when full so the
+# queue can't grow unboundedly if the backend stalls.
+GILFLUX_QUEUE_MAX: int = 1000
+
+# HTTP timeout for a single gilflux update call.
+GILFLUX_HTTP_TIMEOUT_S: float = 10.0

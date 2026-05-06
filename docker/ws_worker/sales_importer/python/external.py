@@ -1,92 +1,103 @@
-from pprint import pprint
-import requests
-import config
-import log
-import metrics
-import database
-from cassandra.query import dict_factory
+"""HTTP helpers for the sales importer (aiohttp).
+
+Holds the async rate limiter and the backend POST routine. The session
+objects themselves are owned by sales_importer.main() — we just provide the
+verbs.
+"""
+from __future__ import annotations
+
+import asyncio
 import json
-import queue
-from math import floor
-from time import time
+import time
 
-def get_item_id_list():
-    result = database.SCYLLA_DB.execute("SELECT id FROM items WHERE marketable = true");
-    item_id_list = []
-    for row in result:
-        item_id_list.append(row.id)
-    
-    return item_id_list
+import aiohttp
 
-ITEM_ID_LIST = sorted(get_item_id_list(), reverse=True)
-
-def get_region_list():
-    result = database.SCYLLA_DB.execute("SELECT region FROM worlds");
-    region_list = []
-    for row in result:
-        if row.region not in region_list:
-            region_list.append(row.region)
-    return region_list
-
-REGION_LIST = get_region_list()
-
-def get_world_list():
-    result = database.SCYLLA_DB.execute("SELECT name FROM worlds where region in ('Europe') ALLOW FILTERING");
-    world_list = [];
-    for row in result:
-        world_list.append(row.name)
-    return world_list
-
-WORLD_LIST = get_world_list()
-
-def get_item_name_dict():
-    result = database.SCYLLA_DB.execute("SELECT id, name FROM items WHERE marketable = true");
-    item_name_dict = {}
-    for row in result:
-        item_name_dict[row.id] = row.name
-    
-    return item_name_dict
-
-ITEM_NAME_DICT = get_item_name_dict()
+import config
+from common import log
+from metrics import METRICS
 
 
-def send_sales_to_php(response_item):
+class TokenBucket:
+    """Asyncio token bucket — caps Universalis request rate independently of
+    fetcher concurrency."""
+
+    def __init__(self, rate: float, capacity: float | None = None) -> None:
+        self.rate = float(rate)
+        self.capacity = float(capacity) if capacity is not None else max(1.0, rate)
+        self._tokens = self.capacity
+        self._last = time.monotonic()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        async with self._lock:
+            while True:
+                now = time.monotonic()
+                self._tokens = min(
+                    self.capacity, self._tokens + (now - self._last) * self.rate
+                )
+                self._last = now
+                if self._tokens >= 1.0:
+                    self._tokens -= 1.0
+                    return
+                deficit = 1.0 - self._tokens
+                await asyncio.sleep(deficit / self.rate)
+
+
+async def fetch_one(
+    http: aiohttp.ClientSession, bucket: TokenBucket, url: str
+) -> str | None:
+    """GET url, return body text on success or None on failure (caller will
+    re-queue). Increments METRICS.requests_completed on success."""
+    await bucket.acquire()
+    log.request(f"GET {url}")
     try:
-        global FAILED_REQUEST_URLS
-        metrics.LAST_RESPONSE = response_item["json"]
-        headers = {'Content-type': 'application/json'}
-        response = requests.post("http://" + config.BACKEND_HOST_CONTAINER + "/api/v1/updatedb/python_request", json=json.loads(response_item["json"]), headers=headers)
-        url = response_item["url"];
-        try:
-            json.loads(response.text)["data"]["parsed_sales"]
-            json.loads(response.text)["data"]["time"]
-        except Exception as e:
-            log.error(e)
-            log.error(f"PHP response error --- {response.text}")
-            FAILED_REQUEST_URLS.put(url)
+        async with http.get(url, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+            if resp.status != 200:
+                return None
+            text = await resp.text()
+            if not text:
+                return None
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        log.error(f"fetch error {url}: {e!r}")
+        return None
 
-    except Exception as e:
-        log.error(e)
-        log.error(f"Error sending sales to PHP --- {response_item['json']}")
-        FAILED_REQUEST_URLS.put(url)
-        return
-        
-    if(response.status_code == 200):
-        try:
-            metrics.PHP_REQUESTS_COMPLETED += 1
-            log.action(response.text)
-            metrics.TOTAL_SALES_PARSED += int(json.loads(response.text)["data"]["parsed_sales"])
-        except Exception as e:
-            log.error(e)
-            log.error(f"Error parsing response --- {response.text}")
-            FAILED_REQUEST_URLS.put(url)
-    else:
-        print("REQUEST FAILED")
-        metrics.PHP_REQUESTS_FAILED += 1
-        FAILED_REQUEST_URLS.put(url)
-        log.error(f"Request failed --- {response.status_code} --- {response.text}")
+    METRICS.inc("requests_completed")
+    return text
 
-FAILED_REQUEST_URLS = queue.Queue()
 
-def get_current_timestamp_ms():
-    return int(floor(time() * 1000))
+async def post_response(
+    http: aiohttp.ClientSession, response_item: dict
+) -> bool:
+    """POST a Universalis response to the backend. True on success, False on
+    failure (caller will re-queue the URL)."""
+    url = response_item["url"]
+    text = response_item["json"]
+    METRICS.set("last_response", text)
+
+    try:
+        async with http.post(
+            f"http://{config.BACKEND_HOST_CONTAINER}/api/v1/updatedb/python_request",
+            data=text.encode("utf-8"),
+            headers={"Content-type": "application/json"},
+            timeout=aiohttp.ClientTimeout(total=120),
+        ) as resp:
+            body = await resp.text()
+            if resp.status != 200:
+                log.error(f"PHP non-200 ({resp.status}) for {url}: {body}")
+                METRICS.inc("php_requests_failed")
+                return False
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        log.error(f"error posting to PHP {url}: {e!r}")
+        return False
+
+    try:
+        obj = json.loads(body)
+        parsed = int(obj["data"]["parsed_sales"])
+    except (ValueError, KeyError, TypeError) as e:
+        log.error(f"could not parse PHP response for {url}: {e!r} body={body[:500]}")
+        return False
+
+    METRICS.inc("php_requests_completed")
+    METRICS.inc("total_sales_parsed", parsed)
+    log.action(body)
+    return True

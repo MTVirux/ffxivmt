@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command *)",
+      "Bash(python -m py_compile docker/ws_worker/common/log.py docker/ws_worker/common/db.py docker/ws_worker/common/world_data.py docker/ws_worker/server/server.py docker/ws_worker/server/sales_add.py docker/ws_worker/server/config.py docker/ws_worker/sales_importer/python/sales_importer.py docker/ws_worker/sales_importer/python/external.py docker/ws_worker/sales_importer/python/config.py docker/ws_worker/sales_importer/python/metrics.py)",
+      "Bash(where py *)",
+      "Bash(where python3 *)",
+      "Bash(where pwsh *)",
+      "Bash(py -3 --version)",
+      "Bash(py -3 -m py_compile docker/ws_worker/common/log.py docker/ws_worker/common/db.py docker/ws_worker/common/world_data.py docker/ws_worker/server/server.py docker/ws_worker/server/sales_add.py docker/ws_worker/server/config.py docker/ws_worker/sales_importer/python/sales_importer.py docker/ws_worker/sales_importer/python/external.py docker/ws_worker/sales_importer/python/config.py docker/ws_worker/sales_importer/python/metrics.py)",
+      "Bash(py *)"
+    ]
+  }
+}

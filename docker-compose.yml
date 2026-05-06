@@ -52,26 +52,7 @@ services:
       - ./docker/ws_worker/startup_scripts:/startup_scripts
       - ./docker/ws_worker/server:/server
       - ./docker/ws_worker/sales_importer:/sales_importer
-    networks:
-      - ffmt_network
-
-  ffmt_ws_worker_2:
-    build:
-      context: .
-      dockerfile: ${WS_WORKER_DOCKERFILE}
-    image: ffmt_ws_worker
-    container_name: ffmt_ws_worker_2
-    restart: "unless-stopped"
-    depends_on:
-    #  - ${SCYLLADB_CONTAINER_NAME}
-      - ${BACKEND_CONTAINER_NAME}
-    environment:
-      - BACKEND_HOST=${BACKEND_CONTAINER_NAME}
-      - SCYLLADB_HOST=${SCYLLADB_CONTAINER_NAME}
-    volumes:
-      - ./docker/ws_worker/startup_scripts:/startup_scripts
-      - ./docker/ws_worker/server:/server
-      - ./docker/ws_worker/sales_importer:/sales_importer
+      - ./docker/ws_worker:/ws_worker
     networks:
       - ffmt_network
 
