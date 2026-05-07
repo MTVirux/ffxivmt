@@ -1,4 +1,5 @@
 using Ffmt.Core.Configuration;
+using Ffmt.Core.External;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Storage.Elastic;
@@ -6,6 +7,7 @@ using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.DI;
 
@@ -37,6 +39,31 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<WorldStructureService>();
         services.AddSingleton<LocationResolver>();
         services.AddSingleton<GilfluxRankingReader>();
+
+        // External HTTP clients (Universalis + Garland), each with a Polly retry pipeline.
+        services.AddHttpClient<IUniversalisClient, UniversalisClient>(UniversalisClient.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<UniversalisOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(opts.RequestTimeoutSeconds);
+            })
+            .AddPolicyHandler((sp, _) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<UniversalisOptions>>().Value;
+                return HttpRetryPolicy.Build(opts.MaxRetries, opts.InitialBackoffSeconds, opts.MaxBackoffSeconds);
+            });
+
+        services.AddHttpClient<IGarlandClient, GarlandClient>(GarlandClient.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<GarlandOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(opts.RequestTimeoutSeconds);
+            })
+            .AddPolicyHandler((sp, _) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<GarlandOptions>>().Value;
+                return HttpRetryPolicy.Build(opts.MaxRetries, opts.InitialBackoffSeconds, opts.MaxBackoffSeconds);
+            });
 
         // Health checks (registered as services here; the API host adds them to the pipeline).
         services.AddSingleton<ScyllaHealthCheck>();
