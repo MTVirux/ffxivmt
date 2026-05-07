@@ -1,4 +1,5 @@
 using Ffmt.Api;
+using Ffmt.Api.Endpoints;
 using Ffmt.Core.DI;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Logging;
@@ -44,6 +45,9 @@ app.MapHealthChecks("/health/ready", new()
 
 // Compatibility shorthand for /health used during Phase 1; equivalent to /health/live.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+app.MapWorldsEndpoints();
+app.MapItemEndpoints();
 
 app.Run();
 
