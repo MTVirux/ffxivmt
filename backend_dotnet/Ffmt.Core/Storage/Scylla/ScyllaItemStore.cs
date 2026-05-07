@@ -7,8 +7,23 @@ public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
 {
     private const string CqlGetById = "SELECT id, name, marketable, craftable FROM items WHERE id = ?";
     private const string CqlGetAllNames = "SELECT id, name FROM items";
+    private const string CqlGetAllIds = "SELECT id FROM items";
     private const string CqlGetMarketableIds = "SELECT id FROM items WHERE marketable = true ALLOW FILTERING";
     private const string CqlGetCraftableIds = "SELECT id FROM items WHERE craftable = true ALLOW FILTERING";
+
+    private const string CqlUpsert = """
+        INSERT INTO items (
+            id, name, description,
+            can_be_hq, always_collectible, stack_size, item_level, icon_image,
+            rarity, filter_group, item_ui_category, item_search_category, equip_slot_category,
+            unique, untradable, disposable, dyable, aetherial_reductible,
+            materia_slot_count, advanced_melding,
+            craftable, marketable, from_scrips
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
+
+    private const string CqlUpdateMarketable = "UPDATE items SET marketable = ? WHERE id = ?";
+    private const string CqlUpdateCraftable = "UPDATE items SET craftable = ? WHERE id = ?";
 
     public async Task<Item?> GetAsync(int id, CancellationToken ct = default)
     {
@@ -30,11 +45,39 @@ public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
         return result;
     }
 
+    public Task<IReadOnlyList<int>> GetAllIdsAsync(CancellationToken ct = default) =>
+        FetchIdsAsync(CqlGetAllIds, ct);
+
     public Task<IReadOnlyList<int>> GetMarketableIdsAsync(CancellationToken ct = default) =>
         FetchIdsAsync(CqlGetMarketableIds, ct);
 
     public Task<IReadOnlyList<int>> GetCraftableIdsAsync(CancellationToken ct = default) =>
         FetchIdsAsync(CqlGetCraftableIds, ct);
+
+    public async Task UpsertAsync(ItemUpsert item, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlUpsert, ct).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(stmt.Bind(
+            item.Id, item.Name, item.Description,
+            item.CanBeHq, item.AlwaysCollectible, item.StackSize, item.ItemLevel, item.IconImage,
+            item.Rarity, item.FilterGroup, item.ItemUiCategory, item.ItemSearchCategory, item.EquipSlotCategory,
+            item.Unique, item.Untradable, item.Disposable, item.Dyable, item.AetherialReductible,
+            item.MateriaSlotCount, item.AdvancedMelding,
+            false, false, false))
+            .ConfigureAwait(false);
+    }
+
+    public async Task UpdateMarketableAsync(int id, bool marketable, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlUpdateMarketable, ct).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(stmt.Bind(marketable, id)).ConfigureAwait(false);
+    }
+
+    public async Task UpdateCraftableAsync(int id, bool craftable, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlUpdateCraftable, ct).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(stmt.Bind(craftable, id)).ConfigureAwait(false);
+    }
 
     private async Task<IReadOnlyList<int>> FetchIdsAsync(string cql, CancellationToken ct)
     {

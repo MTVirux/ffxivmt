@@ -9,4 +9,6 @@ public interface IWorldStore
     Task<World?> GetByIdAsync(int id, CancellationToken ct = default);
 
     Task<World?> GetByNameAsync(string name, CancellationToken ct = default);
+
+    Task UpsertAsync(World world, CancellationToken ct = default);
 }
