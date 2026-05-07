@@ -44,6 +44,13 @@ services:
       dockerfile: ${BACKEND_DOTNET_DOCKERFILE:-./docker/dockerfiles/Dockerfile_backend_dotnet}
     image: ffmt_backend_dotnet
     restart: "always"
+    depends_on:
+      # Plain depends_on only waits for *start*, not health — Scylla takes ~30–60s on first
+      # boot to accept CQL. The Lazy ScyllaSession + 20s healthcheck start_period absorb the
+      # gap. If we tighten this to `condition: service_healthy` later, add healthchecks on
+      # ffmt_scylla_node and ffmt_elastic first.
+      - ffmt_scylla_node
+      - ffmt_elastic
     ports:
       - "${BACKEND_DOTNET_HOST_PORT:-8080}:8080"
     environment:
