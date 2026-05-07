@@ -7,14 +7,19 @@ public sealed class GilfluxOptions
     public int RankingCacheSeconds { get; init; } = 20;
     public int WorldStructureCacheSeconds { get; init; } = 300;
     public int RankingUpdateMaxConcurrency { get; init; } = 0; // 0 = unlimited (Task.WhenAll fan-out)
-    public int[] TimeframesMs { get; init; } =
-    [
-        3_600_000,       // 1h
-        10_800_000,      // 3h
-        21_600_000,      // 6h
-        43_200_000,      // 12h
-        86_400_000,      // 1d
-        259_200_000,     // 3d
-        604_800_000,     // 7d
-    ];
+
+    /// <summary>
+    /// Labelled timeframes echoed back as <c>gilflux_timeframe_in_ms</c> in the gilflux responses.
+    /// Mirrors <c>backend/application/config/gilflux_timeframes.php</c>.
+    /// </summary>
+    public Dictionary<string, long> TimeframesMs { get; init; } = new()
+    {
+        ["7d"]  = 604_800_000,
+        ["3d"]  = 259_200_000,
+        ["1d"]  = 86_400_000,
+        ["12h"] = 43_200_000,
+        ["6h"]  = 21_600_000,
+        ["3h"]  = 10_800_000,
+        ["1h"]  = 3_600_000,
+    };
 }

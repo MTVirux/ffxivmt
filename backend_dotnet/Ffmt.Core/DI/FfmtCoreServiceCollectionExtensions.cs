@@ -1,4 +1,5 @@
 using Ffmt.Core.Configuration;
+using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Storage.Elastic;
 using Ffmt.Core.Storage.Scylla;
@@ -29,10 +30,13 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IScyllaSession, ScyllaSession>();
         services.AddSingleton<IItemStore, ScyllaItemStore>();
         services.AddSingleton<IWorldStore, ScyllaWorldStore>();
+        services.AddSingleton<IGilfluxRankingStore, ScyllaGilfluxRankingStore>();
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
 
         // Domain
         services.AddSingleton<WorldStructureService>();
+        services.AddSingleton<LocationResolver>();
+        services.AddSingleton<GilfluxRankingReader>();
 
         // Health checks (registered as services here; the API host adds them to the pipeline).
         services.AddSingleton<ScyllaHealthCheck>();
