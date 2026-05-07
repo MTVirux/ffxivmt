@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Ffmt.Api/Ffmt.Api.csproj" />
+  <Project Path="Ffmt.Cli/Ffmt.Cli.csproj" />
+  <Project Path="Ffmt.Core/Ffmt.Core.csproj" />
+  <Project Path="Ffmt.Tests/Ffmt.Tests.csproj" />
+</Solution>
