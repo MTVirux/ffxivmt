@@ -1,0 +1,58 @@
+# Multi-stage build for the .NET 9 ffmt backend (Ffmt.Api + Ffmt.Cli).
+# Build context: repo root.
+
+# ---- build ----
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy props/manifests first for better layer caching.
+COPY backend_dotnet/global.json backend_dotnet/Directory.Build.props backend_dotnet/Directory.Packages.props ./backend_dotnet/
+COPY backend_dotnet/Ffmt.slnx ./backend_dotnet/
+COPY backend_dotnet/Ffmt.Core/Ffmt.Core.csproj ./backend_dotnet/Ffmt.Core/
+COPY backend_dotnet/Ffmt.Api/Ffmt.Api.csproj ./backend_dotnet/Ffmt.Api/
+COPY backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj ./backend_dotnet/Ffmt.Cli/
+COPY backend_dotnet/Ffmt.Tests/Ffmt.Tests.csproj ./backend_dotnet/Ffmt.Tests/
+
+RUN dotnet restore ./backend_dotnet/Ffmt.slnx
+
+# Copy the rest and publish.
+COPY backend_dotnet/ ./backend_dotnet/
+
+RUN dotnet publish ./backend_dotnet/Ffmt.Api/Ffmt.Api.csproj \
+        -c Release \
+        -o /app/api \
+        --no-restore \
+        /p:UseAppHost=false \
+ && dotnet publish ./backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj \
+        -c Release \
+        -o /app/cli \
+        --no-restore \
+        /p:UseAppHost=false
+
+# ---- runtime ----
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+
+# tini for signal-handling; curl for healthcheck/diagnostics.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tini curl \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /app/api ./api
+COPY --from=build /app/cli ./cli
+
+# Convenience: `docker exec ffmt_backend_dotnet ffmt updatedb` instead of the full dotnet path.
+RUN printf '#!/bin/sh\nexec dotnet /app/cli/Ffmt.Cli.dll "$@"\n' > /usr/local/bin/ffmt \
+ && chmod +x /usr/local/bin/ffmt
+
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_GCServer=1
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8080/health/live || exit 1
+
+ENTRYPOINT ["/usr/bin/tini", "--", "dotnet", "/app/api/Ffmt.Api.dll"]
