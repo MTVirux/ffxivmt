@@ -34,7 +34,31 @@ services:
       - ./backend:/var/www/html/
     networks:
       - ffmt_network
-  
+
+  # .NET 9 backend, runs in parallel with the PHP backend during the rewrite. ws_worker still
+  # talks to ${BACKEND_CONTAINER_NAME} so leaving this up does not affect the live ingestion
+  # path; flip BACKEND_HOST in .env to ${BACKEND_DOTNET_CONTAINER_NAME} to point ws_worker here
+  # for staging diffs. Cutover replaces ffmt_backend entirely (see plan).
+  ffmt_backend_dotnet:
+    container_name: ${BACKEND_DOTNET_CONTAINER_NAME:-ffmt_backend_dotnet}
+    build:
+      context: .
+      dockerfile: ${BACKEND_DOTNET_DOCKERFILE:-./docker/dockerfiles/Dockerfile_backend_dotnet}
+    image: ffmt_backend_dotnet
+    restart: "always"
+    ports:
+      - "${BACKEND_DOTNET_HOST_PORT:-8080}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Scylla__ContactPoints__0=${SCYLLADB_CONTAINER_NAME:-ffmt_scylla_node}
+      - Elastic__Url=http://${ELASTICSEARCH_CONTAINER_NAME:-ffmt_elastic}:9200
+      - FfmtLogging__LogDirectory=/app/logs
+    volumes:
+      # Per-channel Serilog rolling files; the existing Promtail pipeline tails this directory.
+      - ./logs/backend_dotnet:/app/logs
+    networks:
+      - ffmt_network
+
   ffmt_ws_worker:
     build:
       context: .

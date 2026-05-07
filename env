@@ -5,6 +5,7 @@ COMPOSE_PROJECT_NAME=ffmt
 # ######################## Container Names ######################## #
 FRONTEND_CONTAINER_NAME=ffmt_frontend
 BACKEND_CONTAINER_NAME=ffmt_backend
+BACKEND_DOTNET_CONTAINER_NAME=ffmt_backend_dotnet
 WS_WORKER_CONTAINER_NAME=ffmt_ws_worker
 SCYLLADB_CONTAINER_NAME=ffmt_scylla_node
 ELASTICSEARCH_CONTAINER_NAME=ffmt_elastic
@@ -20,6 +21,7 @@ WS_WORKER_SERVICE_NAME=ffmt_ws_worker
 # ######################## Docker Files ######################## #
 
 BACKEND_DOCKERFILE=./docker/dockerfiles/Dockerfile_backend
+BACKEND_DOTNET_DOCKERFILE=./docker/dockerfiles/Dockerfile_backend_dotnet
 FRONTEND_DOCKERFILE=./docker/dockerfiles/Dockerfile_frontend
 WS_WORKER_DOCKERFILE=./docker/dockerfiles/Dockerfile_ws_worker
 SCYLLADB_DOCKERFILE=./docker/dockerfiles/Dockerfile_scylla
@@ -43,6 +45,10 @@ SCYLLA_DOCKER_PORT=9443
 #Backend
 BACKEND_HOST_PORT=80 #http
 BACKEND_HOST_SSL_PORT=443 #https
+
+# Dotnet backend bind port (parallel to PHP backend during the rewrite; cutover swaps the
+# above PHP ports onto this service or fronts it via Kestrel/host TLS).
+BACKEND_DOTNET_HOST_PORT=8080
 
 FRONTEND_HOST_PORT=8080
 
