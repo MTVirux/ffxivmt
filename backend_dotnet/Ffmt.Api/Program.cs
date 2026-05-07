@@ -67,6 +67,7 @@ app.MapWorldsEndpoints();
 app.MapItemEndpoints();
 app.MapGilfluxEndpoints();
 app.MapUpdatedbEndpoints();
+app.MapSearchBuyerEndpoints();
 
 app.Run();
 

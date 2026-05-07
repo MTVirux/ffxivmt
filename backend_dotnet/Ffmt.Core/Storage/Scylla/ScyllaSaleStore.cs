@@ -15,6 +15,21 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
+    private const string CqlSearchBuyer = """
+        SELECT buyer_name, hq, on_mannequin, unit_price, quantity, sale_time,
+               world_id, item_id, world_name, item_name, total, datacenter, region
+        FROM sales
+        WHERE buyer_name = ?
+        """;
+
+    private const string CqlSearchBuyerWithWorld = """
+        SELECT buyer_name, hq, on_mannequin, unit_price, quantity, sale_time,
+               world_id, item_id, world_name, item_name, total, datacenter, region
+        FROM sales
+        WHERE buyer_name = ? AND world_id = ?
+        ALLOW FILTERING
+        """;
+
     private const int BatchRows = 1000;
 
     public async Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
@@ -64,6 +79,38 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         logger.LogInformation("Inserted {Parsed} sales in {Seconds:F3}s.", parsed, seconds);
         return new SaleBatchResult(parsed, seconds);
     }
+
+    public async Task<IReadOnlyList<Sale>> SearchBuyerAsync(string buyerName, int? worldId, CancellationToken ct = default)
+    {
+        var (cql, args) = worldId is null
+            ? (CqlSearchBuyer, new object[] { buyerName })
+            : (CqlSearchBuyerWithWorld, new object[] { buyerName, worldId.Value });
+
+        var stmt = await scylla.PrepareAsync(cql, ct).ConfigureAwait(false);
+        var rows = await scylla.Session.ExecuteAsync(stmt.Bind(args)).ConfigureAwait(false);
+
+        var result = new List<Sale>();
+        foreach (var row in rows)
+        {
+            result.Add(MapRow(row));
+        }
+        return result;
+    }
+
+    private static Sale MapRow(Row row) => new(
+        ItemId:       row.GetValue<int>("item_id"),
+        WorldId:      row.GetValue<int>("world_id"),
+        ItemName:     row.GetValue<string>("item_name") ?? string.Empty,
+        WorldName:    row.GetValue<string>("world_name") ?? string.Empty,
+        Datacenter:   row.GetValue<string>("datacenter") ?? string.Empty,
+        Region:       row.GetValue<string>("region") ?? string.Empty,
+        BuyerName:    row.GetValue<string>("buyer_name") ?? string.Empty,
+        Hq:           !row.IsNull("hq") && row.GetValue<bool>("hq"),
+        OnMannequin:  !row.IsNull("on_mannequin") && row.GetValue<bool>("on_mannequin"),
+        Quantity:     row.GetValue<int>("quantity"),
+        UnitPrice:    row.GetValue<int>("unit_price"),
+        Total:        row.GetValue<int>("total"),
+        SaleTime:     row.GetValue<DateTimeOffset>("sale_time"));
 
     private static BatchStatement NewBatch(ConsistencyLevel cl) =>
         (BatchStatement)new BatchStatement().SetBatchType(BatchType.Unlogged).SetConsistencyLevel(cl);
