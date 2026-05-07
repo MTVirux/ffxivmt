@@ -73,6 +73,7 @@ app.MapGilfluxEndpoints();
 app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
 app.MapToolsEndpoints();
+app.MapStatusEndpoints();
 
 app.MapRazorPages();
 
