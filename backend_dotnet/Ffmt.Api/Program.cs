@@ -68,6 +68,7 @@ app.MapItemEndpoints();
 app.MapGilfluxEndpoints();
 app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
+app.MapToolsEndpoints();
 
 app.Run();
 
