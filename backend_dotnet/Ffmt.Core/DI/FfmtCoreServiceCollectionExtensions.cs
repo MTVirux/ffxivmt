@@ -34,6 +34,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IItemStore, ScyllaItemStore>();
         services.AddSingleton<IWorldStore, ScyllaWorldStore>();
         services.AddSingleton<IGilfluxRankingStore, ScyllaGilfluxRankingStore>();
+        services.AddSingleton<ISaleStore, ScyllaSaleStore>();
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
 
         // Domain
