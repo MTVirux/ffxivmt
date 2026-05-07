@@ -1,4 +1,13 @@
 # ######################## Docker Compose ######################## #
+#
+# Docker Compose v2 only auto-loads a file literally named `.env` (with a leading dot).
+# Copy this file once before running any `docker compose` command:
+#
+#     cp env .env
+#
+# `.env` is gitignored so it can hold real secrets without leaking into the repo;
+# this committed `env` is the template. As an alternative to copying, pass
+# `--env-file env` on every invocation (e.g. `docker compose --env-file env up -d ...`).
 
 COMPOSE_PROJECT_NAME=ffmt
 
