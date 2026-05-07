@@ -1,0 +1,17 @@
+# Dev override for the .NET backend. Use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d ffmt_backend_dotnet
+#
+# Swaps the production runtime image for the SDK-based watch image and bind-mounts the
+# source tree so changes under ./backend_dotnet/ trigger a rebuild via `dotnet watch`.
+
+services:
+  ffmt_backend_dotnet:
+    build:
+      context: .
+      dockerfile: ./docker/dockerfiles/Dockerfile_backend_dotnet_dev
+    image: ffmt_backend_dotnet_dev
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - ./backend_dotnet:/src/backend_dotnet
+      - ./logs/backend_dotnet:/app/logs
