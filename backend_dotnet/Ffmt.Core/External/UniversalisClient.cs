@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ffmt.Core.Logging;
 using Ffmt.Core.Models;
@@ -50,6 +52,68 @@ public sealed class UniversalisClient(HttpClient http, ILogger<UniversalisClient
         }
         logger.LogInformation("Universalis topology: {WorldCount} worlds across {DcCount} datacenters.", result.Count, dcs.Length);
         return result;
+    }
+
+    public async Task<IReadOnlyDictionary<int, UniversalisMarketBoardListing>> GetMarketBoardDataAsync(
+        string location, IReadOnlyList<int> itemIds, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            throw new ArgumentException("location is required", nameof(location));
+        }
+        if (itemIds.Count == 0)
+        {
+            return new Dictionary<int, UniversalisMarketBoardListing>();
+        }
+
+        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+
+        // /api/v2/{location}/{itemIds} — Universalis returns the multi-id shape with an `items`
+        // dictionary when the path has a comma, and a flat object otherwise.
+        var idsPath = string.Join(",", itemIds.Select(i => i.ToString(CultureInfo.InvariantCulture)));
+        var path = $"{Uri.EscapeDataString(location)}/{idsPath}";
+
+        await using var stream = await http.GetStreamAsync(path, ct).ConfigureAwait(false);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+
+        var result = new Dictionary<int, UniversalisMarketBoardListing>();
+        var root = doc.RootElement;
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            logger.LogWarning("Universalis returned a non-object response for {Location}/{Ids}.", location, idsPath);
+            return result;
+        }
+
+        if (root.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var prop in items.EnumerateObject())
+            {
+                if (!int.TryParse(prop.Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+                {
+                    continue;
+                }
+                result[id] = ParseListing(prop.Value);
+            }
+        }
+        else if (root.TryGetProperty("itemID", out var idProp) && idProp.TryGetInt32(out var singleId))
+        {
+            result[singleId] = ParseListing(root);
+        }
+
+        logger.LogInformation("Universalis MB data: {Hits}/{Requested} items at {Location}.", result.Count, itemIds.Count, location);
+        return result;
+    }
+
+    private static UniversalisMarketBoardListing ParseListing(JsonElement element)
+    {
+        var minPrice = element.TryGetProperty("minPrice", out var mp) && mp.ValueKind == JsonValueKind.Number
+            ? mp.GetInt32()
+            : 0;
+        var velocity = element.TryGetProperty("regularSaleVelocity", out var rv) && rv.ValueKind == JsonValueKind.Number
+            ? rv.GetDouble()
+            : 0d;
+        return new UniversalisMarketBoardListing(minPrice, velocity);
     }
 
     private sealed record UniversalisWorld(
