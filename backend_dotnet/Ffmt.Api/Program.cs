@@ -25,6 +25,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // legacy PHP API consumers see byte-compatible field names. Dictionary keys are deliberately
     // left as-is so /api/v1/worlds keeps preserving original region/datacenter casing.
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+
+    // Inbound payloads from Universalis (and the Python importer that forwards them) mix
+    // `worldID` and `worldId` casings depending on the upstream endpoint hit. Match
+    // case-insensitively so both bind to the same C# property.
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
 builder.Services.AddExceptionHandler<BackendUnavailableExceptionHandler>();
@@ -61,6 +66,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapWorldsEndpoints();
 app.MapItemEndpoints();
 app.MapGilfluxEndpoints();
+app.MapUpdatedbEndpoints();
 
 app.Run();
 
