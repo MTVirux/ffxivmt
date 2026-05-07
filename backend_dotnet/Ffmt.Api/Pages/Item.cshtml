@@ -1,0 +1,25 @@
+@page "/item/{id:int}"
+@model Ffmt.Api.Pages.ItemModel
+@{
+    ViewData["Title"] = Model.Item?.Name ?? "Item";
+}
+
+@if (Model.Item is { } item)
+{
+    <h1 id="page-title">@item.Name</h1>
+
+    <dl class="row mt-4">
+        <dt class="col-sm-3">ID</dt>
+        <dd class="col-sm-9">@item.Id</dd>
+
+        <dt class="col-sm-3">Marketable</dt>
+        <dd class="col-sm-9">@(item.Marketable ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-3">Craftable</dt>
+        <dd class="col-sm-9">@(item.Craftable ? "Yes" : "No")</dd>
+    </dl>
+
+    <p>
+        <a class="btn btn-secondary" href="/api/v1/gilflux/item/@item.Id">Gilflux history (JSON)</a>
+    </p>
+}

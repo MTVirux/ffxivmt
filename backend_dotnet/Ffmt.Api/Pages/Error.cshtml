@@ -1,0 +1,9 @@
+@page "/error/{statusCode:int?}"
+@model Ffmt.Api.Pages.ErrorModel
+@{
+    ViewData["Title"] = $"Error {Model.Status}";
+}
+
+<h1 id="page-title">Error @Model.Status</h1>
+<p>@Model.Message</p>
+<a class="btn btn-primary" href="/">Back to home</a>

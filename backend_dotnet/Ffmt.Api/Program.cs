@@ -37,6 +37,8 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddRequestTimeouts();
 
+builder.Services.AddRazorPages();
+
 builder.Services
     .AddHealthChecks()
     .AddCheck<ScyllaHealthCheck>("scylla", tags: ["ready", "scylla"])
@@ -45,8 +47,10 @@ builder.Services
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseStatusCodePagesWithReExecute("/error/{0}");
 app.UseSerilogRequestLogging();
 app.UseRequestTimeouts();
+app.UseStaticFiles();
 
 // Liveness: process is up.
 app.MapHealthChecks("/health/live", new()
@@ -69,6 +73,8 @@ app.MapGilfluxEndpoints();
 app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
 app.MapToolsEndpoints();
+
+app.MapRazorPages();
 
 app.Run();
 
