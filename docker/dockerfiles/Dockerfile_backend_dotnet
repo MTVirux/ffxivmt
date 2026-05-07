@@ -13,20 +13,23 @@ COPY backend_dotnet/Ffmt.Api/Ffmt.Api.csproj ./backend_dotnet/Ffmt.Api/
 COPY backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj ./backend_dotnet/Ffmt.Cli/
 COPY backend_dotnet/Ffmt.Tests/Ffmt.Tests.csproj ./backend_dotnet/Ffmt.Tests/
 
-RUN dotnet restore ./backend_dotnet/Ffmt.slnx
+# Restore each project explicitly. Solution-level restore over a .slnx sometimes leaves
+# transitive packages un-materialized, which then trips the per-project publish below; per-
+# project restore avoids that.
+RUN dotnet restore ./backend_dotnet/Ffmt.Api/Ffmt.Api.csproj \
+ && dotnet restore ./backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj
 
-# Copy the rest and publish.
+# Copy the rest and publish. Drop --no-restore so each publish does its own restore as a
+# belt-and-suspenders against the .slnx transitive-pinning quirk.
 COPY backend_dotnet/ ./backend_dotnet/
 
 RUN dotnet publish ./backend_dotnet/Ffmt.Api/Ffmt.Api.csproj \
         -c Release \
         -o /app/api \
-        --no-restore \
         /p:UseAppHost=false \
  && dotnet publish ./backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj \
         -c Release \
         -o /app/cli \
-        --no-restore \
         /p:UseAppHost=false
 
 # ---- runtime ----
