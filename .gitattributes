@@ -1,0 +1,5 @@
+# Force LF line endings for shell scripts so Git Bash on Windows (which respects
+# core.autocrlf) doesn't reintroduce CRLF on checkout. CRLF in a .sh file makes the
+# shebang `#!/bin/bash\r` and the kernel reports "no such file or directory" for
+# `/bin/bash\r` — which is what bricked the Scylla startup container.
+*.sh text eol=lf

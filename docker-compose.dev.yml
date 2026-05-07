@@ -1,10 +1,24 @@
-# Dev override for the .NET backend. Use with:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d ffmt_backend_dotnet
+# Dev overrides — file edits on the host are reflected in containers without a manual rebuild.
+# Use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #
-# Swaps the production runtime image for the SDK-based watch image and bind-mounts the
-# source tree so changes under ./backend_dotnet/ trigger a rebuild via `dotnet watch`.
+# What each override does:
+#   ffmt_backend         — disables OPcache so PHP edits land on the next request.
+#   ffmt_backend_dotnet  — swaps to the SDK image and runs `dotnet watch` with polling.
+#   ffmt_ws_worker       — sets WS_WORKER_DEV_WATCH=true, which routes startup through
+#                          run_server_watch.sh (watchfiles-wrapped) for auto-restart on .py
+#                          edits in /server, /sales_importer/python, and /ws_worker/common.
+#
+# Note: ./backend, ./backend_dotnet, and ./docker/ws_worker/{server,sales_importer,...} are
+# already bind-mounted by the base docker-compose.yml — these overrides only flip dev
+# behavior, they do not introduce new mounts beyond a single PHP ini drop-in.
 
 services:
+  ffmt_backend:
+    volumes:
+      # Compose merges this with the base file's ./backend:/var/www/html mount.
+      - ./docker/backend/dev/zz-dev-opcache.ini:/usr/local/etc/php/conf.d/zz-dev-opcache.ini:ro
+
   ffmt_backend_dotnet:
     build:
       context: .
@@ -15,3 +29,9 @@ services:
     volumes:
       - ./backend_dotnet:/src/backend_dotnet
       - ./logs/backend_dotnet:/app/logs
+
+  ffmt_ws_worker:
+    environment:
+      # Routes 999999- startup.sh to run_server_watch.sh. BACKEND_HOST/SCYLLADB_HOST are
+      # already set in the base file and are merged in automatically.
+      - WS_WORKER_DEV_WATCH=true

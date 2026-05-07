@@ -18,6 +18,10 @@ docker/redis/server/logs/system/*.log
 docker/scylla/persistent
 
 .vscode/*
+.claude/*
+.cache
+.pycahce
+CLAUDE.md
 
 ####### MARIADB DOCKER DIR #######
 docker/mariadb/var/*
