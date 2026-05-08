@@ -4,20 +4,24 @@ namespace WsWorker.Services;
 
 public sealed class WorldDataCache
 {
+    private sealed record CacheSnapshot(
+        IReadOnlyDictionary<int, World> Worlds,
+        IReadOnlyDictionary<int, string> ItemNames,
+        IReadOnlyDictionary<int, string> MarketableItemNames,
+        IReadOnlyList<int> MarketableItemIds,
+        IReadOnlyList<string> Regions
+    );
+
     private readonly ScyllaService _scylla;
     private readonly ILogger<WorldDataCache> _logger;
 
-    private IReadOnlyDictionary<int, World> _worlds = new Dictionary<int, World>();
-    private IReadOnlyDictionary<int, string> _itemNames = new Dictionary<int, string>();
-    private IReadOnlyDictionary<int, string> _marketableItemNames = new Dictionary<int, string>();
-    private IReadOnlyList<int> _marketableItemIds = Array.Empty<int>();
-    private IReadOnlyList<string> _regions = Array.Empty<string>();
+    private volatile CacheSnapshot _snapshot = null!;
 
-    public IReadOnlyDictionary<int, World> Worlds => _worlds;
-    public IReadOnlyDictionary<int, string> ItemNames => _itemNames;
-    public IReadOnlyDictionary<int, string> MarketableItemNames => _marketableItemNames;
-    public IReadOnlyList<int> MarketableItemIds => _marketableItemIds;
-    public IReadOnlyList<string> Regions => _regions;
+    public IReadOnlyDictionary<int, World> Worlds => _snapshot.Worlds;
+    public IReadOnlyDictionary<int, string> ItemNames => _snapshot.ItemNames;
+    public IReadOnlyDictionary<int, string> MarketableItemNames => _snapshot.MarketableItemNames;
+    public IReadOnlyList<int> MarketableItemIds => _snapshot.MarketableItemIds;
+    public IReadOnlyList<string> Regions => _snapshot.Regions;
 
     public WorldDataCache(ScyllaService scylla, ILogger<WorldDataCache> logger)
     {
@@ -68,11 +72,7 @@ public sealed class WorldDataCache
         var marketableItemIds = marketableItemNames.Keys.OrderBy(id => id).ToList();
         var regions = worlds.Values.Select(w => w.Region).Distinct().ToList();
 
-        _worlds = worlds;
-        _itemNames = itemNames;
-        _marketableItemNames = marketableItemNames;
-        _marketableItemIds = marketableItemIds;
-        _regions = regions;
+        _snapshot = new CacheSnapshot(worlds, itemNames, marketableItemNames, marketableItemIds, regions);
 
         _logger.LogInformation(
             "WorldDataCache loaded: {WorldCount} worlds, {ItemCount} items, {MarketableCount} marketable items, {RegionCount} regions",
@@ -82,8 +82,8 @@ public sealed class WorldDataCache
     public Task RefreshAsync() => InitializeAsync();
 
     public World? GetWorld(int worldId)
-        => _worlds.TryGetValue(worldId, out var world) ? world : null;
+        => _snapshot.Worlds.TryGetValue(worldId, out var world) ? world : null;
 
     public string? GetItemName(int itemId)
-        => _itemNames.TryGetValue(itemId, out var name) ? name : null;
+        => _snapshot.ItemNames.TryGetValue(itemId, out var name) ? name : null;
 }
