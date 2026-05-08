@@ -97,6 +97,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
         }
 
         _logger.LogInformation("Subscribed to {Count} world channel(s)", worldIds.Count);
+        IsConnected = true;
 
         var buffer = new byte[64 * 1024];
         using var messageStream = new MemoryStream();
@@ -120,8 +121,6 @@ public sealed class UniversalisWsConsumer : BackgroundService
                 messageStream.Write(buffer, 0, result.Count);
             }
             while (!result.EndOfMessage);
-
-            IsConnected = true;
 
             var messageBytes = messageStream.ToArray();
 
