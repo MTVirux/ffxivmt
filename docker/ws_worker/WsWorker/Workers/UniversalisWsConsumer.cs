@@ -19,7 +19,8 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
     private int _inflightCount;
 
-    public bool IsConnected { get; private set; }
+    private volatile bool _isConnected;
+    public bool IsConnected => _isConnected;
 
     public UniversalisWsConsumer(
         ScyllaService scyllaService,
@@ -63,7 +64,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
             }
             catch (Exception ex)
             {
-                IsConnected = false;
+                _isConnected = false;
                 var jitter = Random.Shared.NextDouble() * 2;
                 var delay = backoffSeconds + jitter;
                 _logger.LogWarning(ex, "WebSocket consumer loop failed — reconnecting in {Delay:F1}s", delay);
@@ -97,7 +98,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
         }
 
         _logger.LogInformation("Subscribed to {Count} world channel(s)", worldIds.Count);
-        IsConnected = true;
+        _isConnected = true;
 
         var buffer = new byte[64 * 1024];
         using var messageStream = new MemoryStream();
@@ -113,8 +114,9 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
+                    _isConnected = false;
+                    await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
                     _logger.LogInformation("WebSocket closed by server");
-                    IsConnected = false;
                     return;
                 }
 
@@ -122,16 +124,15 @@ public sealed class UniversalisWsConsumer : BackgroundService
             }
             while (!result.EndOfMessage);
 
-            var messageBytes = messageStream.ToArray();
-
             BsonDocument doc;
             try
             {
-                doc = BsonSerializer.Deserialize<BsonDocument>(messageBytes);
+                messageStream.Position = 0;
+                doc = BsonSerializer.Deserialize<BsonDocument>(messageStream);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to deserialize BSON message ({ByteCount} bytes)", messageBytes.Length);
+                _logger.LogWarning(ex, "Failed to deserialize BSON message ({ByteCount} bytes)", messageStream.Length);
                 continue;
             }
 
@@ -169,12 +170,14 @@ public sealed class UniversalisWsConsumer : BackgroundService
                     if (saleEntry is not BsonDocument saleDoc)
                         continue;
 
-                    var buyerName = saleDoc.TryGetValue("buyerName", out var bn) ? bn.AsString : string.Empty;
+                    var buyerName = saleDoc.TryGetValue("buyerName", out var bn) && bn.IsString
+                        ? bn.AsString
+                        : string.Empty;
                     if (string.IsNullOrEmpty(buyerName))
                         continue;
 
-                    var hq = saleDoc.TryGetValue("hq", out var hqVal) && hqVal.AsBoolean;
-                    var onMannequin = saleDoc.TryGetValue("onMannequin", out var omVal) && omVal.AsBoolean;
+                    var hq = saleDoc.TryGetValue("hq", out var hqVal) && hqVal.IsBoolean && hqVal.AsBoolean;
+                    var onMannequin = saleDoc.TryGetValue("onMannequin", out var omVal) && omVal.IsBoolean && omVal.AsBoolean;
                     var pricePerUnit = saleDoc.TryGetValue("pricePerUnit", out var ppuVal) ? ppuVal.ToInt32() : 0;
                     var quantity = saleDoc.TryGetValue("quantity", out var qVal) ? qVal.ToInt32() : 0;
                     var timestamp = saleDoc.TryGetValue("timestamp", out var tsVal) ? tsVal.ToInt64() : 0L;
@@ -220,6 +223,9 @@ public sealed class UniversalisWsConsumer : BackgroundService
                             _logger.LogError(t.Exception, "Scylla fire-and-forget sale insert failed");
                     }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
 
+                    if (_inflightCount > 500)
+                        await Task.Yield();
+
                     _logger.LogDebug(
                         "Sale processed: world={WorldId} item={ItemId} buyer={BuyerName} price={Price}",
                         worldId, itemId, buyerName, pricePerUnit);
@@ -227,12 +233,9 @@ public sealed class UniversalisWsConsumer : BackgroundService
             }
 
             _gilfluxCoalescer.Submit(worldId, itemId);
-
-            if (_inflightCount > 500)
-                await Task.Yield();
         }
 
-        IsConnected = false;
+        _isConnected = false;
         _logger.LogInformation("WebSocket consumer loop exited (state={State})", ws.State);
     }
 }
