@@ -14,6 +14,8 @@ public sealed class WorldDataCache
 
     private readonly ScyllaService _scylla;
     private readonly ILogger<WorldDataCache> _logger;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private volatile bool _initialized;
 
     private volatile CacheSnapshot _snapshot = null!;
 
@@ -31,6 +33,12 @@ public sealed class WorldDataCache
 
     public async Task InitializeAsync()
     {
+        await _initLock.WaitAsync();
+        try
+        {
+            if (_initialized)
+                return;
+
         var worldsStatement = await _scylla.PrepareAsync("SELECT id, name, datacenter, region FROM ffmt.worlds");
         var worldsResult = await _scylla.ExecuteAsync(worldsStatement.Bind());
 
@@ -57,11 +65,17 @@ public sealed class WorldDataCache
         var marketableItemIds = marketableItemNames.Keys.OrderBy(id => id).ToList();
         var regions = worlds.Values.Select(w => w.Region).Distinct().ToList();
 
-        _snapshot = new CacheSnapshot(worlds, itemNames, marketableItemNames, marketableItemIds, regions);
+            _snapshot = new CacheSnapshot(worlds, itemNames, marketableItemNames, marketableItemIds, regions);
+            _initialized = true;
 
-        _logger.LogInformation(
-            "WorldDataCache loaded: {WorldCount} worlds, {ItemCount} items, {MarketableCount} marketable items, {RegionCount} regions",
-            worlds.Count, itemNames.Count, marketableItemNames.Count, regions.Count);
+            _logger.LogInformation(
+                "WorldDataCache loaded: {WorldCount} worlds, {ItemCount} items, {MarketableCount} marketable items, {RegionCount} regions",
+                worlds.Count, itemNames.Count, marketableItemNames.Count, regions.Count);
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     public Task RefreshAsync() => InitializeAsync();
