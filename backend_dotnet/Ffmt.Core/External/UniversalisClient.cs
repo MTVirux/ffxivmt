@@ -113,8 +113,28 @@ public sealed class UniversalisClient(HttpClient http, ILogger<UniversalisClient
         var velocity = element.TryGetProperty("regularSaleVelocity", out var rv) && rv.ValueKind == JsonValueKind.Number
             ? rv.GetDouble()
             : 0d;
-        return new UniversalisMarketBoardListing(minPrice, velocity);
+        var histogram = ParseStackSizeHistogram(element);
+        return new UniversalisMarketBoardListing(minPrice, velocity, histogram);
     }
+
+    private static IReadOnlyDictionary<int, int> ParseStackSizeHistogram(JsonElement element)
+    {
+        if (!element.TryGetProperty("stackSizeHistogram", out var histo) || histo.ValueKind != JsonValueKind.Object)
+        {
+            return EmptyHistogram;
+        }
+
+        var result = new Dictionary<int, int>();
+        foreach (var prop in histo.EnumerateObject())
+        {
+            if (!int.TryParse(prop.Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size)) continue;
+            if (prop.Value.ValueKind != JsonValueKind.Number || !prop.Value.TryGetInt32(out var occ)) continue;
+            result[size] = occ;
+        }
+        return result;
+    }
+
+    private static readonly IReadOnlyDictionary<int, int> EmptyHistogram = new Dictionary<int, int>();
 
     private sealed record UniversalisWorld(
         [property: JsonPropertyName("id")] int Id,

@@ -115,6 +115,70 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
         return result;
     }
 
+    public async Task<IReadOnlyList<GarlandTradeCurrencyListing>> GetItemTradeCurrencyAsync(int currencyItemId, CancellationToken ct = default)
+    {
+        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+
+        var path = $"item/en/3/{currencyItemId.ToString(CultureInfo.InvariantCulture)}.json";
+        await using var stream = await http.GetStreamAsync(path, ct).ConfigureAwait(false);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+
+        var root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Object) return Array.Empty<GarlandTradeCurrencyListing>();
+        if (!root.TryGetProperty("item", out var item) || item.ValueKind != JsonValueKind.Object) return Array.Empty<GarlandTradeCurrencyListing>();
+        if (!item.TryGetProperty("tradeCurrency", out var trade) || trade.ValueKind != JsonValueKind.Array) return Array.Empty<GarlandTradeCurrencyListing>();
+
+        var result = new List<GarlandTradeCurrencyListing>();
+        foreach (var shop in trade.EnumerateArray())
+        {
+            if (shop.ValueKind != JsonValueKind.Object) continue;
+            if (!shop.TryGetProperty("listings", out var listings) || listings.ValueKind != JsonValueKind.Array) continue;
+
+            foreach (var listing in listings.EnumerateArray())
+            {
+                if (listing.ValueKind != JsonValueKind.Object) continue;
+
+                if (!TryFirstId(listing, "item", out var itemId)) continue;
+                if (!TryFirstId(listing, "currency", out var curId)) continue;
+                if (!TryFirstAmount(listing, "currency", out var amount)) continue;
+
+                result.Add(new GarlandTradeCurrencyListing(itemId, curId, amount));
+            }
+        }
+        logger.LogInformation("Garland tradeCurrency for {Id}: {Count} listings.", currencyItemId, result.Count);
+        return result;
+    }
+
+    private static bool TryFirstId(JsonElement listing, string key, out int id)
+    {
+        id = 0;
+        if (!listing.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array) return false;
+        var first = arr.EnumerateArray().FirstOrDefault();
+        if (first.ValueKind != JsonValueKind.Object) return false;
+        if (!first.TryGetProperty("id", out var idEl)) return false;
+        return idEl.ValueKind switch
+        {
+            JsonValueKind.Number => idEl.TryGetInt32(out id),
+            JsonValueKind.String => int.TryParse(idEl.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out id),
+            _ => false,
+        };
+    }
+
+    private static bool TryFirstAmount(JsonElement listing, string key, out int amount)
+    {
+        amount = 0;
+        if (!listing.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array) return false;
+        var first = arr.EnumerateArray().FirstOrDefault();
+        if (first.ValueKind != JsonValueKind.Object) return false;
+        if (!first.TryGetProperty("amount", out var amEl)) return false;
+        return amEl.ValueKind switch
+        {
+            JsonValueKind.Number => amEl.TryGetInt32(out amount),
+            JsonValueKind.String => int.TryParse(amEl.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out amount),
+            _ => false,
+        };
+    }
+
     public async Task<GarlandInstanceDetail?> GetInstanceAsync(int id, CancellationToken ct = default)
     {
         using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });

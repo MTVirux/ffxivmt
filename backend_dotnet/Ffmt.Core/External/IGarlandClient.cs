@@ -30,6 +30,11 @@ public interface IGarlandClient
     /// to <c>type == "item"</c>.
     /// </summary>
     Task<GarlandInstanceDetail?> GetInstanceAsync(int id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Walks <c>item.tradeCurrency[*].listings[*]</c> — one entry per (exchanged item, currency, amount).
+    /// </summary>
+    Task<IReadOnlyList<GarlandTradeCurrencyListing>> GetItemTradeCurrencyAsync(int currencyItemId, CancellationToken ct = default);
 }
 
 public sealed record GarlandItemFlags(int Id, bool HasCraft);
@@ -39,3 +44,5 @@ public sealed record GarlandItemDetail(int Id, string Name, IReadOnlyList<int> R
 public sealed record GarlandInstanceSummary(int Id, string Name, string Type, int? MinLevel, int? MaxLevel);
 
 public sealed record GarlandInstanceDetail(int Id, IReadOnlyList<int> LootItemIds);
+
+public sealed record GarlandTradeCurrencyListing(int ItemId, int CurrencyId, int CurrencyAmount);

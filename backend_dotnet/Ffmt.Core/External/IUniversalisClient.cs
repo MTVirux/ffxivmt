@@ -23,4 +23,11 @@ public interface IUniversalisClient
         string location, IReadOnlyList<int> itemIds, CancellationToken ct = default);
 }
 
-public sealed record UniversalisMarketBoardListing(int MinPrice, double RegularSaleVelocity);
+/// <summary>
+/// Subset of Universalis's per-item market-board summary surfaced today.
+/// <see cref="StackSizeHistogram"/> maps stack size → occurrence count.
+/// </summary>
+public sealed record UniversalisMarketBoardListing(
+    int MinPrice,
+    double RegularSaleVelocity,
+    IReadOnlyDictionary<int, int> StackSizeHistogram);
