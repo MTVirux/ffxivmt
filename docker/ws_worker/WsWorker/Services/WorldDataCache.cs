@@ -47,28 +47,13 @@ public sealed class WorldDataCache
             worlds[world.Id] = world;
         }
 
-        var itemsStatement = await _scylla.PrepareAsync("SELECT id, name FROM ffmt.items");
-        var itemsResult = await _scylla.ExecuteAsync(itemsStatement.Bind());
+        var itemsStatement = await _scylla.PrepareAsync("SELECT id, name, marketable FROM ffmt.items");
+        var allItemRows = (await _scylla.ExecuteAsync(itemsStatement.Bind())).ToList();
 
-        var itemNames = new Dictionary<int, string>();
-        foreach (var row in itemsResult)
-        {
-            var id = row.GetValue<int>("id");
-            var name = row.GetValue<string>("name");
-            itemNames[id] = name;
-        }
-
-        var marketableStatement = await _scylla.PrepareAsync("SELECT id, name FROM ffmt.items WHERE marketable = true ALLOW FILTERING");
-        var marketableResult = await _scylla.ExecuteAsync(marketableStatement.Bind());
-
-        var marketableItemNames = new Dictionary<int, string>();
-        foreach (var row in marketableResult)
-        {
-            var id = row.GetValue<int>("id");
-            var name = row.GetValue<string>("name");
-            marketableItemNames[id] = name;
-        }
-
+        var itemNames = allItemRows.ToDictionary(r => r.GetValue<int>("id"), r => r.GetValue<string>("name") ?? string.Empty);
+        var marketableItemNames = allItemRows
+            .Where(r => r.GetValue<bool>("marketable"))
+            .ToDictionary(r => r.GetValue<int>("id"), r => r.GetValue<string>("name") ?? string.Empty);
         var marketableItemIds = marketableItemNames.Keys.OrderBy(id => id).ToList();
         var regions = worlds.Values.Select(w => w.Region).Distinct().ToList();
 

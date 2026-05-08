@@ -16,9 +16,9 @@ public sealed class ScyllaService
     private CassandraCluster? _cluster;
     private CassandraSession? _session;
     private readonly SemaphoreSlim _initLock = new(1, 1);
-    private bool _initialized;
+    private volatile bool _initialized;
 
-    private readonly ConcurrentDictionary<string, PreparedStatement> _statementCache = new();
+    private readonly ConcurrentDictionary<string, Task<PreparedStatement>> _statementCache = new();
 
     public PreparedStatement SalesInsert { get; private set; } = null!;
 
@@ -49,8 +49,7 @@ public sealed class ScyllaService
             _session = await _cluster.ConnectAsync(_options.Keyspace);
             _logger.LogInformation("Connected to Scylla at {Host}, keyspace {Keyspace}", _options.Host, _options.Keyspace);
 
-            SalesInsert = await _session.PrepareAsync(SalesInsertCql);
-            _statementCache[SalesInsertCql] = SalesInsert;
+            SalesInsert = await _statementCache.GetOrAdd(SalesInsertCql, c => Session.PrepareAsync(c));
             _logger.LogInformation("Pre-prepared sales INSERT statement");
 
             _initialized = true;
@@ -71,29 +70,22 @@ public sealed class ScyllaService
         }
     }
 
-    public async Task<PreparedStatement> PrepareAsync(string cql)
-    {
-        if (_statementCache.TryGetValue(cql, out var cached))
-            return cached;
-
-        var prepared = await Session.PrepareAsync(cql);
-        _statementCache[cql] = prepared;
-        return prepared;
-    }
+    public Task<PreparedStatement> PrepareAsync(string cql) =>
+        _statementCache.GetOrAdd(cql, c => Session.PrepareAsync(c));
 
     public Task<RowSet> ExecuteAsync(IStatement statement)
         => Session.ExecuteAsync(statement);
 
     public void ExecuteAsyncFireAndForget(IStatement statement, ILogger logger)
     {
-        Session.ExecuteAsync(statement).ContinueWith(t =>
-        {
-            if (t.IsFaulted)
-                logger.LogError(t.Exception, "Scylla fire-and-forget execution failed");
-        }, TaskContinuationOptions.OnlyOnFaulted);
+        Session.ExecuteAsync(statement).ContinueWith(
+            t => logger.LogError(t.Exception, "Scylla fire-and-forget execution failed"),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
     }
 
-    public CassandraSession GetSession() => Session;
+    internal CassandraSession GetSession() => Session;
 
     public void Shutdown()
     {
