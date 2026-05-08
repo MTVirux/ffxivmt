@@ -1,46 +1,10 @@
 services:
 
   ffmt_backend:
-    container_name: ${BACKEND_CONTAINER_NAME}
     build:
       context: .
-      dockerfile: ${BACKEND_DOCKERFILE}
+      dockerfile: ./docker/dockerfiles/Dockerfile_backend_dotnet
     image: ffmt_backend
-    restart: "always"
-    # No host ports — ffmt_proxy is the only public surface; ws_worker reaches it over ffmt_network.
-    environment:
-      - APP_NAME=${APP_NAME}
-      - BACKEND_DOCKER_PORT=${BACKEND_DOCKER_PORT}
-      - GRAFANA_DOCKER_PORT=${GRAFANA_DOCKER_PORT}
-      - SCYLLA_DOCKER_PORT=${SCYLLA_DOCKER_PORT}
-
-      - BACKEND_DOCKER_SSL_PORT=${BACKEND_DOCKER_SSL_PORT}
-      - GRAFANA_DOCKER_SSL_PORT=${GRAFANA_DOCKER_SSL_PORT}
-      - SCYLLA_DOCKER_SSL_PORT=${SCYLLA_DOCKER_SSL_PORT}
-
-      - ZERO_SSL_USER_EMAIL=${ZERO_SSL_USER_EMAIL}
-      
-      - ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
-      - ZERO_SSL_GRAFANA_DOMAIN=${ZERO_SSL_GRAFANA_DOMAIN}
-      - ZERO_SSL_SCYLLA_DOMAIN=${ZERO_SSL_SCYLLA_DOMAIN}
-      
-      - HOST_SSL_CERT=${HOST_SSL_CERT}
-      - HOST_SSL_PRIVATE_KEY=${HOST_SSL_PRIVATE_KEY}
-    volumes:
-      - ./backend_php_old:/var/www/html/
-    networks:
-      - ffmt_network
-
-  # .NET 9 backend, runs in parallel with the PHP backend during the rewrite. ws_worker still
-  # talks to ${BACKEND_CONTAINER_NAME} so leaving this up does not affect the live ingestion
-  # path; flip BACKEND_HOST in .env to ${BACKEND_DOTNET_CONTAINER_NAME} to point ws_worker here
-  # for staging diffs. Cutover replaces ffmt_backend entirely (see plan).
-  ffmt_backend_dotnet:
-    container_name: ${BACKEND_DOTNET_CONTAINER_NAME:-ffmt_backend_dotnet}
-    build:
-      context: .
-      dockerfile: ${BACKEND_DOTNET_DOCKERFILE:-./docker/dockerfiles/Dockerfile_backend_dotnet}
-    image: ffmt_backend_dotnet
     restart: "always"
     depends_on:
       # Plain depends_on only waits for *start*, not health — Scylla takes ~30–60s on first
@@ -53,8 +17,8 @@ services:
     # override at docker-compose.dev.yml re-exposes 8080 for direct probing.
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - Scylla__ContactPoints__0=${SCYLLADB_CONTAINER_NAME:-ffmt_scylla_node}
-      - Elastic__Url=http://${ELASTICSEARCH_CONTAINER_NAME:-ffmt_elastic}:9200
+      - Scylla__ContactPoints__0=ffmt_scylla_node
+      - Elastic__Url=http://ffmt_elastic:9200
       - FfmtLogging__LogDirectory=/app/logs
     volumes:
       # Per-channel Serilog rolling files; the existing Promtail pipeline tails this directory.
@@ -62,36 +26,10 @@ services:
     networks:
       - ffmt_network
 
-  ffmt_ws_worker:
-    build:
-      context: .
-      dockerfile: ${WS_WORKER_DOCKERFILE:-./docker/ws_worker/Dockerfile}
-    image: ffmt_ws_worker
-    container_name: ${WS_WORKER_CONTAINER_NAME}
-    restart: "unless-stopped"
-    depends_on:
-      - ffmt_scylla_node
-      - ffmt_backend_dotnet
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - Scylla__Host=${SCYLLADB_CONTAINER_NAME:-ffmt_scylla_node}
-      - Backend__Host=${BACKEND_DOTNET_CONTAINER_NAME:-ffmt_backend_dotnet}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    volumes:
-      - ./logs/ws_worker:/app/logs
-    networks:
-      - ffmt_network
-
   ffmt_frontend:
-    container_name: ${FRONTEND_CONTAINER_NAME:-ffmt_frontend}
     build:
       context: .
-      dockerfile: ${FRONTEND_DOCKERFILE:-./docker/dockerfiles/Dockerfile_frontend}
+      dockerfile: ./docker/dockerfiles/Dockerfile_frontend
       args:
         VITE_API_BASE_URL: /api/v1
     image: ffmt_frontend
@@ -114,16 +52,15 @@ services:
       - ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
     depends_on:
       - ffmt_frontend
-      - ffmt_backend_dotnet
+      - ffmt_backend
     networks:
       - ffmt_network
 
 # DATABASES
   ffmt_scylla_node:
-    container_name: ${SCYLLADB_CONTAINER_NAME}
-    build: 
+    build:
       context: .
-      dockerfile: ${SCYLLADB_DOCKERFILE}
+      dockerfile: ./docker/dockerfiles/Dockerfile_scylla
     image: ffmt_scylla
     restart: "unless-stopped"
     ports:
@@ -151,12 +88,10 @@ services:
       resources:
         limits:
           memory: 8g
-
     networks:
       - ffmt_network
 
   ffmt_elastic:
-    container_name: ${ELASTICSEARCH_CONTAINER_NAME}
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.0
     restart: "unless-stopped"
     environment:
@@ -169,7 +104,7 @@ services:
           memory: 1g
     networks:
       - ffmt_network
-      
+
 networks:
   ffmt_network:
     driver: bridge
