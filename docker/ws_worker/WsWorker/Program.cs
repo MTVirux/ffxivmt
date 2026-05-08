@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Options;
 using Serilog;
+using WsWorker.Health;
 using WsWorker.Options;
+using WsWorker.Services;
+using WsWorker.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,14 +40,23 @@ builder.Services.AddHttpClient("backfill_universalis", (_, client) =>
     client.Timeout = TimeSpan.FromSeconds(60);
 });
 
-// TODO: builder.Services.AddSingleton<ScyllaService>();
-// TODO: builder.Services.AddSingleton<WorldDataCache>();
-// TODO: builder.Services.AddSingleton<GilfluxCoalescer>();
-// TODO: builder.Services.AddHostedService<UniversalisWsConsumer>();
-// TODO: builder.Services.AddHostedService<SalesBackfillService>();
-// TODO: health checks for Scylla and WS consumer
+builder.Services.AddSingleton<ScyllaService>();
+builder.Services.AddSingleton<WorldDataCache>();
 
-builder.Services.AddHealthChecks();
+// GilfluxCoalescer implements IHostedService — register as singleton so it can be
+// resolved by name, then add as hosted service using the existing instance.
+builder.Services.AddSingleton<GilfluxCoalescer>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GilfluxCoalescer>());
+
+// UniversalisWsConsumer — same pattern so WsConsumerHealthCheck can resolve it.
+builder.Services.AddSingleton<UniversalisWsConsumer>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<UniversalisWsConsumer>());
+
+builder.Services.AddHostedService<SalesBackfillService>();
+
+builder.Services.AddHealthChecks()
+    .AddCheck<ScyllaHealthCheck>("scylla")
+    .AddCheck<WsConsumerHealthCheck>("ws_consumer");
 
 builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
