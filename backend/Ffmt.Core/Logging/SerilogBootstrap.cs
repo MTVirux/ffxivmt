@@ -6,11 +6,6 @@ using Serilog.Formatting.Compact;
 
 namespace Ffmt.Core.Logging;
 
-/// <summary>
-/// Builds a Serilog <see cref="LoggerConfiguration"/> that mirrors the legacy PHP per-channel layout:
-/// one rolling file per enabled channel, plus a console JSON sink for <c>docker logs</c>, and an optional
-/// <c>ALL.log</c> aggregator file in non-Production environments.
-/// </summary>
 public static class SerilogBootstrap
 {
     public static LoggerConfiguration Configure(LoggerConfiguration logger, IConfiguration configuration, string environmentName)
@@ -29,8 +24,6 @@ public static class SerilogBootstrap
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Environment", environmentName)
             .WriteTo.Console(new CompactJsonFormatter());
-
-        _ = configuration; // reserved: ReadFrom.Configuration arrives in a later phase along with Serilog.Settings.Configuration.
 
         foreach (var channel in enabled)
         {

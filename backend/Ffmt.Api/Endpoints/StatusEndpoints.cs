@@ -14,9 +14,6 @@ public static class StatusEndpoints
 
     public static IEndpointRouteBuilder MapStatusEndpoints(this IEndpointRouteBuilder app)
     {
-        // Byte-compatible with the legacy PHP `/status` controller: {status: "Scylla is up"|"Scylla is down", code}.
-        // 10-second IMemoryCache matches the PHP `cache->save(... 10)` window. The richer
-        // `/health/ready` endpoint covers the multi-dependency case for newer consumers.
         app.MapGet("/status", async (
             ScyllaHealthCheck scyllaHealth,
             IMemoryCache cache,

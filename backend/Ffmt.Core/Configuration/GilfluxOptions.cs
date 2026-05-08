@@ -8,10 +8,6 @@ public sealed class GilfluxOptions
     public int WorldStructureCacheSeconds { get; init; } = 300;
     public int RankingUpdateMaxConcurrency { get; init; } = 0; // 0 = unlimited (Task.WhenAll fan-out)
 
-    /// <summary>
-    /// Labelled timeframes echoed back as <c>gilflux_timeframe_in_ms</c> in the gilflux responses.
-    /// Mirrors <c>backend/application/config/gilflux_timeframes.php</c>.
-    /// </summary>
     public Dictionary<string, long> TimeframesMs { get; init; } = new()
     {
         ["7d"]  = 604_800_000,

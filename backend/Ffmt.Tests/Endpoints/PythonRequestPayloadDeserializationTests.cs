@@ -3,13 +3,9 @@ using Ffmt.Api.Endpoints;
 
 namespace Ffmt.Tests.Endpoints;
 
-/// <summary>
-/// Locks the JSON binding rules of the Universalis-style payload that the Python sales importer
-/// forwards to <c>/api/v1/updatedb/python_request</c>. The serializer options mirror what
-/// <c>Ffmt.Api/Program.cs</c> configures (snake_case naming policy + case-insensitive matching).
-/// </summary>
 public sealed class PythonRequestPayloadDeserializationTests
 {
+    // Mirror Ffmt.Api/Program.cs serializer options.
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,

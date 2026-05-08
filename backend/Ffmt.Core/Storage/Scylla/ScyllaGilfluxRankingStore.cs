@@ -170,8 +170,6 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
 
         var now = DateTimeOffset.UtcNow;
 
-        // Fan out the 7 sums + (item-name, world-row, max-sale-time) lookups in parallel.
-        // DataStax driver is async + thread-safe; Scylla coordinator handles parallelism.
         var sumTasks = Timeframes
             .Select(tf => scylla.Session.ExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf)))
             .ToArray();
@@ -194,7 +192,7 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
 
         await scylla.Session.ExecuteAsync(insertStmt.Bind(
             itemId, worldId, datacenter, region, itemName, worldName,
-            0L,             // ranking_alltime — historically always 0 in the legacy code
+            0L,
             sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
             lastSaleTime ?? DateTimeOffset.FromUnixTimeMilliseconds(0),
             now)).ConfigureAwait(false);

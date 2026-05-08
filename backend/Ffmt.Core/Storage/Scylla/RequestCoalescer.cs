@@ -2,10 +2,6 @@ using System.Collections.Concurrent;
 
 namespace Ffmt.Core.Storage.Scylla;
 
-/// <summary>
-/// Coalesces identical in-flight Scylla reads so concurrent callers asking for the same
-/// key share a single Task rather than each issuing their own query.
-/// </summary>
 internal sealed class RequestCoalescer<TKey, TValue> where TKey : notnull
 {
     private readonly ConcurrentDictionary<TKey, Task<TValue>> _inflight = new();

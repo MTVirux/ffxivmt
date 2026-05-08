@@ -10,7 +10,6 @@ public static class SearchBuyerEndpoints
 {
     public static IEndpointRouteBuilder MapSearchBuyerEndpoints(this IEndpointRouteBuilder app)
     {
-        // `data` is the raw array; legacy PHP double-encoded it via `json_encode($buyer_history)`.
         app.MapGet("/api/v1/search_buyer", async (
                 string? buyer_name,
                 string? world,

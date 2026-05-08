@@ -13,9 +13,6 @@ public static class UpdatedbEndpoints
     {
         var group = app.MapGroup("/api/v1/updatedb");
 
-        // Byte-compatible with PHP `python_request_post`. The Python sales importer hits this
-        // with batches of Universalis v2 history responses; we transform → bulk-insert into
-        // `sales` → kick a gilflux ranking refresh per `(world, item)` pair touched.
         group.MapPost("/python_request", async (
                 PythonRequestPayload? payload,
                 IItemStore items,
@@ -58,10 +55,8 @@ public static class UpdatedbEndpoints
                     data = batchResult,
                 });
             })
-            .WithRequestTimeout(System.Threading.Timeout.InfiniteTimeSpan); // PHP: set_time_limit(0)
+            .WithRequestTimeout(System.Threading.Timeout.InfiniteTimeSpan);
 
-        // Byte-compatible with PHP `gilflux_ranking_update_get`. The ws_worker hits this per
-        // `(world, item)` pair after every sales/add message it consumes.
         group.MapGet("/gilflux_ranking_update/{world_id:int}/{item_id:int}", async (
             int world_id,
             int item_id,
@@ -79,7 +74,7 @@ public static class UpdatedbEndpoints
         return app;
     }
 
-    // Marker types so each endpoint gets a distinct ILogger<T> category in Serilog output.
+    // Marker types so each endpoint gets a distinct ILogger<T> category.
     private sealed class PythonRequestLog;
     private sealed class GilfluxRankingUpdateLog;
 }

@@ -16,10 +16,6 @@ public static class ToolsEndpoints
     {
         var group = app.MapGroup("/api/v1/tools");
 
-        // /item_product_profit_calculator?search_term=<name>&location=<world|dc|region>&request_id=<opt>
-        // Resolves the item via Elasticsearch, walks Garland partials for the recipe components,
-        // fetches Universalis MB summaries for the union, and returns each entry's
-        // min_price * regularSaleVelocity score sorted desc.
         group.MapGet("/item_product_profit_calculator", async (
             string? search_term,
             string? location,
@@ -110,14 +106,6 @@ public static class ToolsEndpoints
             });
         });
 
-        // /instance_profit_calculator?location=<world|dc|region>
-        // Walks Garland's instance browse, filters to dungeons/trials/raids minus Savage/Ultimate
-        // variants, gathers marketable loot ids per instance, then makes ONE Universalis multi-id
-        // call (chunked at 100) for the union of ids — replacing the legacy N+1 per-item loop.
-        //
-        // Port-and-fix: the PHP filter `strpos($instance["n"], "Ultimate" || strpos($instance))`
-        // is an operator-precedence bug that always evaluates the second strpos against a boolean.
-        // Fixed here to a clean substring check on the instance name.
         group.MapGet("/instance_profit_calculator", async (
             string? location,
             IItemStore items,
@@ -144,7 +132,7 @@ public static class ToolsEndpoints
                          && !i.Name.Contains("Ultimate", StringComparison.Ordinal))
                 .ToList();
 
-            // Per-instance loot: one Garland call per instance, sequential so we don't hammer.
+            // Sequential per-instance Garland calls to avoid hammering.
             var instanceLoot = new Dictionary<int, List<int>>();
             var allMarketableLootIds = new HashSet<int>();
             foreach (var instance in validInstances)
@@ -160,7 +148,7 @@ public static class ToolsEndpoints
                 foreach (var id in marketable) allMarketableLootIds.Add(id);
             }
 
-            // Single batched MB lookup for the union; chunk at Universalis's effective ~100/id limit.
+            // Universalis caps multi-id lookups around 100.
             var listings = new Dictionary<int, UniversalisMarketBoardListing>();
             foreach (var chunk in allMarketableLootIds.Chunk(100))
             {
@@ -346,8 +334,7 @@ public static class ToolsEndpoints
     private static int MedianStackSize(IReadOnlyDictionary<int, int> histogram)
     {
         if (histogram.Count == 0) return 0;
-        // Sorted on purpose — legacy PHP iterated the histogram in JSON key order,
-        // making its "median" order-dependent rather than statistical.
+        // Sort first; without it the "median" would depend on dictionary iteration order.
         var flat = new List<int>();
         foreach (var (size, occ) in histogram)
         {

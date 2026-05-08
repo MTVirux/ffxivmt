@@ -47,8 +47,7 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
 
     public Task<PreparedStatement> PrepareAsync(string cql, CancellationToken ct = default)
     {
-        // The DataStax driver caches PreparedStatement instances per cluster keyed by CQL string,
-        // so re-issuing PrepareAsync is a hash lookup after the first call.
+        // Driver caches prepared statements per cluster by CQL text; repeat calls are hash lookups.
         return Session.PrepareAsync(cql);
     }
 

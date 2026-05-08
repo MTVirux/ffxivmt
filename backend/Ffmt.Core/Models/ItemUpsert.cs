@@ -1,12 +1,6 @@
 namespace Ffmt.Core.Models;
 
-/// <summary>
-/// Full-row payload used by the <c>updatedb</c> CLI when seeding the <c>items</c> table from
-/// the FFXIV datamining CSV. Columns map 1:1 onto the Scylla schema in
-/// <c>docker/scylla/startup_scripts/3- create_items_table.sh</c>; <c>craftable</c> /
-/// <c>marketable</c> / <c>from_scrips</c> are seeded <c>false</c> here and flipped by later
-/// stages (Garland for craftable, Universalis for marketable).
-/// </summary>
+/// <summary><c>craftable</c> / <c>marketable</c> / <c>from_scrips</c> are seeded <c>false</c> and flipped by later stages.</summary>
 public sealed record ItemUpsert(
     int Id,
     string Name,

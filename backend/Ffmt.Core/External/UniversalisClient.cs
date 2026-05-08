@@ -68,8 +68,8 @@ public sealed class UniversalisClient(HttpClient http, ILogger<UniversalisClient
 
         using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
 
-        // /api/v2/{location}/{itemIds} — Universalis returns the multi-id shape with an `items`
-        // dictionary when the path has a comma, and a flat object otherwise.
+        // Universalis returns a multi-id shape (with an `items` dictionary) when the path has
+        // a comma, and a flat single-item object otherwise.
         var idsPath = string.Join(",", itemIds.Select(i => i.ToString(CultureInfo.InvariantCulture)));
         var path = $"{Uri.EscapeDataString(location)}/{idsPath}";
 

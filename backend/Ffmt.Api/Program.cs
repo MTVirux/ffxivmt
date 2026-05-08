@@ -78,19 +78,16 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Liveness: process is up.
 app.MapHealthChecks("/health/live", new()
 {
     Predicate = _ => false,
 });
 
-// Readiness: dependencies (Scylla, Elastic) are reachable.
 app.MapHealthChecks("/health/ready", new()
 {
     Predicate = check => check.Tags.Contains("ready"),
 });
 
-// Compatibility shorthand for /health used during Phase 1; equivalent to /health/live.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.MapWorldsEndpoints();

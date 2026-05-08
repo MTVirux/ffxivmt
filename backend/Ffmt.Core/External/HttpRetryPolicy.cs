@@ -5,11 +5,6 @@ namespace Ffmt.Core.External;
 
 internal static class HttpRetryPolicy
 {
-    /// <summary>
-    /// Builds a Polly retry policy for transient HTTP failures: connection errors,
-    /// timeouts, 408, 429, and any 5xx. Backoff is exponential starting at
-    /// <paramref name="initialBackoffSeconds"/>, capped at <paramref name="maxBackoffSeconds"/>.
-    /// </summary>
     public static IAsyncPolicy<HttpResponseMessage> Build(int maxRetries, double initialBackoffSeconds, double maxBackoffSeconds)
     {
         return Policy<HttpResponseMessage>

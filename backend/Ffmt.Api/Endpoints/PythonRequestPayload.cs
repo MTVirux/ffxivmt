@@ -2,16 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace Ffmt.Api.Endpoints;
 
-/// <summary>
-/// Body shape posted by the Python sales importer to <c>/api/v1/updatedb/python_request</c>.
-/// Mirrors the Universalis v2 history response: the <c>items</c> dictionary is keyed by item id
-/// (as a string), each value carries an <c>entries</c> array of sale rows.
-///
-/// Property names are pinned with <see cref="JsonPropertyNameAttribute"/> because the upstream
-/// uses camelCase (<c>worldID</c> at top level, <c>worldId</c> per entry), which the global
-/// snake_case naming policy on the host would otherwise rewrite. Case-insensitive matching at
-/// the host level covers minor capitalisation drift (<c>WorldID</c>, <c>worldid</c>, etc.).
-/// </summary>
+// JsonPropertyName pins are required: upstream uses camelCase (worldID top-level, worldId
+// per entry), which the global snake_case naming policy would otherwise rewrite.
 public sealed class PythonRequestPayload
 {
     [JsonPropertyName("worldID")]

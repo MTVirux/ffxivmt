@@ -4,11 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Ffmt.Cli.Stages;
 
-/// <summary>
-/// Runs every <c>updatedb</c> stage in the same order the legacy PHP <c>Updatedb::index</c> did:
-/// worlds → CSV parse → items → elastic → garland → marketability → fix-gilflux-names. The CSV
-/// is parsed once and shared between the items and elastic stages.
-/// </summary>
 public sealed class UpdatedbOrchestrator(
     UpdateWorldsStage updateWorlds,
     ItemCsvSource csv,

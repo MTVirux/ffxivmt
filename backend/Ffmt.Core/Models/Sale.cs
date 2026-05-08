@@ -1,9 +1,6 @@
 namespace Ffmt.Core.Models;
 
-/// <summary>
-/// One row in the <c>sales</c> Scylla table. The schema lives in
-/// <c>docker/scylla/startup_scripts/2- create_sales_table.sh</c>; rows TTL out at 8 days.
-/// </summary>
+/// <summary>One row in the <c>sales</c> Scylla table; rows TTL out at 8 days.</summary>
 public sealed record Sale(
     int ItemId,
     int WorldId,
@@ -19,5 +16,4 @@ public sealed record Sale(
     int Total,
     DateTimeOffset SaleTime);
 
-/// <summary>Result of a <see cref="Storage.Scylla.ISaleStore.AddBatchAsync"/> call.</summary>
 public sealed record SaleBatchResult(int ParsedSales, double Time);

@@ -68,10 +68,6 @@ public sealed class SalesBackfillService : BackgroundService
             HistoricalCrawlLoop(ct));
     }
 
-    // -------------------------------------------------------------------------
-    // Live gap-fill loop
-    // -------------------------------------------------------------------------
-
     private async Task LiveGapFillLoop(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -140,10 +136,6 @@ public sealed class SalesBackfillService : BackgroundService
 
         await RunGilfluxRefreshPass(gilfluxPairs, ct);
     }
-
-    // -------------------------------------------------------------------------
-    // Historical crawl loop
-    // -------------------------------------------------------------------------
 
     private async Task HistoricalCrawlLoop(CancellationToken ct)
     {
@@ -224,10 +216,6 @@ public sealed class SalesBackfillService : BackgroundService
         await RunGilfluxRefreshPass(gilfluxPairs, ct);
     }
 
-    // -------------------------------------------------------------------------
-    // backfill_state helpers
-    // -------------------------------------------------------------------------
-
     private async Task<(DateTimeOffset? LastImportAt, DateTimeOffset? EarliestImportAt)> ReadState(string region)
     {
         var rows = await _scyllaService.ExecuteAsync(_selectState.Bind(region));
@@ -267,10 +255,6 @@ public sealed class SalesBackfillService : BackgroundService
 
         await _scyllaService.ExecuteAsync(_upsertState.Bind(region, newLast, newEarliest));
     }
-
-    // -------------------------------------------------------------------------
-    // Fetch helpers
-    // -------------------------------------------------------------------------
 
     private async Task<List<Sale>> FetchHistory(string region, long entriesWithin, CancellationToken ct)
     {
@@ -425,10 +409,6 @@ public sealed class SalesBackfillService : BackgroundService
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Write helpers
-    // -------------------------------------------------------------------------
-
     private async Task WriteSales(IEnumerable<Sale> sales, CancellationToken ct)
     {
         using var semaphore = new SemaphoreSlim(16, 16);
@@ -465,10 +445,6 @@ public sealed class SalesBackfillService : BackgroundService
 
         _logger.LogInformation("WriteSales: wrote {Count} sales to Scylla", allTasks.Count);
     }
-
-    // -------------------------------------------------------------------------
-    // Gilflux refresh pass
-    // -------------------------------------------------------------------------
 
     private async Task RunGilfluxRefreshPass(HashSet<(int WorldId, int ItemId)> pairs, CancellationToken ct)
     {
@@ -513,19 +489,11 @@ public sealed class SalesBackfillService : BackgroundService
         await Task.WhenAll(tasks);
     }
 
-    // -------------------------------------------------------------------------
-    // Utilities
-    // -------------------------------------------------------------------------
-
     private static IEnumerable<IReadOnlyList<T>> Chunk<T>(IReadOnlyList<T> source, int size)
     {
         for (var i = 0; i < source.Count; i += size)
             yield return source.Skip(i).Take(size).ToList();
     }
-
-    // -------------------------------------------------------------------------
-    // Token bucket
-    // -------------------------------------------------------------------------
 
     private sealed class TokenBucket : IDisposable
     {

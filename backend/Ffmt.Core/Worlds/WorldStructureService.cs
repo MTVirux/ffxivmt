@@ -7,10 +7,6 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Worlds;
 
-/// <summary>
-/// Builds the legacy region&gt;datacenter&gt;world tree consumed by <c>GET /api/v1/worlds</c>.
-/// Cached for <see cref="GilfluxOptions.WorldStructureCacheSeconds"/> (default 300s, matching the PHP <c>cache_timers</c> entry).
-/// </summary>
 public sealed class WorldStructureService
 {
     private const string CacheKey = "ffmt:worlds:structure";

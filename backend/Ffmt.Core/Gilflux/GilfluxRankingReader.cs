@@ -6,10 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
 
-/// <summary>
-/// Read-side service for <c>GET /api/v1/gilflux</c>. Encapsulates the legacy "fan out by child world,
-/// reuse per-world cache as fallback, then optionally filter to crafted-only" behaviour.
-/// </summary>
 public sealed class GilfluxRankingReader
 {
     private readonly IGilfluxRankingStore _store;
@@ -67,8 +63,8 @@ public sealed class GilfluxRankingReader
 
         var craftableIds = (await _itemStore.GetCraftableIdsAsync(ct).ConfigureAwait(false)).ToHashSet();
         var crafted = all.Where(r => craftableIds.Contains(r.ItemId)).ToList();
-        // Only the filtered result lands in the crafted_only key — fixes the legacy bug where
-        // a craft=false request would poison this slot with unfiltered data.
+        // Only the filtered result lands in the crafted_only key — otherwise an unfiltered
+        // request would poison this slot.
         _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: true), (IReadOnlyList<GilfluxRanking>)crafted, _ttl);
         return new RankingByLocationResult(resolution, crafted, FromCache: false);
     }

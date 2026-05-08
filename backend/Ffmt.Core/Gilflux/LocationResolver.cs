@@ -2,10 +2,6 @@ using Ffmt.Core.Storage.Scylla;
 
 namespace Ffmt.Core.Gilflux;
 
-/// <summary>
-/// Maps a free-form <c>target_location</c> query parameter to its canonical world/datacenter/region.
-/// Mirrors the case-insensitive lookup the PHP <c>api/v1/Gilflux::index_get</c> performs against the worlds table.
-/// </summary>
 public sealed class LocationResolver(IWorldStore worldStore)
 {
     public async Task<LocationResolution?> ResolveAsync(string target, CancellationToken ct = default)

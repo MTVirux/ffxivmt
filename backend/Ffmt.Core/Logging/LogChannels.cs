@@ -1,9 +1,6 @@
 namespace Ffmt.Core.Logging;
 
-/// <summary>
-/// String channel names matching the legacy PHP <c>logger_helper</c> channels.
-/// Promtail tails one rolling file per channel under <see cref="Configuration.LoggingOptions.LogDirectory"/>.
-/// </summary>
+/// <summary>Promtail tails one rolling file per channel under <see cref="Configuration.LoggingOptions.LogDirectory"/>.</summary>
 public static class LogChannels
 {
     public const string Error = "ERROR";

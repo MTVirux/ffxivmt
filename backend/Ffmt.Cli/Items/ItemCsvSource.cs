@@ -15,7 +15,6 @@ public sealed class ItemCsvSource(
 {
     public const string HttpClientName = "item-csv";
 
-    // CSV column → ItemUpsert field. Matches the column set the legacy PHP parser required.
     private static readonly string[] RequiredColumns =
     [
         "#", "Name", "Description", "CanBeHq", "AlwaysCollectable",
@@ -25,11 +24,7 @@ public sealed class ItemCsvSource(
         "IsAdvancedMeldingPermitted",
     ];
 
-    /// <summary>
-    /// Downloads each configured datamining CSV in parallel, picks the largest body
-    /// (parity with the PHP behavior), validates the required columns, and returns the
-    /// parsed rows. Items with empty <c>Name</c> are skipped.
-    /// </summary>
+    /// <summary>Downloads each configured CSV in parallel and parses the largest response.</summary>
     public async Task<IReadOnlyList<ItemUpsert>> LoadAsync(CancellationToken ct = default)
     {
         using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaDb });

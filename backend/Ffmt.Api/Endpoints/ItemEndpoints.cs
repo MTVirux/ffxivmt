@@ -65,8 +65,6 @@ public static class ItemEndpoints
                     statusCode: StatusCodes.Status400BadRequest);
             }
 
-            // Match the legacy ucwords(strtolower(...)) normalisation so callers built around
-            // the PHP API see the same behaviour: "MYTHRIL ingot" → "Mythril Ingot".
             var normalised = ToTitleCase(name.Trim());
 
             var hits = await search.SearchByNameAsync(normalised, size: 25, ct);

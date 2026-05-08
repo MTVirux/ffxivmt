@@ -13,10 +13,6 @@ namespace Ffmt.Core.DI;
 
 public static class FfmtCoreServiceCollectionExtensions
 {
-    /// <summary>
-    /// Registers configuration bindings, storage clients, and shared services consumed by both
-    /// <c>Ffmt.Api</c> and <c>Ffmt.Cli</c>. Health-check pipeline wiring is the API host's responsibility.
-    /// </summary>
     public static IServiceCollection AddFfmtCore(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<ScyllaOptions>().Bind(configuration.GetSection(ScyllaOptions.SectionName)).ValidateOnStart();
@@ -29,7 +25,6 @@ public static class FfmtCoreServiceCollectionExtensions
 
         services.AddMemoryCache();
 
-        // Storage
         services.AddSingleton<IScyllaSession, ScyllaSession>();
         services.AddSingleton<IItemStore, ScyllaItemStore>();
         services.AddSingleton<IWorldStore, ScyllaWorldStore>();
@@ -37,12 +32,10 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<ISaleStore, ScyllaSaleStore>();
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
 
-        // Domain
         services.AddSingleton<WorldStructureService>();
         services.AddSingleton<LocationResolver>();
         services.AddSingleton<GilfluxRankingReader>();
 
-        // External HTTP clients (Universalis + Garland), each with a Polly retry pipeline.
         services.AddHttpClient<IUniversalisClient, UniversalisClient>(UniversalisClient.HttpClientName, (sp, http) =>
             {
                 var opts = sp.GetRequiredService<IOptions<UniversalisOptions>>().Value;
@@ -67,7 +60,6 @@ public static class FfmtCoreServiceCollectionExtensions
                 return HttpRetryPolicy.Build(opts.MaxRetries, opts.InitialBackoffSeconds, opts.MaxBackoffSeconds);
             });
 
-        // Health checks (registered as services here; the API host adds them to the pipeline).
         services.AddSingleton<ScyllaHealthCheck>();
         services.AddSingleton<ElasticHealthCheck>();
 

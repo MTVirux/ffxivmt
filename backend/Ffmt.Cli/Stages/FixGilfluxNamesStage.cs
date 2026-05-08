@@ -9,11 +9,6 @@ public sealed class FixGilfluxNamesStage(
     IWorldStore worlds,
     ILogger<FixGilfluxNamesStage> log)
 {
-    /// <summary>
-    /// Walks <c>gilflux_ranking</c> looking for rows whose <c>item_name</c> is empty and
-    /// recomputes the ranking row across every world (which re-populates the names).
-    /// Runs until the missing-name scan returns no more rows.
-    /// </summary>
     public async Task RunAsync(CancellationToken ct)
     {
         using var _ = log.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaGilflux });
