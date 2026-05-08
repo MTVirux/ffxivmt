@@ -316,36 +316,44 @@ public sealed class SalesBackfillService : BackgroundService
             _logger.LogWarning("FetchChunk [{Region}] HTTP request failed: {Message}", region, ex.Message);
             return [];
         }
-
-        if (!response.IsSuccessStatusCode)
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            _logger.LogWarning("FetchChunk [{Region}] returned {StatusCode} for {Url}", region, (int)response.StatusCode, url);
+            _logger.LogWarning("FetchChunk [{Region}] timed out for items {Items}", region, itemIdStr);
             return [];
         }
 
-        string json;
-        try
+        using (response)
         {
-            json = await response.Content.ReadAsStringAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "FetchChunk [{Region}] failed reading response body", region);
-            return [];
-        }
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("FetchChunk [{Region}] returned {StatusCode} for {Url}", region, (int)response.StatusCode, url);
+                return [];
+            }
 
-        try
-        {
-            return ParseHistoryResponse(json, itemIds.Count == 1 ? itemIds[0] : null);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "FetchChunk [{Region}] failed parsing JSON", region);
-            return [];
+            string json;
+            try
+            {
+                json = await response.Content.ReadAsStringAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "FetchChunk [{Region}] failed reading response body", region);
+                return [];
+            }
+
+            try
+            {
+                return ParseHistoryResponse(json);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "FetchChunk [{Region}] failed parsing JSON", region);
+                return [];
+            }
         }
     }
 
-    private List<Sale> ParseHistoryResponse(string json, int? singleItemId)
+    private List<Sale> ParseHistoryResponse(string json)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -519,7 +527,7 @@ public sealed class SalesBackfillService : BackgroundService
     // Token bucket
     // -------------------------------------------------------------------------
 
-    private sealed class TokenBucket
+    private sealed class TokenBucket : IDisposable
     {
         private readonly double _capacity;
         private readonly double _refillRate;
@@ -566,5 +574,13 @@ public sealed class SalesBackfillService : BackgroundService
             _tokens = Math.Min(_capacity, _tokens + elapsed * _refillRate);
             _lastRefillTick = now;
         }
+
+        public void Dispose() => _lock.Dispose();
+    }
+
+    public override void Dispose()
+    {
+        _rateLimiter.Dispose();
+        base.Dispose();
     }
 }
