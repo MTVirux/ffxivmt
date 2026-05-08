@@ -4,4 +4,5 @@ public sealed record Item(
     int Id,
     string Name,
     bool Marketable,
-    bool Craftable);
+    bool Craftable,
+    int IconImage);

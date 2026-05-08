@@ -5,7 +5,7 @@ namespace Ffmt.Core.Storage.Scylla;
 
 public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
 {
-    private const string CqlGetById = "SELECT id, name, marketable, craftable FROM items WHERE id = ?";
+    private const string CqlGetById = "SELECT id, name, marketable, craftable, icon_image FROM items WHERE id = ?";
     private const string CqlGetAllNames = "SELECT id, name FROM items";
     private const string CqlGetAllIds = "SELECT id FROM items";
     private const string CqlGetMarketableIds = "SELECT id FROM items WHERE marketable = true ALLOW FILTERING";
@@ -95,7 +95,11 @@ public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
         row.GetValue<int>("id"),
         row.GetValue<string>("name") ?? string.Empty,
         SafeBool(row, "marketable"),
-        SafeBool(row, "craftable"));
+        SafeBool(row, "craftable"),
+        SafeInt(row, "icon_image"));
+
+    private static int SafeInt(Row row, string column) =>
+        row.IsNull(column) ? 0 : row.GetValue<int>(column);
 
     private static bool SafeBool(Row row, string column) =>
         !row.IsNull(column) && row.GetValue<bool>(column);

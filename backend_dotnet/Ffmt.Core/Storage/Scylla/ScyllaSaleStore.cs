@@ -30,6 +30,17 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         ALLOW FILTERING
         """;
 
+    // sale_time is the first clustering column on ((item_id, world_id), sale_time, ...),
+    // so ORDER BY DESC + LIMIT stays inside one partition.
+    private const string CqlGetByItemAndWorld = """
+        SELECT buyer_name, hq, on_mannequin, unit_price, quantity, sale_time,
+               world_id, item_id, world_name, item_name, total, datacenter, region
+        FROM sales
+        WHERE item_id = ? AND world_id = ?
+        ORDER BY sale_time DESC
+        LIMIT ?
+        """;
+
     private const int BatchRows = 1000;
 
     public async Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
@@ -90,6 +101,19 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         var rows = await scylla.Session.ExecuteAsync(stmt.Bind(args)).ConfigureAwait(false);
 
         var result = new List<Sale>();
+        foreach (var row in rows)
+        {
+            result.Add(MapRow(row));
+        }
+        return result;
+    }
+
+    public async Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int itemId, int worldId, int limit, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlGetByItemAndWorld, ct).ConfigureAwait(false);
+        var rows = await scylla.Session.ExecuteAsync(stmt.Bind(itemId, worldId, limit)).ConfigureAwait(false);
+
+        var result = new List<Sale>(capacity: Math.Min(limit, 256));
         foreach (var row in rows)
         {
             result.Add(MapRow(row));

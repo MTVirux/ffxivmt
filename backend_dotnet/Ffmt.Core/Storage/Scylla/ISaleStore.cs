@@ -17,4 +17,10 @@ public interface ISaleStore
     /// the world filter requires <c>ALLOW FILTERING</c> like the legacy query.
     /// </summary>
     Task<IReadOnlyList<Sale>> SearchBuyerAsync(string buyerName, int? worldId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Most-recent sales for one <c>(itemId, worldId)</c> partition, ordered <c>sale_time</c> DESC.
+    /// World is required — fan-out across all worlds would need <c>ALLOW FILTERING</c> and scale poorly.
+    /// </summary>
+    Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int itemId, int worldId, int limit, CancellationToken ct = default);
 }
