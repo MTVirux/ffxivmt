@@ -1,0 +1,3 @@
+# schema.ts lands here once `pnpm openapi:gen` runs against a live backend
+# (`/openapi/v1.json` is exposed by Ffmt.Api in dev and prod). Until then,
+# call sites should import from `../types` directly.
