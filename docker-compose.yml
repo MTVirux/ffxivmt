@@ -27,7 +27,7 @@ services:
       - HOST_SSL_CERT=${HOST_SSL_CERT}
       - HOST_SSL_PRIVATE_KEY=${HOST_SSL_PRIVATE_KEY}
     volumes:
-      - ./backend:/var/www/html/
+      - ./backend_php_old:/var/www/html/
     networks:
       - ffmt_network
 
@@ -58,7 +58,7 @@ services:
       - FfmtLogging__LogDirectory=/app/logs
     volumes:
       # Per-channel Serilog rolling files; the existing Promtail pipeline tails this directory.
-      - ./logs/backend_dotnet:/app/logs
+      - ./logs/backend:/app/logs
     networks:
       - ffmt_network
 

@@ -13,14 +13,14 @@
 #                          this only if you specifically want a containerized SPA; for daily
 #                          work prefer `pnpm dev` on the host (faster HMR on Windows).
 #
-# Note: ./backend, ./backend_dotnet, and ./docker/ws_worker/{server,sales_importer,...} are
+# Note: ./backend_php_old, ./backend, and ./docker/ws_worker/{server,sales_importer,...} are
 # already bind-mounted by the base docker-compose.yml — these overrides only flip dev
 # behavior, they do not introduce new mounts beyond a single PHP ini drop-in.
 
 services:
   ffmt_backend:
     volumes:
-      # Compose merges this with the base file's ./backend:/var/www/html mount.
+      # Compose merges this with the base file's ./backend_php_old:/var/www/html mount.
       - ./docker/backend/dev/zz-dev-opcache.ini:/usr/local/etc/php/conf.d/zz-dev-opcache.ini:ro
 
   ffmt_backend_dotnet:
@@ -34,8 +34,8 @@ services:
     ports:
       - "${BACKEND_DOTNET_HOST_PORT:-8080}:8080"
     volumes:
-      - ./backend_dotnet:/src/backend_dotnet
-      - ./logs/backend_dotnet:/app/logs
+      - ./backend:/src/backend
+      - ./logs/backend:/app/logs
 
   ffmt_ws_worker:
     environment:

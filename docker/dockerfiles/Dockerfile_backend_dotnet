@@ -6,28 +6,28 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copy props/manifests first for better layer caching.
-COPY backend_dotnet/global.json backend_dotnet/Directory.Build.props backend_dotnet/Directory.Packages.props ./backend_dotnet/
-COPY backend_dotnet/Ffmt.slnx ./backend_dotnet/
-COPY backend_dotnet/Ffmt.Core/Ffmt.Core.csproj ./backend_dotnet/Ffmt.Core/
-COPY backend_dotnet/Ffmt.Api/Ffmt.Api.csproj ./backend_dotnet/Ffmt.Api/
-COPY backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj ./backend_dotnet/Ffmt.Cli/
-COPY backend_dotnet/Ffmt.Tests/Ffmt.Tests.csproj ./backend_dotnet/Ffmt.Tests/
+COPY backend/global.json backend/Directory.Build.props backend/Directory.Packages.props ./backend/
+COPY backend/Ffmt.slnx ./backend/
+COPY backend/Ffmt.Core/Ffmt.Core.csproj ./backend/Ffmt.Core/
+COPY backend/Ffmt.Api/Ffmt.Api.csproj ./backend/Ffmt.Api/
+COPY backend/Ffmt.Cli/Ffmt.Cli.csproj ./backend/Ffmt.Cli/
+COPY backend/Ffmt.Tests/Ffmt.Tests.csproj ./backend/Ffmt.Tests/
 
 # Restore each project explicitly. Solution-level restore over a .slnx sometimes leaves
 # transitive packages un-materialized, which then trips the per-project publish below; per-
 # project restore avoids that.
-RUN dotnet restore ./backend_dotnet/Ffmt.Api/Ffmt.Api.csproj \
- && dotnet restore ./backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj
+RUN dotnet restore ./backend/Ffmt.Api/Ffmt.Api.csproj \
+ && dotnet restore ./backend/Ffmt.Cli/Ffmt.Cli.csproj
 
 # Copy the rest and publish. Drop --no-restore so each publish does its own restore as a
 # belt-and-suspenders against the .slnx transitive-pinning quirk.
-COPY backend_dotnet/ ./backend_dotnet/
+COPY backend/ ./backend/
 
-RUN dotnet publish ./backend_dotnet/Ffmt.Api/Ffmt.Api.csproj \
+RUN dotnet publish ./backend/Ffmt.Api/Ffmt.Api.csproj \
         -c Release \
         -o /app/api \
         /p:UseAppHost=false \
- && dotnet publish ./backend_dotnet/Ffmt.Cli/Ffmt.Cli.csproj \
+ && dotnet publish ./backend/Ffmt.Cli/Ffmt.Cli.csproj \
         -c Release \
         -o /app/cli \
         /p:UseAppHost=false

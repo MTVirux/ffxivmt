@@ -1,10 +1,10 @@
 # Dev image for the .NET backend. Built on the SDK so `dotnet watch` works; paired with the
-# `./backend_dotnet:/src/backend_dotnet` bind-mount in docker-compose.dev.yml so source edits
+# `./backend:/src/backend` bind-mount in docker-compose.dev.yml so source edits
 # on the host trigger an in-container rebuild.
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0
 
-WORKDIR /src/backend_dotnet
+WORKDIR /src/backend
 
 # Polling watcher works around the lack of inotify across some bind-mount setups.
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
