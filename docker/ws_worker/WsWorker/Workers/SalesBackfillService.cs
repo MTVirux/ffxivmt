@@ -305,7 +305,7 @@ public sealed class SalesBackfillService : BackgroundService
         var itemIdStr = string.Join(",", itemIds);
         var url = $"{_uniOptions.ApiUrl}history/{region}/{itemIdStr}?entriesWithin={entriesWithin}&entriesToReturn=999999";
 
-        var client = _httpClientFactory.CreateClient("backfill_gilflux");
+        var client = _httpClientFactory.CreateClient("backfill_universalis");
         HttpResponseMessage response;
         try
         {

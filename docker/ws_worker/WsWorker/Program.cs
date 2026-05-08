@@ -32,6 +32,11 @@ builder.Services.AddHttpClient("backfill_gilflux", (_, client) =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddHttpClient("backfill_universalis", (_, client) =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+
 // TODO: builder.Services.AddSingleton<ScyllaService>();
 // TODO: builder.Services.AddSingleton<WorldDataCache>();
 // TODO: builder.Services.AddSingleton<GilfluxCoalescer>();
