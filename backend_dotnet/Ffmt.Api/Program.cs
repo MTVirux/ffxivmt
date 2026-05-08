@@ -39,6 +39,20 @@ builder.Services.AddRequestTimeouts();
 
 builder.Services.AddRazorPages();
 
+// OpenAPI / Swagger — the JSON document is published unconditionally so the React SPA
+// can regenerate its types via `pnpm openapi:gen`. Public read-only API, no secret schema.
+// Swagger UI is dev-only.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new()
+    {
+        Title = "FFMT API",
+        Version = "v1",
+        Description = "Public read-only API for FFXIV Market Tools (mtvirux.app).",
+    });
+});
+
 builder.Services
     .AddHealthChecks()
     .AddCheck<ScyllaHealthCheck>("scylla", tags: ["ready", "scylla"])
@@ -51,6 +65,18 @@ app.UseStatusCodePagesWithReExecute("/error/{0}");
 app.UseSerilogRequestLogging();
 app.UseRequestTimeouts();
 app.UseStaticFiles();
+
+// /openapi/v1.json is consumed by the SPA's openapi-typescript codegen. Always on.
+app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "FFMT API v1");
+        options.RoutePrefix = "swagger";
+    });
+}
 
 // Liveness: process is up.
 app.MapHealthChecks("/health/live", new()

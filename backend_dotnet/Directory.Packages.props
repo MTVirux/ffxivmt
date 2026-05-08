@@ -30,6 +30,9 @@
     <PackageVersion Include="AspNetCore.HealthChecks.Cassandra" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Elasticsearch" Version="9.0.0" />
 
+    <!-- OpenAPI / Swagger (consumed by the React SPA's openapi-typescript codegen) -->
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+
     <!-- CLI -->
     <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageVersion Include="Spectre.Console" Version="0.49.1" />
