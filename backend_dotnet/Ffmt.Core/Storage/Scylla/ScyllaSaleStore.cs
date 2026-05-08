@@ -41,7 +41,11 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         LIMIT ?
         """;
 
-    private const int BatchRows = 1000;
+    // Max statements per single-partition unlogged batch. Kept well below Scylla's
+    // batch_size_warn_threshold (default 128 KiB) to avoid coordinator warnings.
+    private const int BatchRows = 200;
+
+    private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
 
     public async Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
     {
@@ -54,35 +58,40 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         var stmt = await scylla.PrepareAsync(CqlInsert, ct).ConfigureAwait(false);
         var sw = Stopwatch.StartNew();
-
-        var batch = NewBatch(ConsistencyLevel.LocalOne);
-        var inBatch = 0;
         var parsed = 0;
 
-        for (var i = 0; i < sales.Count; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            var s = sales[i];
-            batch.Add(stmt.Bind(
-                s.BuyerName, s.Hq, s.OnMannequin, s.Quantity, s.SaleTime,
-                s.WorldId, s.ItemId, s.WorldName, s.UnitPrice, s.ItemName,
-                s.Datacenter, s.Region, s.Total));
-            inBatch++;
-            parsed++;
+        // Group by partition key so every batch touches exactly one Scylla partition.
+        // Unlogged batches that span multiple partitions force the coordinator to fan
+        // out to multiple nodes, negating the benefit and adding coordinator overhead.
+        var partitions = sales.GroupBy(s => (s.ItemId, s.WorldId));
 
-            if (inBatch == BatchRows)
+        foreach (var partition in partitions)
+        {
+            var batch = NewBatch();
+            var inBatch = 0;
+
+            foreach (var s in partition)
+            {
+                ct.ThrowIfCancellationRequested();
+                batch.Add(stmt.Bind(
+                    s.BuyerName, s.Hq, s.OnMannequin, s.Quantity, s.SaleTime,
+                    s.WorldId, s.ItemId, s.WorldName, s.UnitPrice, s.ItemName,
+                    s.Datacenter, s.Region, s.Total));
+                inBatch++;
+                parsed++;
+
+                if (inBatch == BatchRows)
+                {
+                    await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
+                    batch = NewBatch();
+                    inBatch = 0;
+                }
+            }
+
+            if (inBatch > 0)
             {
                 await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
-                batch = NewBatch(ConsistencyLevel.LocalOne);
-                inBatch = 0;
             }
-        }
-
-        if (inBatch > 0)
-        {
-            // Final partial batch: PHP passes `5` to `php-cql`'s `batch()`, which is CL=ALL.
-            batch.SetConsistencyLevel(ConsistencyLevel.All);
-            await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
         }
 
         sw.Stop();
@@ -108,9 +117,16 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         return result;
     }
 
-    public async Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int itemId, int worldId, int limit, CancellationToken ct = default)
+    public Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int itemId, int worldId, int limit, CancellationToken ct = default)
     {
-        var stmt = await scylla.PrepareAsync(CqlGetByItemAndWorld, ct).ConfigureAwait(false);
+        return _readCoalescer.CoalesceAsync(
+            (itemId, worldId, limit),
+            () => FetchByItemAndWorldAsync(itemId, worldId, limit));
+    }
+
+    private async Task<IReadOnlyList<Sale>> FetchByItemAndWorldAsync(int itemId, int worldId, int limit)
+    {
+        var stmt = await scylla.PrepareAsync(CqlGetByItemAndWorld).ConfigureAwait(false);
         var rows = await scylla.Session.ExecuteAsync(stmt.Bind(itemId, worldId, limit)).ConfigureAwait(false);
 
         var result = new List<Sale>(capacity: Math.Min(limit, 256));
@@ -136,6 +152,8 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         Total:        row.GetValue<int>("total"),
         SaleTime:     row.GetValue<DateTimeOffset>("sale_time"));
 
-    private static BatchStatement NewBatch(ConsistencyLevel cl) =>
-        (BatchStatement)new BatchStatement().SetBatchType(BatchType.Unlogged).SetConsistencyLevel(cl);
+    private static BatchStatement NewBatch() =>
+        (BatchStatement)new BatchStatement()
+            .SetBatchType(BatchType.Unlogged)
+            .SetConsistencyLevel(ConsistencyLevel.LocalOne);
 }

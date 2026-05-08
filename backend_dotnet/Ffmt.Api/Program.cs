@@ -12,6 +12,12 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
+// Keep enough threads warm to prevent starvation under Scylla driver I/O bursts.
+var minThreads = int.TryParse(Environment.GetEnvironmentVariable("FFMT_MIN_THREADPOOL_SIZE"), out var n)
+    ? n
+    : Environment.ProcessorCount * 4;
+ThreadPool.SetMinThreads(minThreads, minThreads);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, services, logger) =>

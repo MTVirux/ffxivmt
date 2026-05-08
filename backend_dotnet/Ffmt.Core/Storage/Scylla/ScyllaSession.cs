@@ -21,7 +21,10 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
                     .WithPort(opts.Port)
                     .WithLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()))
                     .WithQueryOptions(new QueryOptions().SetConsistencyLevel(ConsistencyLevel.LocalOne))
-                    .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(opts.QueryTimeoutMillis));
+                    .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(opts.QueryTimeoutMillis))
+                    // Fire a speculative retry against a second replica after 400 ms; repeat once more
+                    // if still no response. Caps at 3 total requests in flight per query.
+                    .WithSpeculativeExecutionPolicy(new ConstantSpeculativeExecutionPolicy(400, 2));
 
                 if (!string.IsNullOrEmpty(opts.Username))
                 {

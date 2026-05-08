@@ -119,35 +119,46 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
         TimeSpan.FromDays(7),
     ];
 
-    public async Task<IReadOnlyList<GilfluxRanking>> GetByWorldAsync(int worldId, CancellationToken ct = default)
-    {
-        var stmt = await scylla.PrepareAsync(CqlByWorld, ct).ConfigureAwait(false);
-        return await ExecuteAsync(stmt.Bind(worldId)).ConfigureAwait(false);
-    }
+    private readonly RequestCoalescer<int, IReadOnlyList<GilfluxRanking>> _worldCoalescer = new();
+    private readonly RequestCoalescer<string, IReadOnlyList<GilfluxRanking>> _dcCoalescer = new();
+    private readonly RequestCoalescer<string, IReadOnlyList<GilfluxRanking>> _regionCoalescer = new();
+    private readonly RequestCoalescer<int, IReadOnlyList<GilfluxRanking>> _itemCoalescer = new();
+    private readonly RequestCoalescer<(int, int), IReadOnlyList<GilfluxRanking>> _itemWorldCoalescer = new();
 
-    public async Task<IReadOnlyList<GilfluxRanking>> GetByDatacenterAsync(string datacenter, CancellationToken ct = default)
-    {
-        var stmt = await scylla.PrepareAsync(CqlByDatacenter, ct).ConfigureAwait(false);
-        return await ExecuteAsync(stmt.Bind(datacenter)).ConfigureAwait(false);
-    }
+    public Task<IReadOnlyList<GilfluxRanking>> GetByWorldAsync(int worldId, CancellationToken ct = default) =>
+        _worldCoalescer.CoalesceAsync(worldId, async () =>
+        {
+            var stmt = await scylla.PrepareAsync(CqlByWorld).ConfigureAwait(false);
+            return await ExecuteAsync(stmt.Bind(worldId)).ConfigureAwait(false);
+        });
 
-    public async Task<IReadOnlyList<GilfluxRanking>> GetByRegionAsync(string region, CancellationToken ct = default)
-    {
-        var stmt = await scylla.PrepareAsync(CqlByRegion, ct).ConfigureAwait(false);
-        return await ExecuteAsync(stmt.Bind(region)).ConfigureAwait(false);
-    }
+    public Task<IReadOnlyList<GilfluxRanking>> GetByDatacenterAsync(string datacenter, CancellationToken ct = default) =>
+        _dcCoalescer.CoalesceAsync(datacenter, async () =>
+        {
+            var stmt = await scylla.PrepareAsync(CqlByDatacenter).ConfigureAwait(false);
+            return await ExecuteAsync(stmt.Bind(datacenter)).ConfigureAwait(false);
+        });
 
-    public async Task<IReadOnlyList<GilfluxRanking>> GetByItemAsync(int itemId, CancellationToken ct = default)
-    {
-        var stmt = await scylla.PrepareAsync(CqlByItem, ct).ConfigureAwait(false);
-        return await ExecuteAsync(stmt.Bind(itemId)).ConfigureAwait(false);
-    }
+    public Task<IReadOnlyList<GilfluxRanking>> GetByRegionAsync(string region, CancellationToken ct = default) =>
+        _regionCoalescer.CoalesceAsync(region, async () =>
+        {
+            var stmt = await scylla.PrepareAsync(CqlByRegion).ConfigureAwait(false);
+            return await ExecuteAsync(stmt.Bind(region)).ConfigureAwait(false);
+        });
 
-    public async Task<IReadOnlyList<GilfluxRanking>> GetByItemAndWorldAsync(int itemId, int worldId, CancellationToken ct = default)
-    {
-        var stmt = await scylla.PrepareAsync(CqlByItemAndWorld, ct).ConfigureAwait(false);
-        return await ExecuteAsync(stmt.Bind(itemId, worldId)).ConfigureAwait(false);
-    }
+    public Task<IReadOnlyList<GilfluxRanking>> GetByItemAsync(int itemId, CancellationToken ct = default) =>
+        _itemCoalescer.CoalesceAsync(itemId, async () =>
+        {
+            var stmt = await scylla.PrepareAsync(CqlByItem).ConfigureAwait(false);
+            return await ExecuteAsync(stmt.Bind(itemId)).ConfigureAwait(false);
+        });
+
+    public Task<IReadOnlyList<GilfluxRanking>> GetByItemAndWorldAsync(int itemId, int worldId, CancellationToken ct = default) =>
+        _itemWorldCoalescer.CoalesceAsync((itemId, worldId), async () =>
+        {
+            var stmt = await scylla.PrepareAsync(CqlByItemAndWorld).ConfigureAwait(false);
+            return await ExecuteAsync(stmt.Bind(itemId, worldId)).ConfigureAwait(false);
+        });
 
     public async Task UpdateRankingAsync(int worldId, int itemId, CancellationToken ct = default)
     {
