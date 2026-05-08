@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -6,7 +7,7 @@ using WsWorker.Options;
 
 namespace WsWorker.Services;
 
-public sealed class GilfluxCoalescer
+public sealed class GilfluxCoalescer : IHostedService
 {
     private readonly GilfluxOptions _options;
     private readonly string _backendHost;
@@ -20,7 +21,7 @@ public sealed class GilfluxCoalescer
     private long _droppedCoalesced;
     private long _droppedFull;
 
-    private readonly Timer _logDropsTimer;
+    private Timer? _logDropsTimer;
     private Task[] _workerTasks = [];
 
     public GilfluxCoalescer(
@@ -42,8 +43,6 @@ public sealed class GilfluxCoalescer
             SingleWriter = false,
             SingleReader = false
         });
-
-        _logDropsTimer = new Timer(LogDrops, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
     public void Submit(int worldId, int itemId)
@@ -70,6 +69,8 @@ public sealed class GilfluxCoalescer
             .Select(_ => Task.Run(() => WorkerLoop(ct), ct))
             .ToArray();
 
+        _logDropsTimer = new Timer(LogDrops, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+
         _logger.LogInformation("GilfluxCoalescer started {Workers} worker(s)", _options.Workers);
         return Task.CompletedTask;
     }
@@ -77,8 +78,9 @@ public sealed class GilfluxCoalescer
     public async Task StopAsync(CancellationToken ct)
     {
         _channel.Writer.Complete();
-        await Task.WhenAll(_workerTasks);
-        _logDropsTimer.Dispose();
+        try { await Task.WhenAll(_workerTasks).WaitAsync(ct); }
+        catch (OperationCanceledException) { }
+        _logDropsTimer?.Dispose();
     }
 
     private async Task WorkerLoop(CancellationToken ct)
@@ -112,5 +114,12 @@ public sealed class GilfluxCoalescer
 
         if (coalesced > 0 || full > 0)
             _logger.LogInformation("GilfluxCoalescer drops in last 60s — coalesced: {Coalesced}, queue-full: {Full}", coalesced, full);
+
+        var cutoff = Stopwatch.GetTimestamp() - (long)(_coalesceWindow.TotalSeconds * 10 * Stopwatch.Frequency);
+        foreach (var key in _lastFired.Keys)
+        {
+            if (_lastFired.TryGetValue(key, out var ts) && ts < cutoff)
+                _lastFired.TryRemove(key, out _);
+        }
     }
 }

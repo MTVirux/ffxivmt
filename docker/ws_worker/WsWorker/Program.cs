@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Serilog;
 using WsWorker.Options;
 
@@ -19,6 +20,12 @@ builder.Services.Configure<UniversalisOptions>(builder.Configuration.GetSection(
 builder.Services.Configure<GilfluxOptions>(builder.Configuration.GetSection("Gilflux"));
 builder.Services.Configure<BackfillOptions>(builder.Configuration.GetSection("Backfill"));
 builder.Services.Configure<BackendOptions>(builder.Configuration.GetSection("Backend"));
+
+builder.Services.AddHttpClient("gilflux", (sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<GilfluxOptions>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(opts.HttpTimeoutSeconds);
+});
 
 // TODO: builder.Services.AddSingleton<ScyllaService>();
 // TODO: builder.Services.AddSingleton<WorldDataCache>();
