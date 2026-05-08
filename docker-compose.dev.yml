@@ -4,10 +4,14 @@
 #
 # What each override does:
 #   ffmt_backend         — disables OPcache so PHP edits land on the next request.
-#   ffmt_backend_dotnet  — swaps to the SDK image and runs `dotnet watch` with polling.
+#   ffmt_backend_dotnet  — swaps to the SDK image and runs `dotnet watch` with polling;
+#                          re-exposes :8080 directly for curl/Postman without going via Caddy.
 #   ffmt_ws_worker       — sets WS_WORKER_DEV_WATCH=true, which routes startup through
 #                          run_server_watch.sh (watchfiles-wrapped) for auto-restart on .py
 #                          edits in /server, /sales_importer/python, and /ws_worker/common.
+#   ffmt_frontend        — stops at the Node build stage and runs `pnpm dev` with HMR. Use
+#                          this only if you specifically want a containerized SPA; for daily
+#                          work prefer `pnpm dev` on the host (faster HMR on Windows).
 #
 # Note: ./backend, ./backend_dotnet, and ./docker/ws_worker/{server,sales_importer,...} are
 # already bind-mounted by the base docker-compose.yml — these overrides only flip dev
@@ -26,6 +30,9 @@ services:
     image: ffmt_backend_dotnet_dev
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+    # Re-expose for direct probing — base compose hides this behind ffmt_proxy.
+    ports:
+      - "${BACKEND_DOTNET_HOST_PORT:-8080}:8080"
     volumes:
       - ./backend_dotnet:/src/backend_dotnet
       - ./logs/backend_dotnet:/app/logs
@@ -35,3 +42,15 @@ services:
       # Routes 999999- startup.sh to run_server_watch.sh. BACKEND_HOST/SCYLLADB_HOST are
       # already set in the base file and are merged in automatically.
       - WS_WORKER_DEV_WATCH=true
+
+  ffmt_frontend:
+    build:
+      # Stop at the Node build stage; runtime stage has no pnpm.
+      target: build
+    command: pnpm dev --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      # Anonymous volume so a host node_modules can't shadow the container's install.
+      - /app/node_modules

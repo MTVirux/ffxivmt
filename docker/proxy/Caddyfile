@@ -1,0 +1,22 @@
+# ACME state persists in the caddy_data named volume so recreates don't re-issue.
+# `handle` (not `handle_path`) preserves the full request path — the .NET endpoints
+# expect /api/v1/... intact.
+
+{$ZERO_SSL_MAIN_DOMAIN} {
+    encode gzip zstd
+
+    handle /api/* {
+        reverse_proxy ffmt_backend_dotnet:8080
+    }
+
+    handle /health/* {
+        reverse_proxy ffmt_backend_dotnet:8080
+    }
+    handle /openapi/* {
+        reverse_proxy ffmt_backend_dotnet:8080
+    }
+
+    handle {
+        reverse_proxy ffmt_frontend:80
+    }
+}

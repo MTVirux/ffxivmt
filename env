@@ -51,15 +51,10 @@ SCYLLA_DOCKER_SSL_PORT=9443
 
 # ######################## HOST BIND PORTS ######################## #
 
-#Backend
-BACKEND_HOST_PORT=80 #http
-BACKEND_HOST_SSL_PORT=443 #https
+# ffmt_proxy (Caddy) binds 80/443; backend services are network-internal only.
 
-# Dotnet backend bind port (parallel to PHP backend during the rewrite; cutover swaps the
-# above PHP ports onto this service or fronts it via Kestrel/host TLS).
+# Re-exposed by docker-compose.dev.yml for direct probing of the .NET backend.
 BACKEND_DOTNET_HOST_PORT=8080
-
-FRONTEND_HOST_PORT=8080
 
 #MariaDB
 MARIADB_HOST_PORT=3306

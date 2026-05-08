@@ -7,9 +7,7 @@ services:
       dockerfile: ${BACKEND_DOCKERFILE}
     image: ffmt_backend
     restart: "always"
-    ports:
-      - "${BACKEND_HOST_PORT}:80"
-      - "${BACKEND_HOST_SSL_PORT}:443"
+    # No host ports — ffmt_proxy is the only public surface; ws_worker reaches it over ffmt_network.
     environment:
       - APP_NAME=${APP_NAME}
       - BACKEND_DOCKER_PORT=${BACKEND_DOCKER_PORT}
@@ -51,8 +49,8 @@ services:
       # ffmt_scylla_node and ffmt_elastic first.
       - ffmt_scylla_node
       - ffmt_elastic
-    ports:
-      - "${BACKEND_DOTNET_HOST_PORT:-8080}:8080"
+    # No host ports — ffmt_proxy fronts /api/*, /health/*, and /openapi/*. The dev
+    # override at docker-compose.dev.yml re-exposes 8080 for direct probing.
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Scylla__ContactPoints__0=${SCYLLADB_CONTAINER_NAME:-ffmt_scylla_node}
@@ -82,6 +80,37 @@ services:
       - ./docker/ws_worker/server:/server
       - ./docker/ws_worker/sales_importer:/sales_importer
       - ./docker/ws_worker:/ws_worker
+    networks:
+      - ffmt_network
+
+  ffmt_frontend:
+    container_name: ${FRONTEND_CONTAINER_NAME:-ffmt_frontend}
+    build:
+      context: .
+      dockerfile: ${FRONTEND_DOCKERFILE:-./docker/dockerfiles/Dockerfile_frontend}
+      args:
+        VITE_API_BASE_URL: /api/v1
+    image: ffmt_frontend
+    restart: unless-stopped
+    networks:
+      - ffmt_network
+
+  ffmt_proxy:
+    container_name: ffmt_proxy
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
+    depends_on:
+      - ffmt_frontend
+      - ffmt_backend_dotnet
     networks:
       - ffmt_network
 
@@ -140,3 +169,8 @@ services:
 networks:
   ffmt_network:
     driver: bridge
+
+volumes:
+  # Persists Caddy's ACME state across recreates so certs aren't re-issued every build.
+  caddy_data:
+  caddy_config:
