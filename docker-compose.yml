@@ -7,21 +7,14 @@ services:
     image: ffmt_backend
     restart: "always"
     depends_on:
-      # Plain depends_on only waits for *start*, not health — Scylla takes ~30–60s on first
-      # boot to accept CQL. The Lazy ScyllaSession + 20s healthcheck start_period absorb the
-      # gap. If we tighten this to `condition: service_healthy` later, add healthchecks on
-      # ffmt_scylla_node and ffmt_elastic first.
       - ffmt_scylla_node
       - ffmt_elastic
-    # No host ports — ffmt_proxy fronts /api/*, /health/*, and /openapi/*. The dev
-    # override at docker-compose.dev.yml re-exposes 8080 for direct probing.
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Scylla__ContactPoints__0=ffmt_scylla_node
       - Elastic__Url=http://ffmt_elastic:9200
       - FfmtLogging__LogDirectory=/app/logs
     volumes:
-      # Per-channel Serilog rolling files; the existing Promtail pipeline tails this directory.
       - ./logs/backend:/app/logs
     networks:
       - ffmt_network
@@ -56,7 +49,6 @@ services:
     networks:
       - ffmt_network
 
-# DATABASES
   ffmt_scylla_node:
     build:
       context: .
