@@ -10,9 +10,7 @@ public static class SearchBuyerEndpoints
 {
     public static IEndpointRouteBuilder MapSearchBuyerEndpoints(this IEndpointRouteBuilder app)
     {
-        // PHP returned `data` as a JSON-encoded string (`json_encode($buyer_history)`); per the
-        // cutover plan that double-encode is fixed here — `data` is the raw array. Razor pages
-        // that consumed the old shape are updated in lockstep in Phase 7.
+        // `data` is the raw array; legacy PHP double-encoded it via `json_encode($buyer_history)`.
         app.MapGet("/api/v1/search_buyer", async (
                 string? buyer_name,
                 string? world,

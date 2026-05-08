@@ -37,11 +37,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddRequestTimeouts();
 
-builder.Services.AddRazorPages();
-
-// OpenAPI / Swagger — the JSON document is published unconditionally so the React SPA
-// can regenerate its types via `pnpm openapi:gen`. Public read-only API, no secret schema.
-// Swagger UI is dev-only.
+// `/openapi/v1.json` is always-on (public read-only API, no secret schema); UI is dev-only.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -61,12 +57,10 @@ builder.Services
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseStatusCodePagesWithReExecute("/error/{0}");
+app.UseStatusCodePages();
 app.UseSerilogRequestLogging();
 app.UseRequestTimeouts();
-app.UseStaticFiles();
 
-// /openapi/v1.json is consumed by the SPA's openapi-typescript codegen. Always on.
 app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
 
 if (app.Environment.IsDevelopment())
@@ -100,8 +94,6 @@ app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
 app.MapToolsEndpoints();
 app.MapStatusEndpoints();
-
-app.MapRazorPages();
 
 app.Run();
 
