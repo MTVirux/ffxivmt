@@ -29,6 +29,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IItemStore, ScyllaItemStore>();
         services.AddSingleton<IWorldStore, ScyllaWorldStore>();
         services.AddSingleton<IGilfluxRankingStore, ScyllaGilfluxRankingStore>();
+        services.AddSingleton<IRankingRefresher, ScyllaRankingRefresher>();
         services.AddSingleton<ISaleStore, ScyllaSaleStore>();
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
 
