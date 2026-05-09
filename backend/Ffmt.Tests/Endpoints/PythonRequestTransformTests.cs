@@ -29,7 +29,7 @@ public sealed class PythonRequestTransformTests
     }
 
     [Fact]
-    public void SingleEntry_RenamesFieldsAndComputesTotal()
+    public void SingleEntry_PopulatesCanonicalFields()
     {
         var payload = new PythonRequestPayload
         {
@@ -60,15 +60,10 @@ public sealed class PythonRequestTransformTests
         var sale = result.Sales[0];
         sale.ItemId.Should().Be(12345);
         sale.WorldId.Should().Be(21);
-        sale.WorldName.Should().Be("Ravana");
-        sale.Datacenter.Should().Be("Light");
-        sale.Region.Should().Be("Europe");
-        sale.ItemName.Should().Be("Mythril Ingot");
         sale.BuyerName.Should().Be("Alice");
         sale.Hq.Should().BeTrue();
         sale.UnitPrice.Should().Be(100);
         sale.Quantity.Should().Be(5);
-        sale.Total.Should().Be(500);
         sale.SaleTime.Should().Be(DateTimeOffset.FromUnixTimeSeconds(1_700_000_000));
 
         result.RankingPairs.Should().BeEquivalentTo([(WorldId: 21, ItemId: 12345)]);
@@ -172,23 +167,6 @@ public sealed class PythonRequestTransformTests
         result.Sales.Should().HaveCount(2);
         result.RankingPairs.Should().HaveCount(1);
         result.RankingPairs.Should().BeEquivalentTo([(WorldId: 21, ItemId: 12345)]);
-    }
-
-    [Fact]
-    public void UnknownItemId_StillProducesRowWithEmptyName()
-    {
-        var payload = new PythonRequestPayload
-        {
-            WorldId = 21,
-            Items = new()
-            {
-                ["99999"] = new() { Entries = [new() { Quantity = 1, PricePerUnit = 7, Timestamp = 1 }] },
-            },
-        };
-
-        var result = PythonRequestTransform.Build(payload, Worlds, ItemNames);
-
-        result.Sales.Should().ContainSingle().Which.ItemName.Should().Be(string.Empty);
     }
 
     [Fact]

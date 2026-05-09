@@ -34,26 +34,19 @@ public static class PythonRequestTransform
                     continue;
                 }
 
-                if (!worldsById.TryGetValue(worldId.Value, out var world))
+                if (!worldsById.ContainsKey(worldId.Value))
                 {
                     continue;
                 }
 
-                var itemName = itemNamesById.TryGetValue(itemId, out var n) ? n : string.Empty;
-
                 sales.Add(new Sale(
                     ItemId: itemId,
                     WorldId: worldId.Value,
-                    ItemName: itemName,
-                    WorldName: world.Name,
-                    Datacenter: world.Datacenter,
-                    Region: world.Region,
                     BuyerName: entry.BuyerName,
                     Hq: entry.Hq == 1,
                     OnMannequin: entry.OnMannequin,
                     Quantity: entry.Quantity,
                     UnitPrice: entry.PricePerUnit,
-                    Total: entry.Quantity * entry.PricePerUnit,
                     SaleTime: DateTimeOffset.FromUnixTimeSeconds(entry.Timestamp)));
 
                 pairs.Add((worldId.Value, itemId));
