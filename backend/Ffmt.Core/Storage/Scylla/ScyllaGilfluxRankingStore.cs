@@ -12,6 +12,11 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
         WHERE world_id = ?
         """;
 
+    // WARNING: full-table scatter — item_id is only the first half of the composite PK
+    // ((item_id, world_id)), so this scans every (item_id, world_id) partition for the
+    // matching item across all worlds. OK for now (rarely-hit path: per-item-across-all-
+    // worlds reads), but if telemetry shows /api/v1/gilflux/item/{id} without
+    // target_location is hot, add a gilflux_by_item companion table.
     private const string CqlByItem = """
         SELECT item_id, world_id, ranking_1h, ranking_3h, ranking_6h, ranking_12h,
                ranking_1d, ranking_3d, ranking_7d, last_sale_time, updated_at
