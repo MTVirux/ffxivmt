@@ -85,6 +85,7 @@ public sealed class RankingCoalescer : IHostedService
         try { await Task.WhenAll(_workerTasks).WaitAsync(ct).ConfigureAwait(false); }
         catch (OperationCanceledException) { }
         _logDropsTimer?.Dispose();
+        _stopCts.Dispose();
     }
 
     private async Task WorkerLoop(CancellationToken ct)
