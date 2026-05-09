@@ -7,7 +7,6 @@ public sealed class ScyllaWorldStore(IScyllaSession scylla) : IWorldStore
 {
     private const string CqlGetAll = "SELECT id, name, datacenter, region FROM worlds";
     private const string CqlGetById = "SELECT id, name, datacenter, region FROM worlds WHERE id = ?";
-    private const string CqlGetByName = "SELECT id, name, datacenter, region FROM worlds WHERE name = ? ALLOW FILTERING";
     private const string CqlUpsert = "INSERT INTO worlds (id, name, datacenter, region) VALUES (?, ?, ?, ?)";
 
     public async Task<IReadOnlyList<World>> GetAllAsync(CancellationToken ct = default)
@@ -32,10 +31,9 @@ public sealed class ScyllaWorldStore(IScyllaSession scylla) : IWorldStore
 
     public async Task<World?> GetByNameAsync(string name, CancellationToken ct = default)
     {
-        var stmt = await scylla.PrepareAsync(CqlGetByName, ct).ConfigureAwait(false);
-        var rows = await scylla.Session.ExecuteAsync(stmt.Bind(name)).ConfigureAwait(false);
-        var row = rows.FirstOrDefault();
-        return row is null ? null : MapRow(row);
+        // worlds is ~80 rows; an in-memory scan over GetAllAsync is cheaper than a SI lookup.
+        var all = await GetAllAsync(ct).ConfigureAwait(false);
+        return all.FirstOrDefault(w => string.Equals(w.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task UpsertAsync(World world, CancellationToken ct = default)
