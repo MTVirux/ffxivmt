@@ -120,6 +120,26 @@ services:
     networks:
       - ffmt_network
 
+  ffmt_ws_worker:
+    build:
+      context: .
+      dockerfile: ./docker/ws_worker/Dockerfile
+    image: ffmt_ws_worker
+    restart: always
+    depends_on:
+      - ffmt_scylla_node
+      - ffmt_redis
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Scylla__ContactPoints__0=ffmt_scylla_node
+      - Redis__Host=ffmt_redis
+      - Redis__Port=6379
+      - FfmtLogging__LogDirectory=/app/logs
+    volumes:
+      - ./logs/ws_worker:/app/logs
+    networks:
+      - ffmt_network
+
 networks:
   ffmt_network:
     driver: bridge
