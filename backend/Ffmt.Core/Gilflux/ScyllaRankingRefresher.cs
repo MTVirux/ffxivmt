@@ -110,7 +110,7 @@ public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<Scylla
             {
                 sem.Release();
             }
-        });
+        }).ToArray();
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
     }
