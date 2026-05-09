@@ -93,22 +93,26 @@ public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
 
     public async Task UpdateMarketableAsync(int id, bool marketable, CancellationToken ct = default)
     {
-        var stmt = await scylla.PrepareAsync(CqlUpdateMarketable, ct).ConfigureAwait(false);
-        await scylla.Session.ExecuteAsync(stmt.Bind(marketable, id)).ConfigureAwait(false);
-
+        // Prepare both statements upfront so a single Bind/Execute failure can't strand
+        // the companion-table maintenance in a half-applied state.
         var memberCql = marketable ? CqlInsertMarketableMember : CqlDeleteMarketableMember;
-        var memberStmt = await scylla.PrepareAsync(memberCql, ct).ConfigureAwait(false);
-        await scylla.Session.ExecuteAsync(memberStmt.Bind(id)).ConfigureAwait(false);
+        var stmtTask = scylla.PrepareAsync(CqlUpdateMarketable, ct);
+        var memberStmtTask = scylla.PrepareAsync(memberCql, ct);
+        await Task.WhenAll(stmtTask, memberStmtTask).ConfigureAwait(false);
+
+        await scylla.Session.ExecuteAsync(stmtTask.Result.Bind(marketable, id)).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(memberStmtTask.Result.Bind(id)).ConfigureAwait(false);
     }
 
     public async Task UpdateCraftableAsync(int id, bool craftable, CancellationToken ct = default)
     {
-        var stmt = await scylla.PrepareAsync(CqlUpdateCraftable, ct).ConfigureAwait(false);
-        await scylla.Session.ExecuteAsync(stmt.Bind(craftable, id)).ConfigureAwait(false);
-
         var memberCql = craftable ? CqlInsertCraftableMember : CqlDeleteCraftableMember;
-        var memberStmt = await scylla.PrepareAsync(memberCql, ct).ConfigureAwait(false);
-        await scylla.Session.ExecuteAsync(memberStmt.Bind(id)).ConfigureAwait(false);
+        var stmtTask = scylla.PrepareAsync(CqlUpdateCraftable, ct);
+        var memberStmtTask = scylla.PrepareAsync(memberCql, ct);
+        await Task.WhenAll(stmtTask, memberStmtTask).ConfigureAwait(false);
+
+        await scylla.Session.ExecuteAsync(stmtTask.Result.Bind(craftable, id)).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(memberStmtTask.Result.Bind(id)).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<int>> FetchIdsAsync(string cql, string columnName, CancellationToken ct)
