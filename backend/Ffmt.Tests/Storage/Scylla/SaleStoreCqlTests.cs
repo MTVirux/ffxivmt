@@ -39,15 +39,17 @@ public sealed class SaleStoreCqlTests
     }
 
     [Fact]
-    public async Task SearchBuyerAsync_WithWorld_AddsClusteringFilter()
+    public async Task SearchBuyerAsync_WithWorld_AddsPartitionLocalFilter()
     {
         var (store, captured) = NewStore();
         try { await store.SearchBuyerAsync("Alice", worldId: 21); } catch { /* no real session */ }
 
+        // world_id is the last clustering column; restricting it without sale_time +
+        // item_id prefix needs ALLOW FILTERING. Bounded by the buyer_name partition.
         captured.Should().ContainSingle()
             .Which.Should().Contain("FROM sales_by_buyer")
             .And.Contain("AND world_id = ?")
-            .And.NotContain("ALLOW FILTERING");
+            .And.Contain("ALLOW FILTERING");
     }
 
     private static (ScyllaSaleStore Store, List<string> Captured) NewStore()

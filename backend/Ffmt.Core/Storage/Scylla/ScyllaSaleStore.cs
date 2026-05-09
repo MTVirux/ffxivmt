@@ -28,10 +28,15 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         WHERE buyer_name = ?
         """;
 
+    // world_id is the LAST clustering column on sales_by_buyer; restricting it without
+    // sale_time + item_id prefix needs ALLOW FILTERING. The scan stays bounded by the
+    // buyer_name partition (one buyer's rows only), so this is partition-local, not a
+    // global scatter.
     private const string CqlSearchBuyerWithWorld = """
         SELECT buyer_name, sale_time, item_id, world_id
         FROM sales_by_buyer
         WHERE buyer_name = ? AND world_id = ?
+        ALLOW FILTERING
         """;
 
     private const string CqlGetByItemAndWorld = """
