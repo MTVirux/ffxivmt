@@ -16,10 +16,6 @@ services:
       - ./backend:/src/backend
       - ./logs/backend:/app/logs
 
-  ffmt_ws_worker:
-    environment:
-      - WS_WORKER_DEV_WATCH=true
-
   ffmt_frontend:
     build:
       # runtime stage has no pnpm
