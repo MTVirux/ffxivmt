@@ -1,8 +1,9 @@
-using Microsoft.Extensions.Options;
+using Ffmt.Core.DI;
+using Ffmt.Core.Gilflux;
+using Ffmt.Core.HealthChecks;
 using Serilog;
 using WsWorker.Health;
 using WsWorker.Options;
-using WsWorker.Services;
 using WsWorker.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,37 +19,20 @@ builder.Host.UseSerilog((context, _, logger) =>
             retainedFileCountLimit: 14,
             fileSizeLimitBytes: 100 * 1024 * 1024));
 
-builder.Services.Configure<ScyllaOptions>(builder.Configuration.GetSection("Scylla"));
-builder.Services.Configure<UniversalisOptions>(builder.Configuration.GetSection("Universalis"));
-builder.Services.Configure<GilfluxOptions>(builder.Configuration.GetSection("Gilflux"));
+builder.Services.AddFfmtCore(builder.Configuration);
+
 builder.Services.Configure<BackfillOptions>(builder.Configuration.GetSection("Backfill"));
-builder.Services.Configure<BackendOptions>(builder.Configuration.GetSection("Backend"));
-
-builder.Services.AddHttpClient("gilflux", (sp, client) =>
-{
-    var opts = sp.GetRequiredService<IOptions<GilfluxOptions>>().Value;
-    client.Timeout = TimeSpan.FromSeconds(opts.HttpTimeoutSeconds);
-});
-
-builder.Services.AddHttpClient("backfill_gilflux", (_, client) =>
-{
-    client.Timeout = TimeSpan.FromSeconds(10);
-});
 
 builder.Services.AddHttpClient("backfill_universalis", (_, client) =>
 {
     client.Timeout = TimeSpan.FromSeconds(60);
 });
 
-builder.Services.AddSingleton<ScyllaService>();
-builder.Services.AddSingleton<WorldDataCache>();
+builder.Services.AddSingleton<RankingCoalescer>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<RankingCoalescer>());
 
-// GilfluxCoalescer implements IHostedService — register as singleton so it can be
-// resolved by name, then add as hosted service using the existing instance.
-builder.Services.AddSingleton<GilfluxCoalescer>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<GilfluxCoalescer>());
+builder.Services.AddHostedService<DeferredSweepWorker>();
 
-// UniversalisWsConsumer — same pattern so WsConsumerHealthCheck can resolve it.
 builder.Services.AddSingleton<UniversalisWsConsumer>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UniversalisWsConsumer>());
 
