@@ -1,7 +1,0 @@
-aiohttp>=3.9
-websockets>=12.0
-cassandra-driver>=3.29
-bson>=0.5.10
-# Used only when WS_WORKER_DEV_WATCH=true (dev compose override) to auto-restart server.py
-# on .py edits. Tiny, pure-python; harmless to install in prod images too.
-watchfiles>=0.21
