@@ -26,18 +26,4 @@ public sealed class GilfluxRankingStoreCqlTests
             .And.Contain("WHERE world_id = ?")
             .And.NotContain("ALLOW FILTERING");
     }
-
-    [Fact]
-    public async Task UpdateRankingAsync_PreparesBothCanonicalAndCompanionInsert()
-    {
-        var (store, captured) = NewStore();
-        try { await store.UpdateRankingAsync(21, 12345); } catch { /* no real session */ }
-
-        // Two INSERTs (one per table) plus the timeframe-sum and max-sale-time SELECTs.
-        captured.Should().Contain(c => c.Contains("INSERT INTO gilflux_ranking"));
-        captured.Should().Contain(c => c.Contains("INSERT INTO gilflux_by_world"));
-        captured.Should().Contain(c => c.Contains("SUM(quantity * unit_price)"));
-        captured.Should().NotContain(c => c.Contains("SUM(total)"));
-        captured.Should().NotContain(c => c.Contains("ranking_alltime"));
-    }
 }

@@ -14,9 +14,8 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
 
     // WARNING: full-table scatter — item_id is only the first half of the composite PK
     // ((item_id, world_id)), so this scans every (item_id, world_id) partition for the
-    // matching item across all worlds. OK for now (rarely-hit path: per-item-across-all-
-    // worlds reads), but if telemetry shows /api/v1/gilflux/item/{id} without
-    // target_location is hot, add a gilflux_by_item companion table.
+    // matching item across all worlds. OK for now (rarely-hit path); revisit with a
+    // gilflux_by_item companion if telemetry shows it matters.
     private const string CqlByItem = """
         SELECT item_id, world_id, ranking_1h, ranking_3h, ranking_6h, ranking_12h,
                ranking_1d, ranking_3d, ranking_7d, last_sale_time, updated_at
@@ -31,51 +30,6 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
         FROM gilflux_ranking
         WHERE item_id = ? AND world_id = ?
         """;
-
-    // Aggregating SELECT over sales for one timeframe. Identical shape per timeframe
-    // (only the sale_time floor differs), so we prepare it once and reuse across all 7.
-    private const string CqlSumTotalSinceTimeframe = """
-        SELECT CAST(SUM(quantity * unit_price) AS BIGINT) AS gilflux
-        FROM sales
-        WHERE item_id = ? AND world_id = ? AND sale_time >= ?
-        GROUP BY item_id, world_id
-        """;
-
-    private const string CqlMaxSaleTime = """
-        SELECT MAX(sale_time) AS last_sale_time
-        FROM sales
-        WHERE item_id = ? AND world_id = ? AND sale_time >= ?
-        GROUP BY item_id, world_id
-        """;
-
-    private const string CqlUpsertGilfluxRanking = """
-        INSERT INTO gilflux_ranking
-            (item_id, world_id,
-             ranking_1h, ranking_3h, ranking_6h, ranking_12h,
-             ranking_1d, ranking_3d, ranking_7d,
-             last_sale_time, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
-
-    private const string CqlUpsertGilfluxByWorld = """
-        INSERT INTO gilflux_by_world
-            (world_id, item_id,
-             ranking_1h, ranking_3h, ranking_6h, ranking_12h,
-             ranking_1d, ranking_3d, ranking_7d,
-             last_sale_time, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
-
-    private static readonly TimeSpan[] Timeframes =
-    [
-        TimeSpan.FromHours(1),
-        TimeSpan.FromHours(3),
-        TimeSpan.FromHours(6),
-        TimeSpan.FromHours(12),
-        TimeSpan.FromDays(1),
-        TimeSpan.FromDays(3),
-        TimeSpan.FromDays(7),
-    ];
 
     private readonly RequestCoalescer<int, IReadOnlyList<GilfluxRanking>> _worldCoalescer = new();
     private readonly RequestCoalescer<int, IReadOnlyList<GilfluxRanking>> _itemCoalescer = new();
@@ -102,65 +56,6 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
             return await ExecuteAndMapAsync(stmt.Bind(itemId, worldId)).ConfigureAwait(false);
         });
 
-    public async Task UpdateRankingAsync(int worldId, int itemId, CancellationToken ct = default)
-    {
-        var sumStmt = await scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
-        var maxStmt = await scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
-        var upsertRankingStmt = await scylla.PrepareAsync(CqlUpsertGilfluxRanking, ct).ConfigureAwait(false);
-        var upsertByWorldStmt = await scylla.PrepareAsync(CqlUpsertGilfluxByWorld, ct).ConfigureAwait(false);
-
-        var now = DateTimeOffset.UtcNow;
-
-        var sumTasks = Timeframes
-            .Select(tf => scylla.Session.ExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf)))
-            .ToArray();
-        var maxSaleTask = scylla.Session.ExecuteAsync(maxStmt.Bind(itemId, worldId, now - Timeframes[^1]));
-
-        await Task.WhenAll(sumTasks.Concat(new[] { maxSaleTask })).ConfigureAwait(false);
-
-        var sums = sumTasks.Select(t => SumGilflux(t.Result)).ToArray();
-        var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result) ?? DateTimeOffset.FromUnixTimeMilliseconds(0);
-
-        // Single unlogged batch keeps both writes coordinated. They target different
-        // partitions (PK ((item_id, world_id)) vs PK ((world_id))) so the coordinator
-        // fan-out cost is real but small (2 partitions, both LocalOne).
-        var batch = (BatchStatement)new BatchStatement()
-            .SetBatchType(BatchType.Unlogged)
-            .SetConsistencyLevel(ConsistencyLevel.LocalOne);
-
-        batch.Add(upsertRankingStmt.Bind(
-            itemId, worldId,
-            sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
-            lastSaleTime, now));
-
-        batch.Add(upsertByWorldStmt.Bind(
-            worldId, itemId,
-            sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
-            lastSaleTime, now));
-
-        await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
-    }
-
-    private static long SumGilflux(RowSet rs)
-    {
-        var row = rs.FirstOrDefault();
-        if (row is null || row.GetColumn("gilflux") is null || row.IsNull("gilflux"))
-        {
-            return 0L;
-        }
-        return row.GetValue<long>("gilflux");
-    }
-
-    private static DateTimeOffset? MaxLastSaleTime(RowSet rs)
-    {
-        var row = rs.FirstOrDefault();
-        if (row is null || row.GetColumn("last_sale_time") is null || row.IsNull("last_sale_time"))
-        {
-            return null;
-        }
-        return row.GetValue<DateTimeOffset>("last_sale_time");
-    }
-
     private async Task<IReadOnlyList<GilfluxRanking>> ExecuteAndMapAsync(IStatement stmt)
     {
         var rows = await scylla.Session.ExecuteAsync(stmt).ConfigureAwait(false);
@@ -174,8 +69,6 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
 
     private async Task<IReadOnlyList<GilfluxRanking>> ExecuteAndMapByWorldAsync(IStatement stmt, int worldId)
     {
-        // gilflux_by_world rows don't carry world_id (it's the partition key); inject it
-        // so callers downstream see a fully-populated GilfluxRanking record.
         var rows = await scylla.Session.ExecuteAsync(stmt).ConfigureAwait(false);
         var result = new List<GilfluxRanking>();
         foreach (var row in rows)
