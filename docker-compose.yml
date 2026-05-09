@@ -49,6 +49,26 @@ services:
     networks:
       - ffmt_network
 
+  ffmt_redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+    networks:
+      - ffmt_network
+
   ffmt_scylla_node:
     build:
       context: .
