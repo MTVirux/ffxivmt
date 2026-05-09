@@ -2,18 +2,12 @@ namespace WsWorker.Models;
 
 public sealed class Sale
 {
-    public string BuyerName { get; set; } = string.Empty;
-    public bool Hq { get; set; }
-    public bool OnMannequin { get; set; }
-    public int UnitPrice { get; set; }
-    public int Quantity { get; set; }
-    /// <summary>Unix timestamp in milliseconds.</summary>
-    public long SaleTime { get; set; }
-    public int WorldId { get; set; }
-    public int ItemId { get; set; }
-    public string WorldName { get; set; } = string.Empty;
-    public string ItemName { get; set; } = string.Empty;
-    public string Datacenter { get; set; } = string.Empty;
-    public string Region { get; set; } = string.Empty;
-    public int Total { get; set; }
+    public string BuyerName { get; init; } = string.Empty;
+    public bool Hq { get; init; }
+    public bool OnMannequin { get; init; }
+    public int UnitPrice { get; init; }
+    public int Quantity { get; init; }
+    public long SaleTime { get; init; }   // unix ms
+    public int WorldId { get; init; }
+    public int ItemId { get; init; }
 }

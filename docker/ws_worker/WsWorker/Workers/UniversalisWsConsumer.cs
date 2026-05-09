@@ -193,34 +193,38 @@ public sealed class UniversalisWsConsumer : BackgroundService
                         SaleTime = timestamp * 1000,
                         WorldId = worldId,
                         ItemId = itemId,
-                        WorldName = world.Name,
-                        ItemName = itemName,
-                        Datacenter = world.Datacenter,
-                        Region = world.Region,
-                        Total = total
                     };
 
-                    var bound = _scyllaService.SalesInsert.Bind(
+                    var saleBound = _scyllaService.SalesInsert.Bind(
+                        sale.ItemId,
+                        sale.WorldId,
+                        sale.SaleTime,
                         sale.BuyerName,
                         sale.Hq,
                         sale.OnMannequin,
-                        sale.UnitPrice,
                         sale.Quantity,
+                        sale.UnitPrice);
+
+                    var byBuyerBound = _scyllaService.SalesByBuyerInsert.Bind(
+                        sale.BuyerName,
                         sale.SaleTime,
-                        sale.WorldId,
                         sale.ItemId,
-                        sale.WorldName,
-                        sale.ItemName,
-                        sale.Datacenter,
-                        sale.Region,
-                        sale.Total);
+                        sale.WorldId);
 
                     Interlocked.Increment(ref _inflightCount);
-                    _ = _scyllaService.ExecuteAsync(bound).ContinueWith(t =>
+                    _ = _scyllaService.ExecuteAsync(saleBound).ContinueWith(t =>
                     {
                         Interlocked.Decrement(ref _inflightCount);
                         if (t.IsFaulted)
                             _logger.LogError(t.Exception, "Scylla fire-and-forget sale insert failed");
+                    }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+
+                    Interlocked.Increment(ref _inflightCount);
+                    _ = _scyllaService.ExecuteAsync(byBuyerBound).ContinueWith(t =>
+                    {
+                        Interlocked.Decrement(ref _inflightCount);
+                        if (t.IsFaulted)
+                            _logger.LogError(t.Exception, "Scylla fire-and-forget sales_by_buyer insert failed");
                     }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
 
                     if (_inflightCount > 500)

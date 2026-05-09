@@ -21,11 +21,17 @@ public sealed class ScyllaService
     private readonly ConcurrentDictionary<string, Task<PreparedStatement>> _statementCache = new();
 
     public PreparedStatement SalesInsert { get; private set; } = null!;
+    public PreparedStatement SalesByBuyerInsert { get; private set; } = null!;
 
     private const string SalesInsertCql =
         "INSERT INTO ffmt.sales " +
-        "(buyer_name, hq, on_mannequin, unit_price, quantity, sale_time, world_id, item_id, world_name, item_name, datacenter, region, total) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "(item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private const string SalesByBuyerInsertCql =
+        "INSERT INTO ffmt.sales_by_buyer " +
+        "(buyer_name, sale_time, item_id, world_id) " +
+        "VALUES (?, ?, ?, ?)";
 
     public ScyllaService(IOptions<ScyllaOptions> options, ILogger<ScyllaService> logger)
     {
@@ -50,7 +56,8 @@ public sealed class ScyllaService
             _logger.LogInformation("Connected to Scylla at {Host}, keyspace {Keyspace}", _options.Host, _options.Keyspace);
 
             SalesInsert = await _statementCache.GetOrAdd(SalesInsertCql, c => Session.PrepareAsync(c));
-            _logger.LogInformation("Pre-prepared sales INSERT statement");
+            SalesByBuyerInsert = await _statementCache.GetOrAdd(SalesByBuyerInsertCql, c => Session.PrepareAsync(c));
+            _logger.LogInformation("Pre-prepared sales + sales_by_buyer INSERT statements");
 
             _initialized = true;
         }

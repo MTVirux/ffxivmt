@@ -372,19 +372,11 @@ public sealed class SalesBackfillService : BackgroundService
             if (entry.TryGetProperty("worldID", out var wIdEl))
                 worldId = wIdEl.GetInt32();
 
-            var world = _worldDataCache.GetWorld(worldId);
-            var worldName = world?.Name ?? (entry.TryGetProperty("worldName", out var wn) ? wn.GetString() ?? string.Empty : string.Empty);
-            var datacenter = world?.Datacenter ?? string.Empty;
-            var worldRegion = world?.Region ?? string.Empty;
-
-            var itemName = _worldDataCache.GetItemName(itemId) ?? string.Empty;
-
             var hq = entry.TryGetProperty("hq", out var hqEl) && hqEl.ValueKind == JsonValueKind.True;
             var onMannequin = entry.TryGetProperty("onMannequin", out var omEl) && omEl.ValueKind == JsonValueKind.True;
             var pricePerUnit = entry.TryGetProperty("pricePerUnit", out var ppuEl) ? ppuEl.GetInt32() : 0;
             var quantity = entry.TryGetProperty("quantity", out var qEl) ? qEl.GetInt32() : 0;
             var buyerName = entry.TryGetProperty("buyerName", out var bnEl) ? bnEl.GetString() ?? string.Empty : string.Empty;
-            var total = entry.TryGetProperty("total", out var totEl) ? totEl.GetInt32() : pricePerUnit * quantity;
 
             long saleTimeMs = 0;
             if (entry.TryGetProperty("timestamp", out var tsEl))
@@ -400,11 +392,6 @@ public sealed class SalesBackfillService : BackgroundService
                 SaleTime = saleTimeMs,
                 WorldId = worldId,
                 ItemId = itemId,
-                WorldName = worldName,
-                ItemName = itemName,
-                Datacenter = datacenter,
-                Region = worldRegion,
-                Total = total,
             });
         }
     }
@@ -417,22 +404,24 @@ public sealed class SalesBackfillService : BackgroundService
             await semaphore.WaitAsync(ct);
             try
             {
-                var bound = _scyllaService.SalesInsert.Bind(
+                var saleBound = _scyllaService.SalesInsert.Bind(
+                    sale.ItemId,
+                    sale.WorldId,
+                    sale.SaleTime,
                     sale.BuyerName,
                     sale.Hq,
                     sale.OnMannequin,
-                    sale.UnitPrice,
                     sale.Quantity,
-                    sale.SaleTime,
-                    sale.WorldId,
-                    sale.ItemId,
-                    sale.WorldName,
-                    sale.ItemName,
-                    sale.Datacenter,
-                    sale.Region,
-                    sale.Total);
+                    sale.UnitPrice);
 
-                await _scyllaService.ExecuteAsync(bound);
+                var byBuyerBound = _scyllaService.SalesByBuyerInsert.Bind(
+                    sale.BuyerName,
+                    sale.SaleTime,
+                    sale.ItemId,
+                    sale.WorldId);
+
+                await _scyllaService.ExecuteAsync(saleBound);
+                await _scyllaService.ExecuteAsync(byBuyerBound);
             }
             finally
             {
