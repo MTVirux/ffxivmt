@@ -8,41 +8,40 @@ namespace Ffmt.Core.Storage.Scylla;
 
 public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleStore> logger) : ISaleStore
 {
-    private const string CqlInsert = """
+    private const string CqlInsertSale = """
         INSERT INTO sales
-            (buyer_name, hq, on_mannequin, quantity, sale_time, world_id, item_id,
-             world_name, unit_price, item_name, datacenter, region, total)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
+    private const string CqlInsertSaleByBuyer = """
+        INSERT INTO sales_by_buyer
+            (buyer_name, sale_time, item_id, world_id)
+        VALUES (?, ?, ?, ?)
+        """;
+
+    // Reads from sales_by_buyer; the API caller does follow-up reads on `sales`
+    // for full sale fields if needed.
     private const string CqlSearchBuyer = """
-        SELECT buyer_name, hq, on_mannequin, unit_price, quantity, sale_time,
-               world_id, item_id, world_name, item_name, total, datacenter, region
-        FROM sales
+        SELECT buyer_name, sale_time, item_id, world_id
+        FROM sales_by_buyer
         WHERE buyer_name = ?
         """;
 
     private const string CqlSearchBuyerWithWorld = """
-        SELECT buyer_name, hq, on_mannequin, unit_price, quantity, sale_time,
-               world_id, item_id, world_name, item_name, total, datacenter, region
-        FROM sales
+        SELECT buyer_name, sale_time, item_id, world_id
+        FROM sales_by_buyer
         WHERE buyer_name = ? AND world_id = ?
-        ALLOW FILTERING
         """;
 
-    // sale_time is the first clustering column on ((item_id, world_id), sale_time, ...),
-    // so ORDER BY DESC + LIMIT stays inside one partition.
     private const string CqlGetByItemAndWorld = """
-        SELECT buyer_name, hq, on_mannequin, unit_price, quantity, sale_time,
-               world_id, item_id, world_name, item_name, total, datacenter, region
+        SELECT item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price
         FROM sales
         WHERE item_id = ? AND world_id = ?
         ORDER BY sale_time DESC
         LIMIT ?
         """;
 
-    // Max statements per single-partition unlogged batch. Kept well below Scylla's
-    // batch_size_warn_threshold (default 128 KiB) to avoid coordinator warnings.
     private const int BatchRows = 200;
 
     private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
@@ -56,13 +55,15 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaSales });
 
-        var stmt = await scylla.PrepareAsync(CqlInsert, ct).ConfigureAwait(false);
+        var saleStmt = await scylla.PrepareAsync(CqlInsertSale, ct).ConfigureAwait(false);
+        var byBuyerStmt = await scylla.PrepareAsync(CqlInsertSaleByBuyer, ct).ConfigureAwait(false);
         var sw = Stopwatch.StartNew();
         var parsed = 0;
 
-        // Group by partition key so every batch touches exactly one Scylla partition.
-        // Unlogged batches that span multiple partitions force the coordinator to fan
-        // out to multiple nodes, negating the benefit and adding coordinator overhead.
+        // Group by sales partition key so single-partition unlogged batches stay one-coordinator.
+        // sales_by_buyer rows go into the same batch as their parent sale — they may target
+        // different partitions, but at this batch size (≤200) the coordinator overhead is
+        // acceptable and atomic-per-sale write semantics are preserved.
         var partitions = sales.GroupBy(s => (s.ItemId, s.WorldId));
 
         foreach (var partition in partitions)
@@ -73,10 +74,11 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
             foreach (var s in partition)
             {
                 ct.ThrowIfCancellationRequested();
-                batch.Add(stmt.Bind(
-                    s.BuyerName, s.Hq, s.OnMannequin, s.Quantity, s.SaleTime,
-                    s.WorldId, s.ItemId, s.WorldName, s.UnitPrice, s.ItemName,
-                    s.Datacenter, s.Region, s.Total));
+                batch.Add(saleStmt.Bind(
+                    s.ItemId, s.WorldId, s.SaleTime, s.BuyerName,
+                    s.Hq, s.OnMannequin, s.Quantity, s.UnitPrice));
+                batch.Add(byBuyerStmt.Bind(
+                    s.BuyerName, s.SaleTime, s.ItemId, s.WorldId));
                 inBatch++;
                 parsed++;
 
@@ -109,10 +111,22 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         var stmt = await scylla.PrepareAsync(cql, ct).ConfigureAwait(false);
         var rows = await scylla.Session.ExecuteAsync(stmt.Bind(args)).ConfigureAwait(false);
 
+        // Each row in sales_by_buyer holds only the keys; we return Sale records with
+        // the buyer/time/item/world keys filled and the remaining fields zeroed. Callers
+        // that need full sale fields can fan out to GetByItemAndWorldAsync for each pair,
+        // but the current SearchBuyer endpoint only displays the buyer-keyed projection.
         var result = new List<Sale>();
         foreach (var row in rows)
         {
-            result.Add(MapRow(row));
+            result.Add(new Sale(
+                ItemId: row.GetValue<int>("item_id"),
+                WorldId: row.GetValue<int>("world_id"),
+                BuyerName: row.GetValue<string>("buyer_name") ?? string.Empty,
+                Hq: false,
+                OnMannequin: false,
+                Quantity: 0,
+                UnitPrice: 0,
+                SaleTime: row.GetValue<DateTimeOffset>("sale_time")));
         }
         return result;
     }
@@ -132,25 +146,20 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         var result = new List<Sale>(capacity: Math.Min(limit, 256));
         foreach (var row in rows)
         {
-            result.Add(MapRow(row));
+            result.Add(MapSaleRow(row));
         }
         return result;
     }
 
-    private static Sale MapRow(Row row) => new(
-        ItemId:       row.GetValue<int>("item_id"),
-        WorldId:      row.GetValue<int>("world_id"),
-        ItemName:     row.GetValue<string>("item_name") ?? string.Empty,
-        WorldName:    row.GetValue<string>("world_name") ?? string.Empty,
-        Datacenter:   row.GetValue<string>("datacenter") ?? string.Empty,
-        Region:       row.GetValue<string>("region") ?? string.Empty,
-        BuyerName:    row.GetValue<string>("buyer_name") ?? string.Empty,
-        Hq:           !row.IsNull("hq") && row.GetValue<bool>("hq"),
-        OnMannequin:  !row.IsNull("on_mannequin") && row.GetValue<bool>("on_mannequin"),
-        Quantity:     row.GetValue<int>("quantity"),
-        UnitPrice:    row.GetValue<int>("unit_price"),
-        Total:        row.GetValue<int>("total"),
-        SaleTime:     row.GetValue<DateTimeOffset>("sale_time"));
+    private static Sale MapSaleRow(Row row) => new(
+        ItemId:      row.GetValue<int>("item_id"),
+        WorldId:     row.GetValue<int>("world_id"),
+        BuyerName:   row.GetValue<string>("buyer_name") ?? string.Empty,
+        Hq:          !row.IsNull("hq") && row.GetValue<bool>("hq"),
+        OnMannequin: !row.IsNull("on_mannequin") && row.GetValue<bool>("on_mannequin"),
+        Quantity:    row.GetValue<int>("quantity"),
+        UnitPrice:   row.GetValue<int>("unit_price"),
+        SaleTime:    row.GetValue<DateTimeOffset>("sale_time"));
 
     private static BatchStatement NewBatch() =>
         (BatchStatement)new BatchStatement()

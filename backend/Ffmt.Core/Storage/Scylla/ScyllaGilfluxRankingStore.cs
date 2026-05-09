@@ -242,22 +242,17 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
     }
 
     private static GilfluxRanking MapRow(Row row) => new(
-        ItemId:        row.GetValue<int>("item_id"),
-        ItemName:      GetStr(row, "item_name") ?? string.Empty,
-        WorldId:       HasColumn(row, "world_id") && !row.IsNull("world_id") ? row.GetValue<int>("world_id") : null,
-        WorldName:     GetStr(row, "world_name"),
-        Datacenter:    GetStr(row, "datacenter") ?? string.Empty,
-        Region:        GetStr(row, "region") ?? string.Empty,
-        RankingAlltime: GetLong(row, "ranking_alltime"),
-        Ranking1h:      GetLong(row, "ranking_1h"),
-        Ranking3h:      GetLong(row, "ranking_3h"),
-        Ranking6h:      GetLong(row, "ranking_6h"),
-        Ranking12h:     GetLong(row, "ranking_12h"),
-        Ranking1d:      GetLong(row, "ranking_1d"),
-        Ranking3d:      GetLong(row, "ranking_3d"),
-        Ranking7d:      GetLong(row, "ranking_7d"),
-        UpdatedAt:      GetNullableLong(row, "updated_at"),
-        LastSaleTime:   GetNullableLong(row, "last_sale_time"));
+        ItemId:       row.GetValue<int>("item_id"),
+        WorldId:      HasColumn(row, "world_id") && !row.IsNull("world_id") ? row.GetValue<int>("world_id") : null,
+        Ranking1h:    GetLong(row, "ranking_1h"),
+        Ranking3h:    GetLong(row, "ranking_3h"),
+        Ranking6h:    GetLong(row, "ranking_6h"),
+        Ranking12h:   GetLong(row, "ranking_12h"),
+        Ranking1d:    GetLong(row, "ranking_1d"),
+        Ranking3d:    GetLong(row, "ranking_3d"),
+        Ranking7d:    GetLong(row, "ranking_7d"),
+        UpdatedAt:    GetNullableLong(row, "updated_at"),
+        LastSaleTime: GetNullableLong(row, "last_sale_time"));
 
     private static bool HasColumn(Row row, string name) => row.GetColumn(name) is not null;
 
