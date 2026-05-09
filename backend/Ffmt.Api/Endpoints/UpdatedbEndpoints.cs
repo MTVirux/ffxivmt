@@ -1,3 +1,4 @@
+using Ffmt.Core.Gilflux;
 using Ffmt.Core.Logging;
 using Ffmt.Core.Storage.Scylla;
 using Microsoft.AspNetCore.Builder;
@@ -18,7 +19,7 @@ public static class UpdatedbEndpoints
                 IItemStore items,
                 IWorldStore worlds,
                 ISaleStore sales,
-                IGilfluxRankingStore rankings,
+                IRankingRefresher refresher,
                 ILogger<PythonRequestLog> logger,
                 CancellationToken ct) =>
             {
@@ -42,7 +43,7 @@ public static class UpdatedbEndpoints
                 foreach (var (worldId, itemId) in transform.RankingPairs)
                 {
                     ct.ThrowIfCancellationRequested();
-                    await rankings.UpdateRankingAsync(worldId, itemId, ct);
+                    await refresher.RefreshAsync(worldId, itemId, ct);
                 }
 
                 logger.LogInformation(
@@ -60,13 +61,13 @@ public static class UpdatedbEndpoints
         group.MapGet("/gilflux_ranking_update/{world_id:int}/{item_id:int}", async (
             int world_id,
             int item_id,
-            IGilfluxRankingStore rankings,
+            IRankingRefresher refresher,
             ILogger<GilfluxRankingUpdateLog> logger,
             CancellationToken ct) =>
         {
             using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaGilflux });
 
-            await rankings.UpdateRankingAsync(world_id, item_id, ct);
+            await refresher.RefreshAsync(world_id, item_id, ct);
             logger.LogInformation("gilflux_ranking_update: refreshed (world={WorldId}, item={ItemId}).", world_id, item_id);
             return Results.Ok(new { status = true });
         });
@@ -74,7 +75,6 @@ public static class UpdatedbEndpoints
         return app;
     }
 
-    // Marker types so each endpoint gets a distinct ILogger<T> category.
     private sealed class PythonRequestLog;
     private sealed class GilfluxRankingUpdateLog;
 }
