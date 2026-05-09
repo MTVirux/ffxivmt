@@ -1,20 +1,25 @@
 using Cassandra;
+using Ffmt.Core.Configuration;
+using Ffmt.Core.Gilflux;
+using Ffmt.Core.Models;
+using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Text.Json;
-using WsWorker.Models;
 using WsWorker.Options;
-using WsWorker.Services;
 
 namespace WsWorker.Workers;
 
 public sealed class SalesBackfillService : BackgroundService
 {
-    private readonly ScyllaService _scyllaService;
-    private readonly WorldDataCache _worldDataCache;
+    private readonly IScyllaSession _scylla;
+    private readonly ISaleStore _saleStore;
+    private readonly WorldStructureService _catalog;
+    private readonly IDirtyPairQueue _dirtyPairs;
     private readonly UniversalisOptions _uniOptions;
     private readonly BackfillOptions _backfillOptions;
-    private readonly BackendOptions _backendOptions;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SalesBackfillService> _logger;
 
@@ -32,19 +37,21 @@ public sealed class SalesBackfillService : BackgroundService
     private readonly HashSet<string> _crawlComplete = new(StringComparer.OrdinalIgnoreCase);
 
     public SalesBackfillService(
-        ScyllaService scyllaService,
-        WorldDataCache worldDataCache,
+        IScyllaSession scylla,
+        ISaleStore saleStore,
+        WorldStructureService catalog,
+        IDirtyPairQueue dirtyPairs,
         IOptions<UniversalisOptions> uniOptions,
         IOptions<BackfillOptions> backfillOptions,
-        IOptions<BackendOptions> backendOptions,
         IHttpClientFactory httpClientFactory,
         ILogger<SalesBackfillService> logger)
     {
-        _scyllaService = scyllaService;
-        _worldDataCache = worldDataCache;
+        _scylla = scylla;
+        _saleStore = saleStore;
+        _catalog = catalog;
+        _dirtyPairs = dirtyPairs;
         _uniOptions = uniOptions.Value;
         _backfillOptions = backfillOptions.Value;
-        _backendOptions = backendOptions.Value;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
 
@@ -55,11 +62,8 @@ public sealed class SalesBackfillService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        await _scyllaService.InitializeAsync();
-        await _worldDataCache.InitializeAsync();
-
-        _selectState = await _scyllaService.PrepareAsync(SelectStateCql);
-        _upsertState = await _scyllaService.PrepareAsync(UpsertStateCql);
+        _selectState = await _scylla.PrepareAsync(SelectStateCql, ct);
+        _upsertState = await _scylla.PrepareAsync(UpsertStateCql, ct);
 
         _logger.LogInformation("SalesBackfillService initialized — starting live-gap and historical crawl loops");
 
@@ -117,24 +121,26 @@ public sealed class SalesBackfillService : BackgroundService
             return;
         }
 
-        var entriesWithin = (long)gap.TotalMilliseconds;
+        var entriesWithinSeconds = (long)gap.TotalSeconds;
         _logger.LogInformation("LiveGapFillLoop [{Region}]: fetching {Gap:F1} min of history", region, gap.TotalMinutes);
 
-        var sales = await FetchHistory(region, entriesWithin, ct);
+        var sales = await FetchHistory(region, entriesWithinSeconds, ct);
         _logger.LogInformation("LiveGapFillLoop [{Region}]: fetched {Count} sales", region, sales.Count);
 
-        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeMilliseconds();
-        var gilfluxPairs = new HashSet<(int WorldId, int ItemId)>();
-        foreach (var s in sales)
-        {
-            if (s.SaleTime > sevenDaysAgo)
-                gilfluxPairs.Add((s.WorldId, s.ItemId));
-        }
+        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        var dirtyPairs = sales
+            .Where(s => s.SaleTime > sevenDaysAgo)
+            .Select(s => (s.WorldId, s.ItemId))
+            .ToHashSet();
 
-        await WriteSales(sales, ct);
+        await _saleStore.AddBatchAsync(sales, ct);
         await WriteState(region, lastImportAt: now, earliestImportAt: null);
 
-        await RunGilfluxRefreshPass(gilfluxPairs, ct);
+        if (dirtyPairs.Count > 0)
+        {
+            await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
+            _logger.LogInformation("LiveGapFillLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+        }
     }
 
     private async Task HistoricalCrawlLoop(CancellationToken ct)
@@ -183,17 +189,16 @@ public sealed class SalesBackfillService : BackgroundService
         }
 
         var chunkStart = earliestImportAt.Value - TimeSpan.FromDays(_backfillOptions.ChunkDays);
-        var entriesWithin = (long)(now - chunkStart).TotalMilliseconds;
+        var entriesWithinSeconds = (long)(now - chunkStart).TotalSeconds;
 
         _logger.LogInformation(
             "HistoricalCrawlLoop [{Region}]: crawling chunk {ChunkStart:u} → {EarliestImportAt:u}",
             region, chunkStart, earliestImportAt.Value);
 
-        var allSales = await FetchHistory(region, entriesWithin, ct);
+        var allSales = await FetchHistory(region, entriesWithinSeconds, ct);
         _logger.LogInformation("HistoricalCrawlLoop [{Region}]: fetched {Count} total sales for chunk", region, allSales.Count);
 
-        var earliestMs = earliestImportAt.Value.ToUnixTimeMilliseconds();
-        var toWrite = allSales.Where(s => s.SaleTime < earliestMs).ToList();
+        var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
 
         if (toWrite.Count == 0)
         {
@@ -202,23 +207,25 @@ public sealed class SalesBackfillService : BackgroundService
             return;
         }
 
-        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeMilliseconds();
-        var gilfluxPairs = new HashSet<(int WorldId, int ItemId)>();
-        foreach (var s in toWrite)
-        {
-            if (s.SaleTime > sevenDaysAgo)
-                gilfluxPairs.Add((s.WorldId, s.ItemId));
-        }
+        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        var dirtyPairs = toWrite
+            .Where(s => s.SaleTime > sevenDaysAgo)
+            .Select(s => (s.WorldId, s.ItemId))
+            .ToHashSet();
 
-        await WriteSales(toWrite, ct);
+        await _saleStore.AddBatchAsync(toWrite, ct);
         await WriteState(region, lastImportAt: null, earliestImportAt: chunkStart);
 
-        await RunGilfluxRefreshPass(gilfluxPairs, ct);
+        if (dirtyPairs.Count > 0)
+        {
+            await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
+            _logger.LogInformation("HistoricalCrawlLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+        }
     }
 
     private async Task<(DateTimeOffset? LastImportAt, DateTimeOffset? EarliestImportAt)> ReadState(string region)
     {
-        var rows = await _scyllaService.ExecuteAsync(_selectState.Bind(region));
+        var rows = await _scylla.Session.ExecuteAsync(_selectState.Bind(region));
         var row = rows.FirstOrDefault();
         if (row is null)
             return (null, null);
@@ -247,18 +254,15 @@ public sealed class SalesBackfillService : BackgroundService
 
     private async Task WriteState(string region, DateTimeOffset? lastImportAt, DateTimeOffset? earliestImportAt)
     {
-        // Read current values so we don't clobber columns we're not updating
         var (currentLast, currentEarliest) = await ReadState(region);
-
         var newLast = lastImportAt ?? currentLast;
         var newEarliest = earliestImportAt ?? currentEarliest;
-
-        await _scyllaService.ExecuteAsync(_upsertState.Bind(region, newLast, newEarliest));
+        await _scylla.Session.ExecuteAsync(_upsertState.Bind(region, newLast, newEarliest));
     }
 
-    private async Task<List<Sale>> FetchHistory(string region, long entriesWithin, CancellationToken ct)
+    private async Task<List<Sale>> FetchHistory(string region, long entriesWithinSeconds, CancellationToken ct)
     {
-        var itemIds = _worldDataCache.MarketableItemIds;
+        var itemIds = await _catalog.GetMarketableItemIdsAsync(ct);
         var chunks = Chunk(itemIds, _uniOptions.ItemsPerRequest);
 
         var results = new System.Collections.Concurrent.ConcurrentBag<Sale>();
@@ -270,7 +274,7 @@ public sealed class SalesBackfillService : BackgroundService
             try
             {
                 await _rateLimiter.ConsumeAsync(ct);
-                var chunkSales = await FetchChunk(region, chunk, entriesWithin, ct);
+                var chunkSales = await FetchChunk(region, chunk, entriesWithinSeconds, ct);
                 foreach (var s in chunkSales)
                     results.Add(s);
             }
@@ -284,10 +288,10 @@ public sealed class SalesBackfillService : BackgroundService
         return results.ToList();
     }
 
-    private async Task<List<Sale>> FetchChunk(string region, IReadOnlyList<int> itemIds, long entriesWithin, CancellationToken ct)
+    private async Task<List<Sale>> FetchChunk(string region, IReadOnlyList<int> itemIds, long entriesWithinSeconds, CancellationToken ct)
     {
         var itemIdStr = string.Join(",", itemIds);
-        var url = $"{_uniOptions.ApiUrl}history/{region}/{itemIdStr}?entriesWithin={entriesWithin}&entriesToReturn=999999";
+        var url = $"{_uniOptions.BaseUrl.TrimEnd('/')}/history/{region}/{itemIdStr}?entriesWithin={entriesWithinSeconds}&entriesToReturn=99999";
 
         var client = _httpClientFactory.CreateClient("backfill_universalis");
         HttpResponseMessage response;
@@ -357,7 +361,7 @@ public sealed class SalesBackfillService : BackgroundService
         return sales;
     }
 
-    private void ParseItemElement(JsonElement itemEl, List<Sale> sales)
+    private static void ParseItemElement(JsonElement itemEl, List<Sale> sales)
     {
         if (!itemEl.TryGetProperty("itemID", out var itemIdEl) ||
             !itemEl.TryGetProperty("entries", out var entriesEl) ||
@@ -368,114 +372,24 @@ public sealed class SalesBackfillService : BackgroundService
 
         foreach (var entry in entriesEl.EnumerateArray())
         {
-            int worldId = 0;
-            if (entry.TryGetProperty("worldID", out var wIdEl))
-                worldId = wIdEl.GetInt32();
-
+            var worldId = entry.TryGetProperty("worldID", out var wIdEl) ? wIdEl.GetInt32() : 0;
             var hq = entry.TryGetProperty("hq", out var hqEl) && hqEl.ValueKind == JsonValueKind.True;
             var onMannequin = entry.TryGetProperty("onMannequin", out var omEl) && omEl.ValueKind == JsonValueKind.True;
             var pricePerUnit = entry.TryGetProperty("pricePerUnit", out var ppuEl) ? ppuEl.GetInt32() : 0;
             var quantity = entry.TryGetProperty("quantity", out var qEl) ? qEl.GetInt32() : 0;
             var buyerName = entry.TryGetProperty("buyerName", out var bnEl) ? bnEl.GetString() ?? string.Empty : string.Empty;
+            var saleTimeSeconds = entry.TryGetProperty("timestamp", out var tsEl) ? tsEl.GetInt64() : 0L;
 
-            long saleTimeMs = 0;
-            if (entry.TryGetProperty("timestamp", out var tsEl))
-                saleTimeMs = tsEl.GetInt64() * 1000L; // Universalis history timestamps are in seconds
-
-            sales.Add(new Sale
-            {
-                BuyerName = buyerName,
-                Hq = hq,
-                OnMannequin = onMannequin,
-                UnitPrice = pricePerUnit,
-                Quantity = quantity,
-                SaleTime = saleTimeMs,
-                WorldId = worldId,
-                ItemId = itemId,
-            });
+            sales.Add(new Sale(
+                ItemId:      itemId,
+                WorldId:     worldId,
+                BuyerName:   buyerName,
+                Hq:          hq,
+                OnMannequin: onMannequin,
+                Quantity:    quantity,
+                UnitPrice:   pricePerUnit,
+                SaleTime:    DateTimeOffset.FromUnixTimeSeconds(saleTimeSeconds)));
         }
-    }
-
-    private async Task WriteSales(IEnumerable<Sale> sales, CancellationToken ct)
-    {
-        using var semaphore = new SemaphoreSlim(16, 16);
-        var tasks = sales.Select(async sale =>
-        {
-            await semaphore.WaitAsync(ct);
-            try
-            {
-                var saleBound = _scyllaService.SalesInsert.Bind(
-                    sale.ItemId,
-                    sale.WorldId,
-                    sale.SaleTime,
-                    sale.BuyerName,
-                    sale.Hq,
-                    sale.OnMannequin,
-                    sale.Quantity,
-                    sale.UnitPrice);
-
-                var byBuyerBound = _scyllaService.SalesByBuyerInsert.Bind(
-                    sale.BuyerName,
-                    sale.SaleTime,
-                    sale.ItemId,
-                    sale.WorldId);
-
-                await _scyllaService.ExecuteAsync(saleBound);
-                await _scyllaService.ExecuteAsync(byBuyerBound);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-
-        var allTasks = tasks.ToList();
-        await Task.WhenAll(allTasks);
-
-        _logger.LogInformation("WriteSales: wrote {Count} sales to Scylla", allTasks.Count);
-    }
-
-    private async Task RunGilfluxRefreshPass(HashSet<(int WorldId, int ItemId)> pairs, CancellationToken ct)
-    {
-        if (pairs.Count == 0)
-            return;
-
-        _logger.LogInformation("RunGilfluxRefreshPass: refreshing {Count} (worldId, itemId) pairs", pairs.Count);
-
-        using var semaphore = new SemaphoreSlim(8, 8);
-        var client = _httpClientFactory.CreateClient("backfill_gilflux");
-
-        var tasks = pairs.Select(async pair =>
-        {
-            await semaphore.WaitAsync(ct);
-            try
-            {
-                var url = $"http://{_backendOptions.Host}/api/v1/updatedb/gilflux_ranking_update/{pair.WorldId}/{pair.ItemId}";
-                try
-                {
-                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    cts.CancelAfter(TimeSpan.FromSeconds(10));
-
-                    using var response = await client.GetAsync(url, cts.Token);
-                    if (!response.IsSuccessStatusCode)
-                        _logger.LogWarning("GilfluxRefresh: {StatusCode} for world={WorldId} item={ItemId}", (int)response.StatusCode, pair.WorldId, pair.ItemId);
-                }
-                catch (HttpRequestException ex)
-                {
-                    _logger.LogWarning("GilfluxRefresh: connection error for world={WorldId} item={ItemId}: {Message}", pair.WorldId, pair.ItemId, ex.Message);
-                }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                {
-                    _logger.LogWarning("GilfluxRefresh: timeout for world={WorldId} item={ItemId}", pair.WorldId, pair.ItemId);
-                }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-
-        await Task.WhenAll(tasks);
     }
 
     private static IEnumerable<IReadOnlyList<T>> Chunk<T>(IReadOnlyList<T> source, int size)
