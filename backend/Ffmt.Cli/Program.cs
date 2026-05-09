@@ -30,7 +30,6 @@ builder.Services.AddSingleton<UpdateItemsStage>();
 builder.Services.AddSingleton<UpdateElasticStage>();
 builder.Services.AddSingleton<UpdateGarlandStage>();
 builder.Services.AddSingleton<UpdateMarketabilityStage>();
-builder.Services.AddSingleton<FixGilfluxNamesStage>();
 builder.Services.AddSingleton<UpdatedbOrchestrator>();
 
 using var host = builder.Build();

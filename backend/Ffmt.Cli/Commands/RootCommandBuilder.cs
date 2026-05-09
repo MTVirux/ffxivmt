@@ -19,7 +19,6 @@ internal static class RootCommandBuilder
         root.AddCommand(BuildUpdateElastic(services));
         root.AddCommand(BuildUpdateGarland(services));
         root.AddCommand(BuildUpdateMarketability(services));
-        root.AddCommand(BuildFixGilfluxNames(services));
 
         return root;
     }
@@ -92,17 +91,6 @@ internal static class RootCommandBuilder
         {
             await Run(services, ctx, async (sp, ct) =>
                 await sp.GetRequiredService<UpdateMarketabilityStage>().RunAsync(ct).ConfigureAwait(false));
-        });
-        return cmd;
-    }
-
-    private static Command BuildFixGilfluxNames(IServiceProvider services)
-    {
-        var cmd = new Command("fix-gilflux-names", "Recompute gilflux_ranking rows whose item_name is empty.");
-        cmd.SetHandler(async (InvocationContext ctx) =>
-        {
-            await Run(services, ctx, async (sp, ct) =>
-                await sp.GetRequiredService<FixGilfluxNamesStage>().RunAsync(ct).ConfigureAwait(false));
         });
         return cmd;
     }
