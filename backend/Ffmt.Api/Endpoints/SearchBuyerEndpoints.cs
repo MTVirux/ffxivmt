@@ -33,10 +33,21 @@ public static class SearchBuyerEndpoints
 
                 var history = await sales.SearchBuyerAsync(buyer_name, worldId, ct);
 
+                // sales_by_buyer rows only carry the keys; project explicitly so we
+                // don't ship zeroed Hq/Quantity/UnitPrice fields the frontend would
+                // misread as legitimate zeros.
+                var projection = history.Select(s => new
+                {
+                    item_id = s.ItemId,
+                    world_id = s.WorldId,
+                    buyer_name = s.BuyerName,
+                    sale_time = s.SaleTime,
+                });
+
                 return Results.Ok(new
                 {
                     status = true,
-                    data = history,
+                    data = projection,
                 });
             })
             .WithRequestTimeout(TimeSpan.FromSeconds(300));
