@@ -57,6 +57,7 @@ public static class GilfluxEndpoints
             string? request_id,
             IGilfluxRankingStore store,
             LocationResolver resolver,
+            GilfluxRankingReader reader,
             IOptions<GilfluxOptions> opts,
             CancellationToken ct) =>
         {
@@ -67,11 +68,11 @@ public static class GilfluxEndpoints
                     statusCode: StatusCodes.Status400BadRequest);
             }
 
-            IEnumerable<Ffmt.Core.Models.GilfluxRanking> rankings;
+            IEnumerable<Ffmt.Core.Models.GilfluxRanking> rawRankings;
 
             if (string.IsNullOrWhiteSpace(target_location))
             {
-                rankings = await store.GetByItemAsync(item_id, ct);
+                rawRankings = await store.GetByItemAsync(item_id, ct);
             }
             else
             {
@@ -83,22 +84,41 @@ public static class GilfluxEndpoints
                         statusCode: StatusCodes.Status404NotFound);
                 }
 
-                rankings = resolution.Kind switch
+                rawRankings = resolution.Kind switch
                 {
-                    LocationKind.World => await store.GetByItemAndWorldAsync(item_id, resolution.WorldId!.Value, ct),
+                    LocationKind.World      => await store.GetByItemAndWorldAsync(item_id, resolution.WorldId!.Value, ct),
                     LocationKind.Datacenter => (await store.GetByItemAsync(item_id, ct))
-                        .Where(r => string.Equals(r.Datacenter, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)),
-                    LocationKind.Region => (await store.GetByItemAsync(item_id, ct))
-                        .Where(r => string.Equals(r.Region, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)),
-                    _ => [],
+                        .Where(r => r.WorldId is not null), // narrowing happens in the post-enrich filter below
+                    LocationKind.Region     => (await store.GetByItemAsync(item_id, ct))
+                        .Where(r => r.WorldId is not null),
+                    _ => Array.Empty<Ffmt.Core.Models.GilfluxRanking>(),
                 };
+
+                // Enrich first so DC/region filtering can match against world metadata.
+                var enrichedAll = await reader.EnrichAsync(rawRankings, ct);
+                var filtered = resolution.Kind switch
+                {
+                    LocationKind.Datacenter => enrichedAll.Where(r => string.Equals(r.Datacenter, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)).ToList(),
+                    LocationKind.Region     => enrichedAll.Where(r => string.Equals(r.Region, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)).ToList(),
+                    _ => (IEnumerable<EnrichedGilfluxRanking>)enrichedAll,
+                };
+
+                return Results.Ok(new
+                {
+                    status = true,
+                    message = "Success",
+                    data = filtered,
+                    gilflux_timeframe_in_ms = opts.Value.TimeframesMs,
+                    request_id,
+                });
             }
 
+            var enriched = await reader.EnrichAsync(rawRankings, ct);
             return Results.Ok(new
             {
                 status = true,
                 message = "Success",
-                data = rankings,
+                data = enriched,
                 gilflux_timeframe_in_ms = opts.Value.TimeframesMs,
                 request_id,
             });

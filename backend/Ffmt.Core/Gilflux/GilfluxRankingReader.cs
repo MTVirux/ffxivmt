@@ -6,6 +6,25 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
 
+/// <summary>API-shaped row: a GilfluxRanking enriched with item/world fields the
+/// underlying Scylla rows no longer carry.</summary>
+public sealed record EnrichedGilfluxRanking(
+    int ItemId,
+    string ItemName,
+    int? WorldId,
+    string? WorldName,
+    string Datacenter,
+    string Region,
+    long Ranking1h,
+    long Ranking3h,
+    long Ranking6h,
+    long Ranking12h,
+    long Ranking1d,
+    long Ranking3d,
+    long Ranking7d,
+    long? UpdatedAt,
+    long? LastSaleTime);
+
 public sealed class GilfluxRankingReader
 {
     private readonly IGilfluxRankingStore _store;
@@ -40,85 +59,107 @@ public sealed class GilfluxRankingReader
         }
 
         var requestedKey = GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly);
-        if (_cache.TryGetValue(requestedKey, out IReadOnlyList<GilfluxRanking>? cached) && cached is not null)
+        if (_cache.TryGetValue(requestedKey, out IReadOnlyList<EnrichedGilfluxRanking>? cached) && cached is not null)
         {
             return new RankingByLocationResult(resolution, cached, FromCache: true);
         }
 
-        IReadOnlyList<GilfluxRanking> all = resolution.Kind switch
+        var allWorlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
+        var worldsById = allWorlds.ToDictionary(w => w.Id);
+        var itemNames = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
+
+        IReadOnlyList<EnrichedGilfluxRanking> enrichedAll = resolution.Kind switch
         {
-            LocationKind.World      => await _store.GetByWorldAsync(resolution.WorldId!.Value, ct).ConfigureAwait(false),
-            LocationKind.Datacenter => await MergeByDatacenterAsync(resolution.CanonicalName, ct).ConfigureAwait(false),
-            LocationKind.Region     => await MergeByRegionAsync(resolution.CanonicalName, ct).ConfigureAwait(false),
-            _ => [],
+            LocationKind.World      => Enrich(await _store.GetByWorldAsync(resolution.WorldId!.Value, ct).ConfigureAwait(false), worldsById, itemNames),
+            LocationKind.Datacenter => Enrich(await MergeRawByDatacenterAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames),
+            LocationKind.Region     => Enrich(await MergeRawByRegionAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames),
+            _ => Array.Empty<EnrichedGilfluxRanking>(),
         };
 
         // Always populate the unfiltered cache so siblings that include this location can reuse it.
-        _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: false), all, _ttl);
+        _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: false), enrichedAll, _ttl);
 
         if (!craftedOnly)
         {
-            return new RankingByLocationResult(resolution, all, FromCache: false);
+            return new RankingByLocationResult(resolution, enrichedAll, FromCache: false);
         }
 
         var craftableIds = (await _itemStore.GetCraftableIdsAsync(ct).ConfigureAwait(false)).ToHashSet();
-        var crafted = all.Where(r => craftableIds.Contains(r.ItemId)).ToList();
-        // Only the filtered result lands in the crafted_only key — otherwise an unfiltered
-        // request would poison this slot.
-        _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: true), (IReadOnlyList<GilfluxRanking>)crafted, _ttl);
+        var crafted = enrichedAll.Where(r => craftableIds.Contains(r.ItemId)).ToList();
+        _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: true), (IReadOnlyList<EnrichedGilfluxRanking>)crafted, _ttl);
         return new RankingByLocationResult(resolution, crafted, FromCache: false);
     }
 
-    private async Task<IReadOnlyList<GilfluxRanking>> MergeByDatacenterAsync(string datacenter, CancellationToken ct)
+    /// <summary>Public helper exposed for endpoints that want to enrich a list returned
+    /// directly by the store (e.g. the per-item endpoint).</summary>
+    public async Task<IReadOnlyList<EnrichedGilfluxRanking>> EnrichAsync(
+        IEnumerable<GilfluxRanking> rows, CancellationToken ct = default)
     {
-        var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var merged = new List<GilfluxRanking>();
-        foreach (var w in worlds.Where(w => string.Equals(w.Datacenter, datacenter, StringComparison.OrdinalIgnoreCase)))
-        {
-            merged.AddRange(await GetWorldFromCacheOrStoreAsync(w.Id, w.Name, ct).ConfigureAwait(false));
-        }
-        return merged;
+        var allWorlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
+        var worldsById = allWorlds.ToDictionary(w => w.Id);
+        var itemNames = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
+        return Enrich(rows, worldsById, itemNames);
     }
 
-    private async Task<IReadOnlyList<GilfluxRanking>> MergeByRegionAsync(string region, CancellationToken ct)
+    private async Task<IReadOnlyList<GilfluxRanking>> MergeRawByDatacenterAsync(string datacenter, CancellationToken ct)
     {
         var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var merged = new List<GilfluxRanking>();
-
-        var byDatacenter = worlds
-            .Where(w => string.Equals(w.Region, region, StringComparison.OrdinalIgnoreCase))
-            .GroupBy(w => w.Datacenter, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var dcGroup in byDatacenter)
-        {
-            // Reuse a cached datacenter aggregate if a previous request already built it.
-            var dcKey = GilfluxCacheKeys.For(dcGroup.Key, craftedOnly: false);
-            if (_cache.TryGetValue(dcKey, out IReadOnlyList<GilfluxRanking>? dcCached) && dcCached is not null)
-            {
-                merged.AddRange(dcCached);
-                continue;
-            }
-
-            foreach (var w in dcGroup)
-            {
-                merged.AddRange(await GetWorldFromCacheOrStoreAsync(w.Id, w.Name, ct).ConfigureAwait(false));
-            }
-        }
-        return merged;
+        var dcWorlds = worlds.Where(w => string.Equals(w.Datacenter, datacenter, StringComparison.OrdinalIgnoreCase)).ToList();
+        var perWorldTasks = dcWorlds.Select(w => _store.GetByWorldAsync(w.Id, ct)).ToArray();
+        await Task.WhenAll(perWorldTasks).ConfigureAwait(false);
+        return perWorldTasks.SelectMany(t => t.Result).ToList();
     }
 
-    private async Task<IReadOnlyList<GilfluxRanking>> GetWorldFromCacheOrStoreAsync(int worldId, string worldName, CancellationToken ct)
+    private async Task<IReadOnlyList<GilfluxRanking>> MergeRawByRegionAsync(string region, CancellationToken ct)
     {
-        var key = GilfluxCacheKeys.For(worldName, craftedOnly: false);
-        if (_cache.TryGetValue(key, out IReadOnlyList<GilfluxRanking>? cached) && cached is not null)
-        {
-            return cached;
-        }
+        var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
+        var regionWorlds = worlds.Where(w => string.Equals(w.Region, region, StringComparison.OrdinalIgnoreCase)).ToList();
+        var perWorldTasks = regionWorlds.Select(w => _store.GetByWorldAsync(w.Id, ct)).ToArray();
+        await Task.WhenAll(perWorldTasks).ConfigureAwait(false);
+        return perWorldTasks.SelectMany(t => t.Result).ToList();
+    }
 
-        var fresh = await _store.GetByWorldAsync(worldId, ct).ConfigureAwait(false);
-        _cache.Set(key, fresh, _ttl);
-        return fresh;
+    private static IReadOnlyList<EnrichedGilfluxRanking> Enrich(
+        IEnumerable<GilfluxRanking> rows,
+        IReadOnlyDictionary<int, World> worldsById,
+        IReadOnlyDictionary<int, string> itemNames)
+    {
+        var result = new List<EnrichedGilfluxRanking>();
+        foreach (var r in rows)
+        {
+            var (worldName, datacenter, region) = ResolveLocation(r.WorldId, worldsById);
+            var itemName = itemNames.TryGetValue(r.ItemId, out var n) ? n : string.Empty;
+            result.Add(new EnrichedGilfluxRanking(
+                ItemId: r.ItemId,
+                ItemName: itemName,
+                WorldId: r.WorldId,
+                WorldName: worldName,
+                Datacenter: datacenter,
+                Region: region,
+                Ranking1h: r.Ranking1h,
+                Ranking3h: r.Ranking3h,
+                Ranking6h: r.Ranking6h,
+                Ranking12h: r.Ranking12h,
+                Ranking1d: r.Ranking1d,
+                Ranking3d: r.Ranking3d,
+                Ranking7d: r.Ranking7d,
+                UpdatedAt: r.UpdatedAt,
+                LastSaleTime: r.LastSaleTime));
+        }
+        return result;
+    }
+
+    private static (string? WorldName, string Datacenter, string Region) ResolveLocation(
+        int? worldId, IReadOnlyDictionary<int, World> worldsById)
+    {
+        if (worldId is null) return (null, string.Empty, string.Empty);
+        return worldsById.TryGetValue(worldId.Value, out var w)
+            ? (w.Name, w.Datacenter, w.Region)
+            : (null, string.Empty, string.Empty);
     }
 }
 
-public sealed record RankingByLocationResult(LocationResolution Resolution, IReadOnlyList<GilfluxRanking> Rankings, bool FromCache);
+public sealed record RankingByLocationResult(
+    LocationResolution Resolution,
+    IReadOnlyList<EnrichedGilfluxRanking> Rankings,
+    bool FromCache);
