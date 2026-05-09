@@ -1,19 +1,21 @@
+using Ffmt.Core.Configuration;
+using Ffmt.Core.Gilflux;
+using Ffmt.Core.Models;
+using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using System.Net.WebSockets;
-using WsWorker.Models;
-using WsWorker.Options;
-using WsWorker.Services;
 
 namespace WsWorker.Workers;
 
 public sealed class UniversalisWsConsumer : BackgroundService
 {
-    private readonly ScyllaService _scyllaService;
-    private readonly WorldDataCache _worldDataCache;
-    private readonly GilfluxCoalescer _gilfluxCoalescer;
+    private readonly ISaleStore _saleStore;
+    private readonly WorldStructureService _catalog;
+    private readonly RankingCoalescer _coalescer;
     private readonly UniversalisOptions _options;
     private readonly ILogger<UniversalisWsConsumer> _logger;
 
@@ -23,26 +25,25 @@ public sealed class UniversalisWsConsumer : BackgroundService
     public bool IsConnected => _isConnected;
 
     public UniversalisWsConsumer(
-        ScyllaService scyllaService,
-        WorldDataCache worldDataCache,
-        GilfluxCoalescer gilfluxCoalescer,
+        ISaleStore saleStore,
+        WorldStructureService catalog,
+        RankingCoalescer coalescer,
         IOptions<UniversalisOptions> options,
         ILogger<UniversalisWsConsumer> logger)
     {
-        _scyllaService = scyllaService;
-        _worldDataCache = worldDataCache;
-        _gilfluxCoalescer = gilfluxCoalescer;
+        _saleStore = saleStore;
+        _catalog = catalog;
+        _coalescer = coalescer;
         _options = options.Value;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        await _scyllaService.InitializeAsync();
-        await _worldDataCache.InitializeAsync();
+        var worldsById = await _catalog.GetWorldsByIdAsync(ct);
 
         var worldIds = _options.RegionsToUse
-            .SelectMany(region => _worldDataCache.Worlds.Values.Where(w => w.Region == region))
+            .SelectMany(region => worldsById.Values.Where(w => string.Equals(w.Region, region, StringComparison.OrdinalIgnoreCase)))
             .Select(w => w.Id)
             .Distinct()
             .ToList();
@@ -154,17 +155,16 @@ public sealed class UniversalisWsConsumer : BackgroundService
                 continue;
             }
 
-            var world = _worldDataCache.GetWorld(worldId);
+            var world = await _catalog.GetWorldAsync(worldId, ct);
             if (world is null)
             {
                 _logger.LogWarning("Received sales/add for unknown worldId {WorldId} — skipping", worldId);
                 continue;
             }
 
-            var itemName = _worldDataCache.GetItemName(itemId) ?? "Unknown";
-
             if (doc.TryGetValue("sales", out var salesVal) && salesVal.IsBsonArray)
             {
+                var sales = new List<Sale>();
                 foreach (BsonValue saleEntry in salesVal.AsBsonArray)
                 {
                     if (saleEntry is not BsonDocument saleDoc)
@@ -181,62 +181,34 @@ public sealed class UniversalisWsConsumer : BackgroundService
                     var pricePerUnit = saleDoc.TryGetValue("pricePerUnit", out var ppuVal) ? ppuVal.ToInt32() : 0;
                     var quantity = saleDoc.TryGetValue("quantity", out var qVal) ? qVal.ToInt32() : 0;
                     var timestamp = saleDoc.TryGetValue("timestamp", out var tsVal) ? tsVal.ToInt64() : 0L;
-                    var total = saleDoc.TryGetValue("total", out var totVal) ? totVal.ToInt32() : 0;
 
-                    var sale = new Sale
-                    {
-                        BuyerName = buyerName,
-                        Hq = hq,
-                        OnMannequin = onMannequin,
-                        UnitPrice = pricePerUnit,
-                        Quantity = quantity,
-                        SaleTime = timestamp * 1000,
-                        WorldId = worldId,
-                        ItemId = itemId,
-                    };
+                    sales.Add(new Sale(
+                        ItemId:      itemId,
+                        WorldId:     worldId,
+                        BuyerName:   buyerName,
+                        Hq:          hq,
+                        OnMannequin: onMannequin,
+                        Quantity:    quantity,
+                        UnitPrice:   pricePerUnit,
+                        SaleTime:    DateTimeOffset.FromUnixTimeSeconds(timestamp)));
+                }
 
-                    var saleBound = _scyllaService.SalesInsert.Bind(
-                        sale.ItemId,
-                        sale.WorldId,
-                        sale.SaleTime,
-                        sale.BuyerName,
-                        sale.Hq,
-                        sale.OnMannequin,
-                        sale.Quantity,
-                        sale.UnitPrice);
-
-                    var byBuyerBound = _scyllaService.SalesByBuyerInsert.Bind(
-                        sale.BuyerName,
-                        sale.SaleTime,
-                        sale.ItemId,
-                        sale.WorldId);
-
+                if (sales.Count > 0)
+                {
                     Interlocked.Increment(ref _inflightCount);
-                    _ = _scyllaService.ExecuteAsync(saleBound).ContinueWith(t =>
+                    _ = _saleStore.AddBatchAsync(sales, ct).ContinueWith(t =>
                     {
                         Interlocked.Decrement(ref _inflightCount);
                         if (t.IsFaulted)
-                            _logger.LogError(t.Exception, "Scylla fire-and-forget sale insert failed");
-                    }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
-
-                    Interlocked.Increment(ref _inflightCount);
-                    _ = _scyllaService.ExecuteAsync(byBuyerBound).ContinueWith(t =>
-                    {
-                        Interlocked.Decrement(ref _inflightCount);
-                        if (t.IsFaulted)
-                            _logger.LogError(t.Exception, "Scylla fire-and-forget sales_by_buyer insert failed");
+                            _logger.LogError(t.Exception, "Scylla fire-and-forget sale-batch insert failed");
                     }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
 
                     if (_inflightCount > 500)
                         await Task.Yield();
-
-                    _logger.LogDebug(
-                        "Sale processed: world={WorldId} item={ItemId} buyer={BuyerName} price={Price}",
-                        worldId, itemId, buyerName, pricePerUnit);
                 }
             }
 
-            _gilfluxCoalescer.Submit(worldId, itemId);
+            _coalescer.Submit(worldId, itemId);
         }
 
         _isConnected = false;
