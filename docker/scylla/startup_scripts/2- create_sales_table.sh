@@ -1,25 +1,27 @@
 #!/bin/bash
 
 cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales (
-    buyer_name text,
-    hq boolean,
-    on_mannequin  boolean,
-    unit_price int,
-    quantity int,
-    sale_time timestamp,
-    world_id int,
-    item_id int,
-    world_name text,
-    item_name text,
-    total int,
-    datacenter text,
-    region text,
-PRIMARY KEY ((item_id,world_id),sale_time, buyer_name))
-WITH default_time_to_live = 691200;"  # 8 days in seconds
+    item_id      int,
+    world_id     int,
+    sale_time    timestamp,
+    buyer_name   text,
+    hq           boolean,
+    on_mannequin boolean,
+    quantity     int,
+    unit_price   int,
+    PRIMARY KEY ((item_id, world_id), sale_time, buyer_name)
+) WITH CLUSTERING ORDER BY (sale_time DESC, buyer_name ASC)
+  AND compaction = {
+    'class': 'TimeWindowCompactionStrategy',
+    'compaction_window_unit': 'DAYS',
+    'compaction_window_size': 7
+  }
+  AND compression = {'sstable_compression': 'ZstdCompressor'};"
 
-#Secondary index the buyer_name column
-cqlsh -e "CREATE INDEX IF NOT EXISTS sales_buyers ON ffmt.sales (buyer_name)"
-cqlsh -e "CREATE INDEX IF NOT EXISTS sales_item_names ON ffmt.sales (item_name)"
-cqlsh -e "CREATE INDEX IF NOT EXISTS sales_world_names ON ffmt.sales (world_name)"
-cqlsh -e "CREATE INDEX IF NOT EXISTS sales_datacenters ON ffmt.sales (datacenter)"
-cqlsh -e "CREATE INDEX IF NOT EXISTS sales_regions ON ffmt.sales (region)"
+cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales_by_buyer (
+    buyer_name text,
+    sale_time  timestamp,
+    item_id    int,
+    world_id   int,
+    PRIMARY KEY ((buyer_name), sale_time, item_id, world_id)
+) WITH CLUSTERING ORDER BY (sale_time DESC, item_id ASC, world_id ASC);"
