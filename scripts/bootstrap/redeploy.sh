@@ -34,6 +34,14 @@ else
     git pull --ff-only
 fi
 
+# Load existing .env so re-rendering preserves bootstrap-set values.
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . .env
+    set +a
+fi
+
 # Re-render env in case template changed.
 render_env_file env .env
 
