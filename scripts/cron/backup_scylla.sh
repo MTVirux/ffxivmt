@@ -1,7 +1,7 @@
-#! /bin/bash
+#!/bin/bash
+set -euo pipefail
 
-# Give +x permissions to the make_backup.sh script inside ffmt_scylla container
-docker exec ffmt_scylla chmod +x /usr/local/bin/make_backup.sh
+CONTAINER="${SCYLLA_CONTAINER:-ffmt_scylla_node}"
 
-# Run the backup script in /usr/local/bin inside the ffmt_scylla container
-docker exec ffmt_scylla /usr/local/bin/make_backup.sh
+docker exec "$CONTAINER" chmod +x /usr/local/bin/make_backup.sh
+docker exec "$CONTAINER" /usr/local/bin/make_backup.sh
