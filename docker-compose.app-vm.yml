@@ -1,0 +1,8 @@
+services:
+  ffmt_backend:
+    environment:
+      - Scylla__ContactPoints__0=${SCYLLA_PRIVATE_IP}
+
+  ffmt_ws_worker:
+    environment:
+      - Scylla__ContactPoints__0=${SCYLLA_PRIVATE_IP}
