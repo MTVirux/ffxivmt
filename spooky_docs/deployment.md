@@ -179,6 +179,15 @@ scratch on the new VMs.
 
 A list of things that have actually broken.
 
+**`terraform apply` errors with "Function calls not allowed" in `terraform.tfvars`.**
+You hand-edited `terraform.tfvars` and put a `file(...)` call (or any other
+function) on the right-hand side. `.tfvars` only accepts literal values —
+the wizard works around this by reading the SSH key during prompting and
+inlining the contents. Either re-run `bash setup.sh` and let it write the
+file, or paste the public key as a literal string:
+`ssh_public_key = "ssh-ed25519 AAAAC3Nza... user@host"`. The file is
+gitignored, and it's a public key, so the literal is fine.
+
 **Cloud-init hangs in the middle of bootstrap.** SSH in and
 `tail -200 /var/log/ffmt-bootstrap.log`. The bootstrap scripts run under
 `set -euo pipefail` and propagate failures, so the last log lines tell you
