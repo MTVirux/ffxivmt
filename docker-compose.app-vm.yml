@@ -1,5 +1,7 @@
 services:
   ffmt_backend:
+    ports:
+      - "127.0.0.1:8080:8080"
     environment:
       - Scylla__ContactPoints__0=${SCYLLA_PRIVATE_IP}
 
