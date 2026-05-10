@@ -35,7 +35,6 @@ docker/mariadb/var/*
 /*.sh
 /*.ps1
 .env
-!/swap_scripts.sh
 
 ####### TERRAFORM #######
 tf/.terraform
