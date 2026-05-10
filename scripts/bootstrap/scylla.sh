@@ -31,7 +31,7 @@ log_info "Starting Scylla container..."
 docker compose \
     -f docker-compose.yml \
     -f docker-compose.scylla-vm.yml \
-    --profile scylla up -d --build
+    --profile scylla up -d --build ffmt_scylla_node
 
 # 4. Wait for CQL
 wait_for_tcp 127.0.0.1 9042 600
