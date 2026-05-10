@@ -77,6 +77,7 @@ services:
       context: .
       dockerfile: ./docker/dockerfiles/Dockerfile_scylla
     image: ffmt_scylla
+    profiles: ["scylla"]
     restart: "unless-stopped"
     ports:
       - 9042:9042
