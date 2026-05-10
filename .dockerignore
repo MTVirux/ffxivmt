@@ -1,5 +1,1 @@
-backend
-monitoring
-scripts
-docker/mariadb/var
 docker/scylla/persistent
