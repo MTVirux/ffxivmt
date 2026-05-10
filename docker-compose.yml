@@ -5,6 +5,7 @@ services:
       context: .
       dockerfile: ./docker/dockerfiles/Dockerfile_backend_dotnet
     image: ffmt_backend
+    container_name: ffmt_backend
     restart: "always"
     depends_on:
       - ffmt_elastic

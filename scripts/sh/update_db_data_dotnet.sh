@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-CONTAINER="${BACKEND_CONTAINER_NAME:-ffmt_backend_dotnet}"
+CONTAINER="${BACKEND_CONTAINER_NAME:-ffmt_backend}"
 
 echo "Running 'ffmt updatedb' inside container ${CONTAINER}..."
 docker exec "${CONTAINER}" ffmt updatedb
