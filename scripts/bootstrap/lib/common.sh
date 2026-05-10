@@ -83,7 +83,7 @@ ensure_cron() {
         log_info "  (already present)"
         return 0
     fi
-    (crontab -l 2>/dev/null; echo "$line") | crontab -
+    { crontab -l 2>/dev/null || true; echo "$line"; } | crontab -
 }
 
 # Append an /etc/fstab line if not already present (exact-match).
