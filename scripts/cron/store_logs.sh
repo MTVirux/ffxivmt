@@ -1,29 +1,26 @@
 #!/bin/bash
+set -euo pipefail
 
-echo "$(date +%Y-%m-%d) @ $(date +%H:%M:%S) - Cron task was run to backup and zip logs started" >> /root/logs/cron.log
+# Repo path is expected to be passed via FFMT_REPO (defaults to /opt/ffmt).
+FFMT_REPO="${FFMT_REPO:-/opt/ffmt}"
 
-# Create folders if they don't exist
-mkdir -p /root/logs
-mkdir -p /root/logs/temp
-mkdir -p /root/logs/temp/backend
-mkdir -p /root/logs/temp/ws_worker
-mkdir -p /root/logs/temp/ws_worker/action
-mkdir -p /root/logs/temp/ws_worker/error
-mkdir -p /root/logs/temp/ws_worker/debug
+LOG_DIR="${LOG_DIR:-/root/logs}"
+TEMP="$LOG_DIR/temp"
 
+echo "$(date -Is) - store_logs cron started" >> "$LOG_DIR/cron.log"
 
-# Copy logs to backup folder
-echo "$(date +%Y-%m-%d) @ $(date +%H:%M:%S) - Moving logs to /root/logs/temp..." >> /root/logs/cron.log
-mv /root/ffxiv-market-tools/backend/application/logs/*.log /root/logs/temp/backend
-mv /root/ffxiv-market-tools/docker/ws_worker/server/logs/action/*.log /root/logs/temp/ws_worker/action
-mv /root/ffxiv-market-tools/docker/ws_worker/server/logs/error/*.log /root/logs/temp/ws_worker/error
-mv /root/ffxiv-market-tools/docker/ws_worker/server/logs/debug/*.log /root/logs/temp/ws_worker/debug
+mkdir -p "$LOG_DIR" \
+         "$TEMP/backend" \
+         "$TEMP/ws_worker/action" \
+         "$TEMP/ws_worker/error" \
+         "$TEMP/ws_worker/debug"
 
-#zip the temp folder into a timestamped zip file
-zip -r /root/logs/$(date +%Y-%m-%d_%H-%M-%S).zip /root/logs/temp >> /root/logs/cron.log
+mv "$FFMT_REPO/backend/application/logs/"*.log                    "$TEMP/backend/"        2>/dev/null || true
+mv "$FFMT_REPO/docker/ws_worker/server/logs/action/"*.log         "$TEMP/ws_worker/action/" 2>/dev/null || true
+mv "$FFMT_REPO/docker/ws_worker/server/logs/error/"*.log          "$TEMP/ws_worker/error/"  2>/dev/null || true
+mv "$FFMT_REPO/docker/ws_worker/server/logs/debug/"*.log          "$TEMP/ws_worker/debug/"  2>/dev/null || true
 
-#Delete the temp folder
-rm -rf /root/logs/temp
+zip -r "$LOG_DIR/$(date +%Y-%m-%d_%H-%M-%S).zip" "$TEMP" >> "$LOG_DIR/cron.log"
+rm -rf "$TEMP"
 
-#Write hello to cron.log
-echo "$(date +%Y-%m-%d) @ $(date +%H:%M:%S) - Cron task was run to backup and zip logs and finished" >> /root/logs/cron.log
+echo "$(date -Is) - store_logs cron finished" >> "$LOG_DIR/cron.log"
