@@ -1,0 +1,10 @@
+services:
+  ffmt_scylla_node:
+    volumes:
+      - /mnt/scylla-data/data:/var/lib/scylla
+      - /mnt/scylla-data/commitlog:/var/lib/scylla/commitlog
+      - /mnt/scylla-data/saved_caches:/var/lib/scylla/saved_caches
+      - /mnt/scylla-data/log:/var/log/scylla
+      - ./docker/scylla/etc/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - ./docker/scylla/usr/local/bin:/usr/local/bin
+      - ./docker/scylla/startup_scripts:/startup_scripts
