@@ -7,7 +7,6 @@ services:
     image: ffmt_backend
     restart: "always"
     depends_on:
-      - ffmt_scylla_node
       - ffmt_elastic
       - ffmt_redis
     environment:
@@ -128,7 +127,6 @@ services:
     image: ffmt_ws_worker
     restart: always
     depends_on:
-      - ffmt_scylla_node
       - ffmt_redis
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
