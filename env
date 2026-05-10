@@ -32,3 +32,10 @@ ZERO_SSL_USER_EMAIL=example@domain.com
 ZERO_SSL_MAIN_DOMAIN=example.com
 ZERO_SSL_GRAFANA_DOMAIN=grafana.example.com
 ZERO_SSL_SCYLLA_DOMAIN=scylla.example.com
+
+
+# ######################## Private network IPs (rendered by bootstrap) ######################## #
+
+# Cloud-init substitutes this with the Scylla VM's private IP. Empty in single-host dev.
+SCYLLA_PRIVATE_IP=
+APP_PRIVATE_IP=
