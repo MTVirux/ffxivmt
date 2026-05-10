@@ -25,16 +25,16 @@ the API token belongs to.
 
 A **Cloud API token** scoped to that project. Console → Security → API Tokens
 → Read+Write. Call it `ffmt-tf` so revoking it later doesn't kill any other
-automation.
+automation. As of hcloud Terraform provider 1.54 (May 2026), this same token
+covers DNS too — there's no separate DNS token anymore. The legacy
+`dns.hetzner.com` console was retired and DNS was folded into the main Hetzner
+Console.
 
-A **DNS zone** for the apex domain you're going to deploy on. Hetzner DNS
-console → Add Zone. The TF module references this as a data source, so it has
-to exist before apply — TF won't create it. After Hetzner shows you the zone's
-nameservers, point your registrar at them. Propagation can take an hour; do
-this early.
-
-A **DNS API token**. Separate from the Cloud token. Same place but in the DNS
-console.
+A **DNS zone** for the apex domain you're going to deploy on. In Hetzner
+Console (not the legacy DNS console — that's gone). Add the zone, then point
+your registrar's nameservers at the ones Hetzner shows you. The TF module
+references the zone by name, so it has to exist before apply — TF won't
+create it. Propagation can take an hour; do this early.
 
 That's it. Everything else — networks, firewalls, volumes, servers, the actual
 A/AAAA records — TF creates.
@@ -42,7 +42,7 @@ A/AAAA records — TF creates.
 ## Operator side (one time)
 
 You need `terraform >= 1.6`, `git`, and `direnv` on your laptop. The wizard
-uses direnv to load API tokens into the shell so they don't end up in
+uses direnv to load the API token into the shell so it doesn't end up in
 `terraform.tfvars` (and, by extension, in state). If you really hate direnv,
 the wizard prints a `source .envrc` line you can paste each session, but
 direnv is worth the five minutes of one-time setup.
@@ -57,8 +57,8 @@ The wizard prompts through everything. Defaults are sensible — if you're
 deploying in Falkenstein on CCX13/CCX23 with a 100 GB Scylla volume, hit Enter
 through most of it. The prompts that need your real values are the apex
 domain, the ACME contact email, and the SSH allowlist (which auto-detects
-your current public IP — broaden it if you SSH from multiple places). Tokens
-go in last, hidden. The wizard verifies them by hitting the Hetzner API
+your current public IP — broaden it if you SSH from multiple places). The
+token goes in last, hidden. The wizard verifies it by hitting the Hetzner API
 before writing anything to disk.
 
 It writes `terraform.tfvars` and `.envrc`, both gitignored, both `chmod 600`.
