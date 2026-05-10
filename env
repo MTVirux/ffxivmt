@@ -1,3 +1,9 @@
+# Lines using ${VAR} are envsubst placeholders — they're filled in by the
+# bootstrap (scripts/bootstrap/app.sh + scripts/bootstrap/redeploy.sh) before
+# `docker compose up`. For local dev, run `envsubst < env > .env` (requires
+# `gettext-base` on Debian/Ubuntu) with those vars exported in your shell.
+# Plain `cp env .env` will leave them unsubstituted.
+
 # ######################## Docker Compose ######################## #
 #
 # Docker Compose v2 only auto-loads a file literally named `.env` (with a leading dot).
@@ -28,8 +34,8 @@ PMA_HOST_PORT=8001
 
 # ######################## SSL CERT CONFIG ######################## #
 
-ZERO_SSL_USER_EMAIL=example@domain.com
-ZERO_SSL_MAIN_DOMAIN=example.com
+ZERO_SSL_USER_EMAIL=${ZERO_SSL_USER_EMAIL}
+ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
 ZERO_SSL_GRAFANA_DOMAIN=grafana.example.com
 ZERO_SSL_SCYLLA_DOMAIN=scylla.example.com
 
@@ -37,5 +43,5 @@ ZERO_SSL_SCYLLA_DOMAIN=scylla.example.com
 # ######################## Private network IPs (rendered by bootstrap) ######################## #
 
 # Cloud-init substitutes this with the Scylla VM's private IP. Empty in single-host dev.
-SCYLLA_PRIVATE_IP=
-APP_PRIVATE_IP=
+SCYLLA_PRIVATE_IP=${SCYLLA_PRIVATE_IP}
+APP_PRIVATE_IP=${APP_PRIVATE_IP}
