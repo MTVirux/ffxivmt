@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Cassandra;
+using Ffmt.Core.Metrics;
 using Ffmt.Core.Storage.Scylla;
 using Microsoft.Extensions.Logging;
 
@@ -51,38 +53,52 @@ public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<Scylla
 
     public async Task RefreshAsync(int worldId, int itemId, CancellationToken ct = default)
     {
-        var sumStmt = await scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
-        var maxStmt = await scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
-        var upsertRankingStmt = await scylla.PrepareAsync(CqlUpsertGilfluxRanking, ct).ConfigureAwait(false);
-        var upsertByWorldStmt = await scylla.PrepareAsync(CqlUpsertGilfluxByWorld, ct).ConfigureAwait(false);
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var sumStmt = await scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
+            var maxStmt = await scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
+            var upsertRankingStmt = await scylla.PrepareAsync(CqlUpsertGilfluxRanking, ct).ConfigureAwait(false);
+            var upsertByWorldStmt = await scylla.PrepareAsync(CqlUpsertGilfluxByWorld, ct).ConfigureAwait(false);
 
-        var now = DateTimeOffset.UtcNow;
+            var now = DateTimeOffset.UtcNow;
 
-        var sumTasks = Timeframes
-            .Select(tf => scylla.Session.ExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf)))
-            .ToArray();
-        var maxSaleTask = scylla.Session.ExecuteAsync(maxStmt.Bind(itemId, worldId, now - Timeframes[^1]));
+            var sumTasks = Timeframes
+                .Select(tf => scylla.MeasuredExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf), "gilflux_sum"))
+                .ToArray();
+            var maxSaleTask = scylla.MeasuredExecuteAsync(maxStmt.Bind(itemId, worldId, now - Timeframes[^1]), "gilflux_max");
 
-        await Task.WhenAll(sumTasks.Concat(new[] { maxSaleTask })).ConfigureAwait(false);
+            await Task.WhenAll(sumTasks.Concat(new[] { maxSaleTask })).ConfigureAwait(false);
 
-        var sums = sumTasks.Select(t => SumGilflux(t.Result)).ToArray();
-        var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result) ?? DateTimeOffset.FromUnixTimeMilliseconds(0);
+            var sums = sumTasks.Select(t => SumGilflux(t.Result)).ToArray();
+            var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result) ?? DateTimeOffset.FromUnixTimeMilliseconds(0);
 
-        var batch = (BatchStatement)new BatchStatement()
-            .SetBatchType(BatchType.Unlogged)
-            .SetConsistencyLevel(ConsistencyLevel.LocalOne);
+            var batch = (BatchStatement)new BatchStatement()
+                .SetBatchType(BatchType.Unlogged)
+                .SetConsistencyLevel(ConsistencyLevel.LocalOne);
 
-        batch.Add(upsertRankingStmt.Bind(
-            itemId, worldId,
-            sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
-            lastSaleTime, now));
+            batch.Add(upsertRankingStmt.Bind(
+                itemId, worldId,
+                sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
+                lastSaleTime, now));
 
-        batch.Add(upsertByWorldStmt.Bind(
-            worldId, itemId,
-            sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
-            lastSaleTime, now));
+            batch.Add(upsertByWorldStmt.Bind(
+                worldId, itemId,
+                sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
+                lastSaleTime, now));
 
-        await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
+            await scylla.MeasuredExecuteAsync(batch, "gilflux_upsert").ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            MetricsCatalog.GilfluxRefreshErrorsTotal.Inc();
+            throw;
+        }
+        finally
+        {
+            sw.Stop();
+            MetricsCatalog.GilfluxRefreshDurationSeconds.Observe(sw.Elapsed.TotalSeconds);
+        }
     }
 
     public async Task RefreshManyAsync(IReadOnlyCollection<(int WorldId, int ItemId)> pairs, int maxConcurrency, CancellationToken ct = default)
