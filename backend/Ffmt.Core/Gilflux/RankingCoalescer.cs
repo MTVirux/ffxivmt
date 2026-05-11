@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Channels;
 using Ffmt.Core.Configuration;
+using Ffmt.Core.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -54,6 +55,7 @@ public sealed class RankingCoalescer : IHostedService
             Stopwatch.GetElapsedTime(lastTick) < _coalesceWindow)
         {
             Interlocked.Increment(ref _droppedCoalesced);
+            MetricsCatalog.CoalescerCoalescedTotal.Inc();
             return;
         }
 
@@ -62,6 +64,11 @@ public sealed class RankingCoalescer : IHostedService
         if (!_channel.Writer.TryWrite(key))
         {
             Interlocked.Increment(ref _droppedFull);
+            MetricsCatalog.CoalescerDropsTotal.Inc();
+        }
+        else
+        {
+            MetricsCatalog.CoalescerQueueDepth.Inc();
         }
     }
 
@@ -69,7 +76,7 @@ public sealed class RankingCoalescer : IHostedService
     {
         _workerTasks = Enumerable
             .Range(0, _workerCount)
-            .Select(_ => Task.Run(() => WorkerLoop(_stopCts.Token), _stopCts.Token))
+            .Select(i => Task.Run(() => WorkerLoop(i, _stopCts.Token), _stopCts.Token))
             .ToArray();
 
         _logDropsTimer = new Timer(LogDrops, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -88,10 +95,15 @@ public sealed class RankingCoalescer : IHostedService
         _stopCts.Dispose();
     }
 
-    private async Task WorkerLoop(CancellationToken ct)
+    private async Task WorkerLoop(int workerId, CancellationToken ct)
     {
+        var workerIdStr = workerId.ToString();
+        MetricsCatalog.CoalescerWorkerBusy.WithLabels(workerIdStr).Set(0);
+
         await foreach (var (worldId, itemId) in _channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
         {
+            MetricsCatalog.CoalescerQueueDepth.Dec();
+            MetricsCatalog.CoalescerWorkerBusy.WithLabels(workerIdStr).Set(1);
             try
             {
                 await _refresher.RefreshAsync(worldId, itemId, ct).ConfigureAwait(false);
@@ -103,6 +115,10 @@ public sealed class RankingCoalescer : IHostedService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "RankingCoalescer: refresh failed for world={WorldId} item={ItemId}", worldId, itemId);
+            }
+            finally
+            {
+                MetricsCatalog.CoalescerWorkerBusy.WithLabels(workerIdStr).Set(0);
             }
         }
     }
