@@ -20,3 +20,8 @@
         reverse_proxy ffmt_frontend:80
     }
 }
+
+{$ZERO_SSL_MONITORING_DOMAIN} {
+    encode gzip zstd
+    reverse_proxy ffmt_grafana:3000
+}
