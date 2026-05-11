@@ -114,3 +114,77 @@ idempotent_apt_install() {
         log_info "All packages already installed: $*"
     fi
 }
+
+bring_up_monitoring() {
+    log_info "=== bring_up_monitoring start ==="
+
+    : "${MONITORING_DOMAIN:=monitoring.${ZERO_SSL_MAIN_DOMAIN}}"
+    log_info "Monitoring domain: $MONITORING_DOMAIN"
+
+    # 1. Generate / load Grafana secrets.
+    mkdir -p /var/lib/ffmt
+    chmod 0750 /var/lib/ffmt
+
+    if [ ! -f /var/lib/ffmt/grafana-admin-pass ]; then
+        openssl rand -base64 32 | tr -d /=+ | cut -c1-32 > /var/lib/ffmt/grafana-admin-pass
+        chmod 0600 /var/lib/ffmt/grafana-admin-pass
+        log_info "Grafana admin password written to /var/lib/ffmt/grafana-admin-pass — read once via SSH and store it."
+    fi
+    local admin_pass
+    admin_pass="$(cat /var/lib/ffmt/grafana-admin-pass)"
+
+    if [ ! -f /var/lib/ffmt/grafana-secret-key ]; then
+        openssl rand -base64 32 | tr -d /=+ | cut -c1-32 > /var/lib/ffmt/grafana-secret-key
+        chmod 0600 /var/lib/ffmt/grafana-secret-key
+    fi
+    local secret_key
+    secret_key="$(cat /var/lib/ffmt/grafana-secret-key)"
+
+    # 2. Render Prometheus scrape target files.
+    mkdir -p docker/monitoring/prometheus/rendered
+    chmod 0750 docker/monitoring/prometheus/rendered
+    export SCYLLA_PRIVATE_IP APP_PRIVATE_IP
+    envsubst < docker/monitoring/prometheus/scylla_servers.yml.tpl > docker/monitoring/prometheus/rendered/scylla_servers.yml
+    envsubst < docker/monitoring/prometheus/node_exporter_servers.yml.tpl > docker/monitoring/prometheus/rendered/node_exporter_servers.yml
+
+    # 3. Upsert monitoring env in .env (idempotent — sed-delete then append).
+    sed -i '/^ZERO_SSL_MONITORING_DOMAIN=/d' .env
+    sed -i '/^GF_SECURITY_ADMIN_PASSWORD=/d' .env
+    sed -i '/^GF_SECURITY_SECRET_KEY=/d' .env
+    sed -i '/^GF_SERVER_DOMAIN=/d' .env
+    {
+        echo "ZERO_SSL_MONITORING_DOMAIN=${MONITORING_DOMAIN}"
+        echo "GF_SECURITY_ADMIN_PASSWORD=${admin_pass}"
+        echo "GF_SECURITY_SECRET_KEY=${secret_key}"
+        echo "GF_SERVER_DOMAIN=${MONITORING_DOMAIN}"
+    } >> .env
+    chmod 0600 .env
+
+    # 4. Wait for DNS on the monitoring subdomain so Caddy ACME can succeed.
+    wait_for_dns "$MONITORING_DOMAIN" "$SELF_IPV4" 300
+
+    # 5. Bring up the monitoring stack.
+    docker compose -f docker-compose.monitoring.yml up -d --build
+
+    # 6. Readiness via docker exec (no host port bindings).
+    local elapsed=0
+    log_info "Waiting on Grafana /api/health (up to 300s)..."
+    until docker exec ffmt_grafana wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1; do
+        if [ "$elapsed" -ge 300 ]; then log_err "Grafana not ready"; return 1; fi
+        sleep 5; elapsed=$((elapsed + 5))
+    done
+    log_info "Grafana is healthy."
+
+    elapsed=0
+    log_info "Waiting on Prometheus /-/ready (up to 60s)..."
+    until docker exec ffmt_prometheus wget -qO- http://127.0.0.1:9090/-/ready >/dev/null 2>&1; do
+        if [ "$elapsed" -ge 60 ]; then log_err "Prometheus not ready"; return 1; fi
+        sleep 5; elapsed=$((elapsed + 5))
+    done
+    log_info "Prometheus is ready."
+
+    # 7. Wait for public HTTPS (proves Caddy ACME succeeded).
+    wait_for_http "https://$MONITORING_DOMAIN/login" 300
+
+    log_info "=== bring_up_monitoring done ==="
+}
