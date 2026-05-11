@@ -1,1 +1,35 @@
+# Existing
 docker/scylla/persistent
+
+# .NET build outputs — Windows-built artifacts must not enter Linux build context
+**/bin
+**/obj
+
+# Frontend build outputs and deps
+frontend/node_modules
+frontend/dist
+**/.pnpm-store
+
+# VCS / editor state
+.git
+.gitattributes
+.gitignore
+.vscode
+.idea
+
+# Runtime state
+logs
+**/*.log
+.env
+
+# Test artifacts
+**/TestResults
+**/.coverage
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Old PHP-era leftovers still in the tree
+docker/ws_worker_old_python
+docker/backend/etc/apache2
