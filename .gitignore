@@ -36,6 +36,9 @@ docker/mariadb/var/*
 /*.ps1
 .env
 
+####### MONITORING #######
+docker/monitoring/prometheus/rendered/
+
 ####### TERRAFORM #######
 tf/.terraform
 tf/.terraform.lock.hcl
