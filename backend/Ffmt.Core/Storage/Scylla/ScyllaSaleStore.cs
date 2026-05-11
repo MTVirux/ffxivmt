@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Cassandra;
 using Ffmt.Core.Logging;
+using Ffmt.Core.Metrics;
 using Ffmt.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -89,7 +90,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
                 if (inBatch == BatchRows)
                 {
-                    await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
+                    await scylla.MeasuredExecuteAsync(batch, "sale_insert").ConfigureAwait(false);
                     batch = NewBatch();
                     inBatch = 0;
                 }
@@ -97,7 +98,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
             if (inBatch > 0)
             {
-                await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
+                await scylla.MeasuredExecuteAsync(batch, "sale_insert").ConfigureAwait(false);
             }
         }
 
