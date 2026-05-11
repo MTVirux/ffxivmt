@@ -49,9 +49,14 @@ render_env_file env .env
 docker compose \
     -f docker-compose.yml \
     -f docker-compose.app-vm.yml \
+    --profile host_metrics \
     up -d --build
 
 wait_for_http http://127.0.0.1:8080/health 300
+
+# Capture SELF_IPV4 for bring_up_monitoring's wait_for_dns step.
+SELF_IPV4="$(curl -fsS https://ipv4.icanhazip.com)"
+bring_up_monitoring
 
 if [ "$ARG_UPDATEDB" -eq 1 ]; then
     log_info "Running ffmt updatedb..."
