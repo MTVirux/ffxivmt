@@ -1,6 +1,7 @@
 using Ffmt.Core.DI;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
+using Ffmt.Core.Metrics;
 using Serilog;
 using WsWorker.Health;
 using WsWorker.Options;
@@ -20,6 +21,8 @@ builder.Host.UseSerilog((context, _, logger) =>
             fileSizeLimitBytes: 100 * 1024 * 1024));
 
 builder.Services.AddFfmtCore(builder.Configuration);
+
+builder.Services.AddFfmtMetrics();
 
 builder.Services.Configure<BackfillOptions>(builder.Configuration.GetSection("Backfill"));
 
@@ -47,5 +50,7 @@ builder.WebHost.UseUrls("http://0.0.0.0:8080");
 var app = builder.Build();
 
 app.MapHealthChecks("/health");
+
+app.MapFfmtMetrics();
 
 app.Run();
