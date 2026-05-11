@@ -1,5 +1,11 @@
 services:
   ffmt_scylla_node:
+    ports:
+      - "${SCYLLA_PRIVATE_IP}:9180:9180"
+      - "${SCYLLA_PRIVATE_IP}:9042:9042"
+      - "${SCYLLA_PRIVATE_IP}:9142:9142"
+      - "${SCYLLA_PRIVATE_IP}:19042:19042"
+      - "${SCYLLA_PRIVATE_IP}:19142:19142"
     volumes:
       - /mnt/scylla-data/data:/var/lib/scylla
       - /mnt/scylla-data/commitlog:/var/lib/scylla/commitlog
