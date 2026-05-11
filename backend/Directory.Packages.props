@@ -45,6 +45,7 @@
     <PackageVersion Include="prometheus-net.DotNetRuntime" Version="4.4.1" />
 
     <!-- Testing -->
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
