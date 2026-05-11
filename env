@@ -36,8 +36,7 @@ PMA_HOST_PORT=8001
 
 ZERO_SSL_USER_EMAIL=${ZERO_SSL_USER_EMAIL}
 ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
-ZERO_SSL_GRAFANA_DOMAIN=grafana.example.com
-ZERO_SSL_SCYLLA_DOMAIN=scylla.example.com
+ZERO_SSL_MONITORING_DOMAIN=${ZERO_SSL_MONITORING_DOMAIN}
 
 
 # ######################## Private network IPs (rendered by bootstrap) ######################## #
