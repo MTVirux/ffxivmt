@@ -1,0 +1,29 @@
+# Top-level Prometheus config. Scrape targets are split into three files so
+# the rendered/ subdir (private IPs) can be gitignored while keeping the
+# .tpl templates committed.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: ffmt
+    monitor: ffmt-mon
+
+scrape_configs:
+
+  # ScyllaDB native Prometheus port (9180). Labels { dc: ffmt, cluster: ffmt_cluster }
+  # are what ScyllaDB's upstream dashboards filter on — they appear in the rendered file.
+  - job_name: scylla
+    file_sd_configs:
+      - files: [/etc/prometheus/rendered/scylla_servers.yml]
+
+  # node_exporter on both VMs.
+  - job_name: node_exporter
+    file_sd_configs:
+      - files: [/etc/prometheus/rendered/node_exporter_servers.yml]
+
+  # FFMT .NET services. Docker network DNS — no envsubst needed.
+  - job_name: ffmt
+    metrics_path: /metrics
+    file_sd_configs:
+      - files: [/etc/prometheus/ffmt_servers.yml]

@@ -1,0 +1,9 @@
+# .NET service targets — docker network DNS, no IP substitution.
+- targets:
+    - ffmt_backend:8080
+  labels:
+    service: backend
+- targets:
+    - ffmt_ws_worker:8080
+  labels:
+    service: ws_worker
