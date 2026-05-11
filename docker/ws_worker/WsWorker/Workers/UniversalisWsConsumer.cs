@@ -1,5 +1,6 @@
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Gilflux;
+using Ffmt.Core.Metrics;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
@@ -66,6 +67,10 @@ public sealed class UniversalisWsConsumer : BackgroundService
             catch (Exception ex)
             {
                 _isConnected = false;
+                foreach (var w in worldIds)
+                {
+                    MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(0);
+                }
                 var jitter = Random.Shared.NextDouble() * 2;
                 var delay = backoffSeconds + jitter;
                 _logger.LogWarning(ex, "WebSocket consumer loop failed — reconnecting in {Delay:F1}s", delay);
@@ -100,6 +105,10 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
         _logger.LogInformation("Subscribed to {Count} world channel(s)", worldIds.Count);
         _isConnected = true;
+        foreach (var w in worldIds)
+        {
+            MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(1);
+        }
 
         var buffer = new byte[64 * 1024];
         using var messageStream = new MemoryStream();
@@ -115,6 +124,10 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
+                    foreach (var w in worldIds)
+                    {
+                        MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(0);
+                    }
                     _isConnected = false;
                     await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
                     _logger.LogInformation("WebSocket closed by server");
@@ -195,12 +208,22 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
                 if (sales.Count > 0)
                 {
+                    var worldLabel = worldId.ToString();
+                    MetricsCatalog.WsSalesReceivedTotal.WithLabels(worldLabel).Inc(sales.Count);
+
                     Interlocked.Increment(ref _inflightCount);
                     _ = _saleStore.AddBatchAsync(sales, ct).ContinueWith(t =>
                     {
                         Interlocked.Decrement(ref _inflightCount);
                         if (t.IsFaulted)
+                        {
+                            MetricsCatalog.WsInsertsTotal.WithLabels(worldLabel, "error").Inc();
                             _logger.LogError(t.Exception, "Scylla fire-and-forget sale-batch insert failed");
+                        }
+                        else
+                        {
+                            MetricsCatalog.WsInsertsTotal.WithLabels(worldLabel, "ok").Inc();
+                        }
                     }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
 
                     if (_inflightCount > 500)
@@ -211,6 +234,10 @@ public sealed class UniversalisWsConsumer : BackgroundService
             _coalescer.Submit(worldId, itemId);
         }
 
+        foreach (var w in worldIds)
+        {
+            MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(0);
+        }
         _isConnected = false;
         _logger.LogInformation("WebSocket consumer loop exited (state={State})", ws.State);
     }
