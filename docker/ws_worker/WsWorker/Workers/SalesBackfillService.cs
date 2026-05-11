@@ -1,6 +1,7 @@
 using Cassandra;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Gilflux;
+using Ffmt.Core.Metrics;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
@@ -103,43 +104,59 @@ public sealed class SalesBackfillService : BackgroundService
 
     private async Task RunLiveGapPass(string region, CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
-
-        var (lastImportAt, _) = await ReadState(region);
-
-        if (lastImportAt is null)
+        MetricsCatalog.BackfillState.WithLabels(region).Set(1); // running
+        try
         {
+            var now = DateTimeOffset.UtcNow;
+
+            var (lastImportAt, _) = await ReadState(region);
+
+            if (lastImportAt is null)
+            {
+                await WriteState(region, lastImportAt: now, earliestImportAt: null);
+                _logger.LogInformation("LiveGapFillLoop [{Region}]: first run — initialised last_import_at pointer, skipping fetch", region);
+                return;
+            }
+
+            var gap = now - lastImportAt.Value;
+            if (gap < TimeSpan.FromMinutes(_backfillOptions.SkipIfGapUnderMinutes))
+            {
+                _logger.LogInformation("LiveGapFillLoop [{Region}]: gap {Gap:F1} min < threshold, skipping", region, gap.TotalMinutes);
+                return;
+            }
+
+            var entriesWithinSeconds = (long)gap.TotalSeconds;
+            _logger.LogInformation("LiveGapFillLoop [{Region}]: fetching {Gap:F1} min of history", region, gap.TotalMinutes);
+
+            var sales = await FetchHistory(region, entriesWithinSeconds, ct);
+            _logger.LogInformation("LiveGapFillLoop [{Region}]: fetched {Count} sales", region, sales.Count);
+
+            var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+            var dirtyPairs = sales
+                .Where(s => s.SaleTime > sevenDaysAgo)
+                .Select(s => (s.WorldId, s.ItemId))
+                .ToHashSet();
+
+            await _saleStore.AddBatchAsync(sales, ct);
             await WriteState(region, lastImportAt: now, earliestImportAt: null);
-            _logger.LogInformation("LiveGapFillLoop [{Region}]: first run — initialised last_import_at pointer, skipping fetch", region);
-            return;
+
+            if (dirtyPairs.Count > 0)
+            {
+                await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
+                _logger.LogInformation("LiveGapFillLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+            }
         }
-
-        var gap = now - lastImportAt.Value;
-        if (gap < TimeSpan.FromMinutes(_backfillOptions.SkipIfGapUnderMinutes))
+        catch
         {
-            _logger.LogInformation("LiveGapFillLoop [{Region}]: gap {Gap:F1} min < threshold, skipping", region, gap.TotalMinutes);
-            return;
+            MetricsCatalog.BackfillState.WithLabels(region).Set(3); // error
+            throw;
         }
-
-        var entriesWithinSeconds = (long)gap.TotalSeconds;
-        _logger.LogInformation("LiveGapFillLoop [{Region}]: fetching {Gap:F1} min of history", region, gap.TotalMinutes);
-
-        var sales = await FetchHistory(region, entriesWithinSeconds, ct);
-        _logger.LogInformation("LiveGapFillLoop [{Region}]: fetched {Count} sales", region, sales.Count);
-
-        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-        var dirtyPairs = sales
-            .Where(s => s.SaleTime > sevenDaysAgo)
-            .Select(s => (s.WorldId, s.ItemId))
-            .ToHashSet();
-
-        await _saleStore.AddBatchAsync(sales, ct);
-        await WriteState(region, lastImportAt: now, earliestImportAt: null);
-
-        if (dirtyPairs.Count > 0)
+        finally
         {
-            await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
-            _logger.LogInformation("LiveGapFillLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+            if (MetricsCatalog.BackfillState.WithLabels(region).Value != 3)
+            {
+                MetricsCatalog.BackfillState.WithLabels(region).Set(0); // idle
+            }
         }
     }
 
@@ -177,49 +194,65 @@ public sealed class SalesBackfillService : BackgroundService
 
     private async Task RunHistoricalCrawlPass(string region, CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
-
-        var (_, earliestImportAt) = await ReadState(region);
-
-        if (earliestImportAt is null)
+        MetricsCatalog.BackfillState.WithLabels(region).Set(1); // running
+        try
         {
-            await WriteState(region, lastImportAt: null, earliestImportAt: now);
-            _logger.LogInformation("HistoricalCrawlLoop [{Region}]: first run — initialised earliest_import_at pointer", region);
-            return;
+            var now = DateTimeOffset.UtcNow;
+
+            var (_, earliestImportAt) = await ReadState(region);
+
+            if (earliestImportAt is null)
+            {
+                await WriteState(region, lastImportAt: null, earliestImportAt: now);
+                _logger.LogInformation("HistoricalCrawlLoop [{Region}]: first run — initialised earliest_import_at pointer", region);
+                return;
+            }
+
+            var chunkStart = earliestImportAt.Value - TimeSpan.FromDays(_backfillOptions.ChunkDays);
+            var entriesWithinSeconds = (long)(now - chunkStart).TotalSeconds;
+
+            _logger.LogInformation(
+                "HistoricalCrawlLoop [{Region}]: crawling chunk {ChunkStart:u} → {EarliestImportAt:u}",
+                region, chunkStart, earliestImportAt.Value);
+
+            var allSales = await FetchHistory(region, entriesWithinSeconds, ct);
+            _logger.LogInformation("HistoricalCrawlLoop [{Region}]: fetched {Count} total sales for chunk", region, allSales.Count);
+
+            var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
+
+            if (toWrite.Count == 0)
+            {
+                _logger.LogInformation("HistoricalCrawlLoop [{Region}]: 0 new entries written — crawl complete", region);
+                _crawlComplete.Add(region);
+                return;
+            }
+
+            var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+            var dirtyPairs = toWrite
+                .Where(s => s.SaleTime > sevenDaysAgo)
+                .Select(s => (s.WorldId, s.ItemId))
+                .ToHashSet();
+
+            await _saleStore.AddBatchAsync(toWrite, ct);
+            await WriteState(region, lastImportAt: null, earliestImportAt: chunkStart);
+
+            if (dirtyPairs.Count > 0)
+            {
+                await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
+                _logger.LogInformation("HistoricalCrawlLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+            }
         }
-
-        var chunkStart = earliestImportAt.Value - TimeSpan.FromDays(_backfillOptions.ChunkDays);
-        var entriesWithinSeconds = (long)(now - chunkStart).TotalSeconds;
-
-        _logger.LogInformation(
-            "HistoricalCrawlLoop [{Region}]: crawling chunk {ChunkStart:u} → {EarliestImportAt:u}",
-            region, chunkStart, earliestImportAt.Value);
-
-        var allSales = await FetchHistory(region, entriesWithinSeconds, ct);
-        _logger.LogInformation("HistoricalCrawlLoop [{Region}]: fetched {Count} total sales for chunk", region, allSales.Count);
-
-        var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
-
-        if (toWrite.Count == 0)
+        catch
         {
-            _logger.LogInformation("HistoricalCrawlLoop [{Region}]: 0 new entries written — crawl complete", region);
-            _crawlComplete.Add(region);
-            return;
+            MetricsCatalog.BackfillState.WithLabels(region).Set(3); // error
+            throw;
         }
-
-        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-        var dirtyPairs = toWrite
-            .Where(s => s.SaleTime > sevenDaysAgo)
-            .Select(s => (s.WorldId, s.ItemId))
-            .ToHashSet();
-
-        await _saleStore.AddBatchAsync(toWrite, ct);
-        await WriteState(region, lastImportAt: null, earliestImportAt: chunkStart);
-
-        if (dirtyPairs.Count > 0)
+        finally
         {
-            await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
-            _logger.LogInformation("HistoricalCrawlLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+            if (MetricsCatalog.BackfillState.WithLabels(region).Value != 3)
+            {
+                MetricsCatalog.BackfillState.WithLabels(region).Set(0); // idle
+            }
         }
     }
 
@@ -301,11 +334,13 @@ public sealed class SalesBackfillService : BackgroundService
         }
         catch (HttpRequestException ex)
         {
+            MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
             _logger.LogWarning("FetchChunk [{Region}] HTTP request failed: {Message}", region, ex.Message);
             return [];
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
+            MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
             _logger.LogWarning("FetchChunk [{Region}] timed out for items {Items}", region, itemIdStr);
             return [];
         }
@@ -314,6 +349,7 @@ public sealed class SalesBackfillService : BackgroundService
         {
             if (!response.IsSuccessStatusCode)
             {
+                MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
                 _logger.LogWarning("FetchChunk [{Region}] returned {StatusCode} for {Url}", region, (int)response.StatusCode, url);
                 return [];
             }
@@ -325,16 +361,21 @@ public sealed class SalesBackfillService : BackgroundService
             }
             catch (Exception ex)
             {
+                MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
                 _logger.LogWarning(ex, "FetchChunk [{Region}] failed reading response body", region);
                 return [];
             }
 
             try
             {
-                return ParseHistoryResponse(json);
+                var sales = ParseHistoryResponse(json);
+                MetricsCatalog.BackfillPagesTotal.WithLabels(region, "ok").Inc();
+                MetricsCatalog.BackfillRowsTotal.WithLabels(region).Inc(sales.Count);
+                return sales;
             }
             catch (Exception ex)
             {
+                MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
                 _logger.LogWarning(ex, "FetchChunk [{Region}] failed parsing JSON", region);
                 return [];
             }
