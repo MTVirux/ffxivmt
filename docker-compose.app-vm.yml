@@ -8,3 +8,7 @@ services:
   ffmt_ws_worker:
     environment:
       - Scylla__ContactPoints__0=${SCYLLA_PRIVATE_IP}
+
+  ffmt_node_exporter:
+    environment:
+      - HOST_PRIVATE_IP=${APP_PRIVATE_IP}

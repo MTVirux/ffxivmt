@@ -140,6 +140,20 @@ services:
     networks:
       - ffmt_network
 
+  ffmt_node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: ffmt_node_exporter
+    profiles: ["host_metrics"]
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--web.listen-address=${HOST_PRIVATE_IP:-127.0.0.1}:9100"
+    volumes:
+      - "/:/host:ro,rslave"
+
 networks:
   ffmt_network:
     driver: bridge
