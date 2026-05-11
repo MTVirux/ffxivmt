@@ -19,8 +19,10 @@ idempotent_apt_install gettext-base dnsutils
 # 2. Render .env from template
 export ZERO_SSL_USER_EMAIL="$ACME_EMAIL"
 export ZERO_SSL_MAIN_DOMAIN="$DOMAIN"
+export ZERO_SSL_MONITORING_DOMAIN="$MONITORING_DOMAIN"
 export SCYLLA_PRIVATE_IP APP_PRIVATE_IP
 render_env_file env .env
+chmod 0600 .env
 
 # 3. Wait on Scylla (peer VM may still be booting)
 wait_for_tcp "$SCYLLA_PRIVATE_IP" 9042 600
@@ -35,10 +37,14 @@ log_info "Starting app stack..."
 docker compose \
     -f docker-compose.yml \
     -f docker-compose.app-vm.yml \
+    --profile host_metrics \
     up -d --build
 
 # 6. Wait for backend health
 wait_for_http http://127.0.0.1:8080/health 600
+
+# 6a. Monitoring stack.
+bring_up_monitoring
 
 # 7. First-time DB seed
 if [ ! -f /var/lib/ffmt/.updatedb-done ]; then
