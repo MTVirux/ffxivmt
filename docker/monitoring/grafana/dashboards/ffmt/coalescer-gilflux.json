@@ -1,0 +1,71 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Coalescer queue depth",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "ffmt_coalescer_queue_depth", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Coalescer drops per second",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(ffmt_coalescer_drops_total[1m])", "legendFormat": "drops", "refId": "A" },
+        { "expr": "rate(ffmt_coalescer_coalesced_total[1m])", "legendFormat": "coalesced", "refId": "B" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Coalescer worker busy",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "ffmt_coalescer_worker_busy", "legendFormat": "worker {{worker_id}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Gilflux refresh p50/p95/p99",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(ffmt_gilflux_refresh_duration_seconds_bucket[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(ffmt_gilflux_refresh_duration_seconds_bucket[5m])))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(ffmt_gilflux_refresh_duration_seconds_bucket[5m])))", "legendFormat": "p99", "refId": "C" }
+      ],
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Gilflux refresh errors / dirty drained",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "rate(ffmt_gilflux_refresh_errors_total[5m])", "legendFormat": "errors", "refId": "A" },
+        { "expr": "rate(ffmt_dirty_pairs_drained_total[1m])", "legendFormat": "drained / s", "refId": "B" }
+      ],
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ffmt", "gilflux"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "FFMT — Coalescer + Gilflux",
+  "uid": "ffmt-coalescer-gilflux",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,49 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Backfill state per region (0=idle 1=running 2=paused 3=error)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "ffmt_backfill_state", "legendFormat": "{{world}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pages fetched per second",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (world, result) (rate(ffmt_backfill_pages_total[5m]))", "legendFormat": "{{world}} {{result}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Rows imported per second",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (world) (rate(ffmt_backfill_rows_total[5m]))", "legendFormat": "{{world}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ffmt", "backfill"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "FFMT — Backfill",
+  "uid": "ffmt-backfill",
+  "version": 1,
+  "weekStart": ""
+}
