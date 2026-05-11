@@ -1,4 +1,5 @@
 using Ffmt.Core.Configuration;
+using Ffmt.Core.Metrics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -53,6 +54,7 @@ public sealed class DeferredSweepWorker : BackgroundService
                 // (the *next* sale on a failed pair re-enqueues it via the live coalescer).
                 await _queue.RemoveAsync(claims, ct).ConfigureAwait(false);
 
+                MetricsCatalog.DirtyPairsDrainedTotal.Inc(claims.Count);
                 _logger.LogDebug("DeferredSweepWorker: drained {Count} pairs", claims.Count);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
