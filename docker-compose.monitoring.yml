@@ -1,0 +1,70 @@
+# Sibling compose for the monitoring stack. Attached to the main stack's
+# ffmt_network as an external network so Prometheus can scrape app containers
+# by service name. No host port bindings — Grafana is reached via Caddy
+# (ffmt_proxy) over ffmt_network, and bootstrap readiness uses `docker exec`.
+#
+# Bring-up:
+#   docker compose -f docker-compose.monitoring.yml up -d --build
+#
+# Required env (sourced from the main stack's .env):
+#   GF_SECURITY_ADMIN_PASSWORD, GF_SECURITY_SECRET_KEY, GF_SERVER_DOMAIN
+
+services:
+
+  ffmt_prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: ffmt_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--storage.tsdb.retention.size=2GB"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitoring/prometheus/ffmt_servers.yml:/etc/prometheus/ffmt_servers.yml:ro
+      - ./docker/monitoring/prometheus/rendered:/etc/prometheus/rendered:ro
+      - prometheus_data:/prometheus
+    networks:
+      - ffmt_network
+
+  ffmt_grafana:
+    image: grafana/grafana:11.3.0
+    container_name: ffmt_grafana
+    restart: unless-stopped
+    depends_on:
+      - ffmt_prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_SECURITY_SECRET_KEY=${GF_SECURITY_SECRET_KEY}
+      - GF_SERVER_DOMAIN=${GF_SERVER_DOMAIN}
+    volumes:
+      - ./docker/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - ffmt_network
+
+  # Declared inert in v1 — no rules loaded. Keeping the service present so
+  # turning alerting on later is just writing rule files into a mounted dir
+  # and a Prometheus reload, not a second compose bring-up.
+  ffmt_alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: ffmt_alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    volumes:
+      - ./docker/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - ffmt_network
+
+networks:
+  ffmt_network:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
