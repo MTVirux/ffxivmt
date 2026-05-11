@@ -2,6 +2,7 @@ using System.Text.Json;
 using Ffmt.Api;
 using Ffmt.Api.Endpoints;
 using Ffmt.Core.DI;
+using Ffmt.Core.Metrics;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Logging;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +25,7 @@ builder.Host.UseSerilog((context, services, logger) =>
     SerilogBootstrap.Configure(logger, context.Configuration, context.HostingEnvironment.EnvironmentName));
 
 builder.Services.AddFfmtCore(builder.Configuration);
+builder.Services.AddFfmtMetrics();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -65,6 +67,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();
+app.UseFfmtHttpMetrics();
 app.UseRequestTimeouts();
 
 app.UseSwagger(options => options.RouteTemplate = "openapi/{documentName}.json");
@@ -89,6 +92,7 @@ app.MapHealthChecks("/health/ready", new()
 });
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapFfmtMetrics();
 
 app.MapWorldsEndpoints();
 app.MapItemEndpoints();
