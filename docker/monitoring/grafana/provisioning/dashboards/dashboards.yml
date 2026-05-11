@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'FFMT'
+    orgId: 1
+    folder: 'FFMT'
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards/ffmt
