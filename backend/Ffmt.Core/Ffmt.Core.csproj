@@ -19,6 +19,8 @@
     <PackageReference Include="Serilog.Formatting.Compact" />
     <PackageReference Include="CassandraCSharpDriver" />
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
+    <PackageReference Include="prometheus-net.AspNetCore" />
+    <PackageReference Include="prometheus-net.DotNetRuntime" />
   </ItemGroup>
 
 </Project>
