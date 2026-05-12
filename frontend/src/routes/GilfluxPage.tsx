@@ -1,14 +1,48 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import RankingTable from '../components/data/RankingTable';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';
 import { useGilfluxRanking } from '../hooks/useGilfluxRanking';
 import { aggregateRankings } from '../lib/rankingAggregate';
 import { formatNumber } from '../lib/format';
-import type { Location } from '../api/types';
+import type { Location, LocationKind } from '../api/types';
 
 export default function GilfluxPage() {
-  const [location, setLocation] = useState<Location | undefined>(undefined);
-  const [craftedOnly, setCraftedOnly] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const location = useMemo<Location | undefined>(() => {
+    const name = searchParams.get('loc');
+    const kind = searchParams.get('kind') as LocationKind | null;
+    if (!name || !kind) return undefined;
+    const wid = searchParams.get('wid');
+    return { kind, name, ...(kind === 'world' && wid ? { worldId: Number(wid) } : {}) };
+  }, [searchParams]);
+
+  const craftedOnly = searchParams.get('crafted') === '1';
+
+  const setLocation = (next: Location) => {
+    setSearchParams(
+      (prev) => {
+        prev.set('loc', next.name);
+        prev.set('kind', next.kind);
+        if (next.kind === 'world' && next.worldId !== undefined) prev.set('wid', String(next.worldId));
+        else prev.delete('wid');
+        return prev;
+      },
+      { replace: true },
+    );
+  };
+
+  const setCraftedOnly = (next: boolean) => {
+    setSearchParams(
+      (prev) => {
+        if (next) prev.set('crafted', '1');
+        else prev.delete('crafted');
+        return prev;
+      },
+      { replace: true },
+    );
+  };
 
   const query = useGilfluxRanking(location, craftedOnly);
   const rows = useMemo(() => aggregateRankings(query.data ?? []), [query.data]);
