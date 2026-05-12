@@ -11,8 +11,8 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 {
     private const string CqlInsertSale = """
         INSERT INTO sales
-            (item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
     private const string CqlInsertSaleByBuyer = """
@@ -82,7 +82,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
                 ct.ThrowIfCancellationRequested();
                 batch.Add(saleStmt.Bind(
                     s.ItemId, s.WorldId, s.SaleTime, s.BuyerName,
-                    s.Hq, s.OnMannequin, s.Quantity, s.UnitPrice));
+                    s.Hq, s.OnMannequin, s.Quantity, s.UnitPrice, s.Quantity * s.UnitPrice));
                 batch.Add(byBuyerStmt.Bind(
                     s.BuyerName, s.SaleTime, s.ItemId, s.WorldId));
                 inBatch++;

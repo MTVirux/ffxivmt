@@ -9,7 +9,7 @@ namespace Ffmt.Core.Gilflux;
 public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<ScyllaRankingRefresher> logger) : IRankingRefresher
 {
     private const string CqlSumTotalSinceTimeframe = """
-        SELECT CAST(SUM(quantity * unit_price) AS BIGINT) AS gilflux
+        SELECT CAST(SUM(total_price) AS BIGINT) AS gilflux
         FROM sales
         WHERE item_id = ? AND world_id = ? AND sale_time >= ?
         GROUP BY item_id, world_id

@@ -9,6 +9,7 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales (
     on_mannequin boolean,
     quantity     int,
     unit_price   int,
+    total_price  int,
     PRIMARY KEY ((item_id, world_id), sale_time, buyer_name)
 ) WITH CLUSTERING ORDER BY (sale_time DESC, buyer_name ASC)
   AND compaction = {

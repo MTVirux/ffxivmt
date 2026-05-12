@@ -25,7 +25,7 @@ public sealed class RankingRefresherCqlTests
 
         captured.Should().Contain(c => c.Contains("INSERT INTO gilflux_ranking"));
         captured.Should().Contain(c => c.Contains("INSERT INTO gilflux_by_world"));
-        captured.Should().Contain(c => c.Contains("SUM(quantity * unit_price)"));
+        captured.Should().Contain(c => c.Contains("SUM(total_price)"));
         captured.Should().NotContain(c => c.Contains("ranking_alltime"));
     }
 
