@@ -81,19 +81,10 @@ services:
     image: ffmt_scylla
     profiles: ["scylla"]
     restart: "unless-stopped"
-    ports:
-      - 9042:9042
-      - 9142:9142
-      - 7000:7000
-      - 7001:7001
-      - 7199:7199
-      - 10000:10000
-      - 10001:10001
-      - 9180:9180
-      - 9100:9100
-      - 9160:9160
-      - 19042:19042
-      - 19142:19142
+    # Host port publications live in the per-VM override
+    # (docker-compose.scylla-vm.yml) — keeping them here would (a) leak Scylla
+    # to the public NIC and (b) collide with ffmt_node_exporter on :9100 and
+    # the override's private-IP bindings (compose appends port lists).
     volumes:
       - ./docker/scylla/persistent/data:/var/lib/scylla
       - ./docker/scylla/persistent/commitlog:/var/lib/scylla/commitlog
