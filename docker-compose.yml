@@ -45,6 +45,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     environment:
+      - ZERO_SSL_USER_EMAIL=${ZERO_SSL_USER_EMAIL}
       - ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
       - ZERO_SSL_MONITORING_DOMAIN=${ZERO_SSL_MONITORING_DOMAIN}
     depends_on:

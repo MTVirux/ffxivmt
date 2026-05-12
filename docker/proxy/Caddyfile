@@ -2,6 +2,10 @@
 # `handle` (not `handle_path`) preserves the full request path — the .NET endpoints
 # expect /api/v1/... intact.
 
+{
+    email {$ZERO_SSL_USER_EMAIL}
+}
+
 {$ZERO_SSL_MAIN_DOMAIN} {
     encode gzip zstd
 
