@@ -33,7 +33,6 @@ export type RankingRow = {
   ranking_1d: number;
   ranking_3d: number;
   ranking_7d: number;
-  ranking_alltime: number;
   last_sale_time: number | null;
   subRows?: RankingRow[];
 };
@@ -57,7 +56,6 @@ export function aggregateRankings(rankings: GilfluxRanking[]): RankingRow[] {
         ranking_1d: 0,
         ranking_3d: 0,
         ranking_7d: 0,
-        ranking_alltime: 0,
         last_sale_time: null,
         subRows: [],
       };
@@ -65,7 +63,6 @@ export function aggregateRankings(rankings: GilfluxRanking[]): RankingRow[] {
     }
 
     for (const { key } of TIMEFRAMES) agg[key] += r[key];
-    agg.ranking_alltime += r.ranking_alltime;
 
     if (r.last_sale_time !== null && (agg.last_sale_time === null || r.last_sale_time > agg.last_sale_time)) {
       agg.last_sale_time = r.last_sale_time;
@@ -83,7 +80,6 @@ export function aggregateRankings(rankings: GilfluxRanking[]): RankingRow[] {
       ranking_1d: r.ranking_1d,
       ranking_3d: r.ranking_3d,
       ranking_7d: r.ranking_7d,
-      ranking_alltime: r.ranking_alltime,
       last_sale_time: r.last_sale_time,
     });
   }

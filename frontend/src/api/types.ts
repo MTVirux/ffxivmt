@@ -28,7 +28,6 @@ export type GilfluxRanking = {
   world_name: string | null;
   datacenter: string;
   region: string;
-  ranking_alltime: number;
   ranking_1h: number;
   ranking_3h: number;
   ranking_6h: number;
