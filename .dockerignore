@@ -1,14 +1,17 @@
 # Existing
 docker/scylla/persistent
 
-# .NET build outputs — Windows-built artifacts must not enter Linux build context
-**/bin
-**/obj
+# .NET build outputs — scoped to project paths so docker/scylla/usr/local/bin
+# (a source dir mirroring the Scylla image's /usr/local/bin) isn't excluded.
+backend/**/bin
+backend/**/obj
+docker/ws_worker/**/bin
+docker/ws_worker/**/obj
 
 # Frontend build outputs and deps
 frontend/node_modules
 frontend/dist
-**/.pnpm-store
+frontend/.pnpm-store
 
 # VCS / editor state
 .git
@@ -23,8 +26,8 @@ logs
 .env
 
 # Test artifacts
-**/TestResults
-**/.coverage
+backend/**/TestResults
+backend/**/.coverage
 
 # OS metadata
 .DS_Store
