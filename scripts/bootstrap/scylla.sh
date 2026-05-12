@@ -35,7 +35,7 @@ docker compose \
     up -d --build ffmt_scylla_node ffmt_node_exporter
 
 # 4. Wait for CQL
-wait_for_tcp 127.0.0.1 9042 600
+wait_for_tcp "${SCYLLA_PRIVATE_IP}" 9042 600
 # Schema/keyspace creation runs from the container's run_entrypoints.sh
 # (docker/scylla/startup_scripts/*) — no extra step needed here.
 
