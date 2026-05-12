@@ -10,3 +10,12 @@ providers:
     allowUiUpdates: false
     options:
       path: /var/lib/grafana/dashboards/ffmt
+  - name: 'Scylla'
+    orgId: 1
+    folder: 'Scylla'
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards/scylla
