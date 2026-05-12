@@ -149,6 +149,7 @@ services:
 
 networks:
   ffmt_network:
+    name: ffmt_network
     driver: bridge
 
 volumes:
