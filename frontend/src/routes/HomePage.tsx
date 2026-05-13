@@ -31,8 +31,8 @@ export default function HomePage() {
           Watch the gil flow.
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          Live Final Fantasy XIV market data. 
-          Gilflux rankings, crafting profit math, and currency efficiency
+          Live Final Fantasy XIV market data.<br />
+          Gilflux rankings, crafting profit math, and currency efficiency.<br />
           Powered by Universalis and You ❤︎
         </p>
 
