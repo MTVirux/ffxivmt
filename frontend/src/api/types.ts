@@ -28,14 +28,9 @@ export type GilfluxRanking = {
   world_name: string | null;
   datacenter: string;
   region: string;
-  ranking_1h: number;
-  ranking_3h: number;
-  ranking_6h: number;
-  ranking_12h: number;
-  ranking_1d: number;
-  ranking_3d: number;
-  ranking_7d: number;
-  /** Epoch millis (long?) — null if the ranking has never been refreshed. */
+  /** Keyed by timeframe label (e.g. "1h", "7d"). */
+  rankings: Record<string, number>;
+  /** Epoch millis — null if the ranking has never been refreshed. */
   updated_at: number | null;
   /** Epoch millis of the most recent sale used for the ranking; null if no sales yet. */
   last_sale_time: number | null;
