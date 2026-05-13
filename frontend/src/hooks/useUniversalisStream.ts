@@ -21,8 +21,8 @@ export type EnrichedSale = {
 const WS_URL = 'wss://universalis.app/api/ws';
 const BUFFER_SIZE = 50;
 const MAX_BACKOFF_MS = 60_000;
-const EXPIRY_S = 3600;
-const PRUNE_INTERVAL_MS = 30_000;
+const EXPIRY_S = 600;
+const PRUNE_INTERVAL_MS = 10_000;
 
 function buildWorldMap(worlds: WorldStructure): Map<number, string> {
   const map = new Map<number, string>();
@@ -54,6 +54,7 @@ export function useUniversalisStream() {
   const backoffRef = useRef(1_000);
   const deadRef = useRef(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const generationRef = useRef(0);
 
   useEffect(() => {
     if (!worlds.data) return;
@@ -62,6 +63,7 @@ export function useUniversalisStream() {
     const worldIds = Array.from(worldMap.keys());
     deadRef.current = false;
     backoffRef.current = 1_000;
+    const generation = ++generationRef.current;
 
     async function resolveItemName(itemId: number): Promise<string> {
       const cached = itemNameCache.current.get(itemId);
@@ -147,7 +149,7 @@ export function useUniversalisStream() {
 
       ws.onclose = () => {
         connectionDead = true;
-        if (deadRef.current) return;
+        if (deadRef.current || generationRef.current !== generation) return;
         setStatus('reconnecting');
         const delay = backoffRef.current;
         backoffRef.current = Math.min(backoffRef.current * 2, MAX_BACKOFF_MS);

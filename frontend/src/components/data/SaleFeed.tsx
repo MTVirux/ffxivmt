@@ -12,7 +12,7 @@ export default function SaleFeed() {
   const { sales, status } = useUniversalisStream();
   const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    const id = setInterval(() => setTick((n) => n + 1), 10_000);
     return () => clearInterval(id);
   }, []);
 
@@ -33,11 +33,18 @@ export default function SaleFeed() {
               <SkeletonRow key={i} />
             ))}
           </div>
+        ) : sales.length === 0 ? (
+          <div className="flex items-center justify-center py-10 font-mono text-xs text-muted-foreground/40">
+            no recent activity
+          </div>
         ) : (
           <div className="divide-y divide-border/40">
-            {sales.map((sale, i) => (
-              <SaleRow key={sale.key} sale={sale} isNewest={i === 0} />
-            ))}
+            {(() => {
+              const now = Date.now() / 1000;
+              return sales.map((sale, i) => (
+                <SaleRow key={sale.key} sale={sale} isNewest={i === 0 && now - sale.saleTime < 30} />
+              ));
+            })()}
           </div>
         )}
       </div>
