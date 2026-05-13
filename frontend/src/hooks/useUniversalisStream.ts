@@ -82,6 +82,8 @@ export function useUniversalisStream() {
 
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
+      ws.binaryType = 'arraybuffer';
+      let connectionDead = false;
 
       ws.onopen = () => {
         backoffRef.current = 1_000;
@@ -91,13 +93,12 @@ export function useUniversalisStream() {
         setStatus('connected');
       };
 
-      ws.onmessage = async (evt: MessageEvent) => {
+      ws.onmessage = (evt: MessageEvent) => {
+        if (connectionDead) return;
+
         let data: unknown;
         try {
-          const buf = evt.data instanceof Blob
-            ? await evt.data.arrayBuffer()
-            : (evt.data as ArrayBuffer);
-          data = deserialize(new Uint8Array(buf));
+          data = deserialize(new Uint8Array(evt.data as ArrayBuffer));
         } catch {
           return;
         }
@@ -109,9 +110,7 @@ export function useUniversalisStream() {
         if (!Array.isArray(rawSales) || !worldId || !itemId) return;
 
         const worldName = worldMap.get(worldId) ?? String(worldId);
-        const itemName = await resolveItemName(itemId);
-
-        if (deadRef.current) return;
+        const cachedName = itemNameCache.current.get(itemId);
 
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
@@ -119,7 +118,7 @@ export function useUniversalisStream() {
           .map((s, i) => ({
             key: `${itemId}-${worldId}-${s['timestamp']}-${i}`,
             itemId,
-            itemName,
+            itemName: cachedName ?? String(itemId),
             worldName,
             buyerName: s['buyerName'] as string,
             hq: s['hq'] === true,
@@ -131,9 +130,23 @@ export function useUniversalisStream() {
         if (newEntries.length === 0) return;
 
         setSales((prev) => [...newEntries, ...prev].slice(0, BUFFER_SIZE));
+
+        if (cachedName === undefined) {
+          void resolveItemName(itemId).then((name) => {
+            if (connectionDead || name === String(itemId)) return;
+            setSales((prev) => {
+              const placeholder = String(itemId);
+              if (!prev.some((s) => s.itemId === itemId && s.itemName === placeholder)) return prev;
+              return prev.map((s) =>
+                s.itemId === itemId && s.itemName === placeholder ? { ...s, itemName: name } : s,
+              );
+            });
+          });
+        }
       };
 
       ws.onclose = () => {
+        connectionDead = true;
         if (deadRef.current) return;
         setStatus('reconnecting');
         const delay = backoffRef.current;
