@@ -21,8 +21,8 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales (
 
 cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales_by_buyer (
     buyer_name text,
+    world_id   int,
     sale_time  timestamp,
     item_id    int,
-    world_id   int,
-    PRIMARY KEY ((buyer_name), sale_time, item_id, world_id)
-) WITH CLUSTERING ORDER BY (sale_time DESC, item_id ASC, world_id ASC);"
+    PRIMARY KEY ((buyer_name), world_id, sale_time, item_id)
+) WITH CLUSTERING ORDER BY (world_id ASC, sale_time DESC, item_id ASC);"

@@ -27,17 +27,7 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.items (
     advanced_melding boolean,
     PRIMARY KEY (id));"
 
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.marketable_items (
-    bucket  int,
-    item_id int,
-    PRIMARY KEY ((bucket), item_id));"
-
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.craftable_items (
-    bucket  int,
-    item_id int,
-    PRIMARY KEY ((bucket), item_id));"
-
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.scrip_items (
-    bucket  int,
-    item_id int,
-    PRIMARY KEY ((bucket), item_id));"
+cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.item_sets (
+    set_name text,
+    item_id  int,
+    PRIMARY KEY ((set_name), item_id));"
