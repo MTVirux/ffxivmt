@@ -17,7 +17,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
     private const string CqlInsertSaleByBuyer = """
         INSERT INTO sales_by_buyer
-            (buyer_name, sale_time, item_id, world_id)
+            (buyer_name, world_id, sale_time, item_id)
         VALUES (?, ?, ?, ?)
         """;
 
@@ -29,15 +29,10 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         WHERE buyer_name = ?
         """;
 
-    // world_id is the LAST clustering column on sales_by_buyer; restricting it without
-    // sale_time + item_id prefix needs ALLOW FILTERING. The scan stays bounded by the
-    // buyer_name partition (one buyer's rows only), so this is partition-local, not a
-    // global scatter.
     private const string CqlSearchBuyerWithWorld = """
         SELECT buyer_name, sale_time, item_id, world_id
         FROM sales_by_buyer
         WHERE buyer_name = ? AND world_id = ?
-        ALLOW FILTERING
         """;
 
     private const string CqlGetByItemAndWorld = """
@@ -84,7 +79,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
                     s.ItemId, s.WorldId, s.SaleTime, s.BuyerName,
                     s.Hq, s.OnMannequin, s.Quantity, s.UnitPrice, s.Quantity * s.UnitPrice));
                 batch.Add(byBuyerStmt.Bind(
-                    s.BuyerName, s.SaleTime, s.ItemId, s.WorldId));
+                    s.BuyerName, s.WorldId, s.SaleTime, s.ItemId));
                 inBatch++;
                 parsed++;
 
