@@ -10,7 +10,7 @@ export default function Shell() {
       </main>
       <footer className="border-t border-border/60 py-6">
         <div className="mx-auto w-full max-w-6xl px-6 text-sm text-muted-foreground">
-          FFXIV Market Tools — community-built market analysis. Not affiliated with Square Enix.
+          FFXIV Market Tools - Not affiliated with Square Enix.
         </div>
       </footer>
     </div>
