@@ -16,14 +16,22 @@ public sealed class GilfluxRankingStoreCqlTests
     }
 
     [Fact]
-    public async Task GetByWorldAsync_PreparesAgainstGilfluxByWorld()
+    public async Task GetByWorldAsync_PreparesAgainstGilfluxRankings()
     {
         var (store, captured) = NewStore();
         try { await store.GetByWorldAsync(21); } catch { /* no real session */ }
 
-        captured.Should().ContainSingle()
-            .Which.Should().Contain("FROM gilflux_by_world")
-            .And.Contain("WHERE world_id = ?")
-            .And.NotContain("ALLOW FILTERING");
+        captured.Should().Contain(c => c.Contains("FROM gilflux_rankings") && c.Contains("WHERE world_id = ?"));
+        captured.Should().NotContain(c => c.Contains("FROM gilflux_rankings") && c.Contains("ALLOW FILTERING"));
+    }
+
+    [Fact]
+    public async Task GetByItemAndWorldAsync_UsesWorldFirstPrefixLookup()
+    {
+        var (store, captured) = NewStore();
+        try { await store.GetByItemAndWorldAsync(12345, 21); } catch { /* no real session */ }
+
+        captured.Should().Contain(c => c.Contains("FROM gilflux_rankings") && c.Contains("WHERE world_id = ?") && c.Contains("AND item_id = ?"));
+        captured.Should().NotContain(c => c.Contains("FROM gilflux_rankings") && c.Contains("ALLOW FILTERING"));
     }
 }
