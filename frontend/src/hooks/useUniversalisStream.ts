@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { deserialize } from 'bson';
 import { useWorlds } from './useWorlds';
 import { apiGet } from '../api/client';
 import type { Item, WorldStructure } from '../api/types';
@@ -77,7 +78,7 @@ export function useUniversalisStream() {
     function connect() {
       if (deadRef.current) return;
 
-      const ws = new WebSocket(WS_URL, ['json']);
+      const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -91,8 +92,10 @@ export function useUniversalisStream() {
       ws.onmessage = async (evt: MessageEvent) => {
         let data: unknown;
         try {
-          const text = typeof evt.data === 'string' ? evt.data : await (evt.data as Blob).text();
-          data = JSON.parse(text);
+          const buf = evt.data instanceof Blob
+            ? await evt.data.arrayBuffer()
+            : (evt.data as ArrayBuffer);
+          data = deserialize(new Uint8Array(buf));
         } catch {
           return;
         }
