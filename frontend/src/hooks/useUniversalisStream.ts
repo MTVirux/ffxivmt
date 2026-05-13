@@ -26,6 +26,7 @@ const PRUNE_INTERVAL_MS = 10_000;
 
 let salesCache: EnrichedSale[] = [];
 let statusCache: StreamStatus = 'connecting';
+const itemNameCache = new Map<number, string>();
 
 function buildWorldMap(worlds: WorldStructure): Map<number, string> {
   const map = new Map<number, string>();
@@ -69,7 +70,6 @@ export function useUniversalisStream() {
     statusCache = s;
     setStatusState(s);
   }, []);
-  const itemNameCache = useRef(new Map<number, string>());
   const backoffRef = useRef(1_000);
   const deadRef = useRef(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -85,15 +85,15 @@ export function useUniversalisStream() {
     const generation = ++generationRef.current;
 
     async function resolveItemName(itemId: number): Promise<string> {
-      const cached = itemNameCache.current.get(itemId);
+      const cached = itemNameCache.get(itemId);
       if (cached !== undefined) return cached;
       try {
         const item = await apiGet<Item>(`/item/${itemId}`);
-        itemNameCache.current.set(itemId, item.name);
+        itemNameCache.set(itemId, item.name);
         return item.name;
       } catch {
         const fallback = String(itemId);
-        itemNameCache.current.set(itemId, fallback);
+        itemNameCache.set(itemId, fallback);
         return fallback;
       }
     }
@@ -131,7 +131,7 @@ export function useUniversalisStream() {
         if (!Array.isArray(rawSales) || !worldId || !itemId) return;
 
         const worldName = worldMap.get(worldId) ?? String(worldId);
-        const cachedName = itemNameCache.current.get(itemId);
+        const cachedName = itemNameCache.get(itemId);
 
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
