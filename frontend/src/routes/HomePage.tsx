@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { navItems } from '../config/navigation';
 import { useWorlds } from '../hooks/useWorlds';
+import SaleFeed from '../components/data/SaleFeed';
 
 export default function HomePage() {
   const worlds = useWorlds();
@@ -63,6 +64,10 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
+      </section>
+
+      <section>
+        <SaleFeed />
       </section>
     </div>
   );
