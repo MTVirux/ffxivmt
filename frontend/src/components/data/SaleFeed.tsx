@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUniversalisStream } from '../../hooks/useUniversalisStream';
 import type { EnrichedSale, StreamStatus } from '../../hooks/useUniversalisStream';
@@ -6,27 +6,38 @@ import { formatGilExact } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 
 const SKELETON_COUNT = 5;
-const DISPLAY_COUNT = 8;
 const COL_WIDTHS = '2fr 0.9fr 1fr 1fr 0.55fr';
+const ROW_HEIGHT_PX = 41;
 
 export default function SaleFeed() {
   const { sales, status } = useUniversalisStream();
   const [, setTick] = useState(0);
+  const [displayCount, setDisplayCount] = useState(8);
+  const listRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 10_000);
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setDisplayCount(Math.max(1, Math.floor(entry.contentRect.height / ROW_HEIGHT_PX)));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          <StatusDot status={status} />
-          Live Sales
-        </div>
+    <div className="flex h-full flex-col">
+      <div className="mb-3 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+        <StatusDot status={status} />
+        Live Sales
       </div>
 
-      <div className="rounded-xl border border-border/60">
+      <div ref={listRef} className="flex-1 overflow-hidden rounded-xl border border-border/60">
         {status === 'connecting' && sales.length === 0 ? (
           <div className="divide-y divide-border/40">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
@@ -34,14 +45,14 @@ export default function SaleFeed() {
             ))}
           </div>
         ) : sales.length === 0 ? (
-          <div className="flex items-center justify-center py-10 font-mono text-xs text-muted-foreground/40">
+          <div className="flex h-full items-center justify-center font-mono text-xs text-muted-foreground/40">
             no recent activity
           </div>
         ) : (
           <div className="divide-y divide-border/40">
             {(() => {
               const now = Date.now() / 1000;
-              return sales.slice(0, DISPLAY_COUNT).map((sale, i) => (
+              return sales.slice(0, displayCount).map((sale, i) => (
                 <SaleRow key={sale.key} sale={sale} isNewest={i === 0 && now - sale.saleTime < 30} />
               ));
             })()}

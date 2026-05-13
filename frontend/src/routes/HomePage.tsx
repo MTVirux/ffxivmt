@@ -66,7 +66,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section>
+      <section className="h-96">
         <SaleFeed />
       </section>
     </div>
