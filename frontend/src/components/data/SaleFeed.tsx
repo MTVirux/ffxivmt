@@ -24,7 +24,6 @@ export default function SaleFeed() {
           <StatusDot status={status} />
           Live Sales
         </div>
-        <span className="font-mono text-xs text-muted-foreground/40">last {DISPLAY_COUNT}</span>
       </div>
 
       <div className="rounded-xl border border-border/60">
