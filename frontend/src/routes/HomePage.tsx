@@ -31,9 +31,9 @@ export default function HomePage() {
           Watch the gil flow.
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          Live sale ingestion across Europe and North America. Gilflux rankings,
-          crafting profit math, and currency efficiency — all backed by the same
-          Universalis stream powering the market boards in-game.
+          Live Final Fantasy XIV market data. 
+          Gilflux rankings, crafting profit math, and currency efficiency
+          Powered by Universalis and You ❤︎
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 font-mono text-xs uppercase tracking-widest text-muted-foreground">
