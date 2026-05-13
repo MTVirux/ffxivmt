@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { deserialize, serialize } from 'bson';
 import { useWorlds } from './useWorlds';
 import { apiGet } from '../api/client';
@@ -24,6 +24,9 @@ const MAX_BACKOFF_MS = 60_000;
 const EXPIRY_S = 600;
 const PRUNE_INTERVAL_MS = 10_000;
 
+let salesCache: EnrichedSale[] = [];
+let statusCache: StreamStatus = 'connecting';
+
 function buildWorldMap(worlds: WorldStructure): Map<number, string> {
   const map = new Map<number, string>();
   for (const dcs of Object.values(worlds)) {
@@ -48,8 +51,24 @@ export function useUniversalisStream() {
         .sort()
         .join(',')
     : null;
-  const [sales, setSales] = useState<EnrichedSale[]>([]);
-  const [status, setStatus] = useState<StreamStatus>('connecting');
+  const [sales, setSalesState] = useState<EnrichedSale[]>(() => {
+    const cutoff = Date.now() / 1000 - EXPIRY_S;
+    return salesCache.filter((s) => s.saleTime > cutoff);
+  });
+  const [status, setStatusState] = useState<StreamStatus>(() => statusCache);
+
+  const setSales = useCallback((updater: (prev: EnrichedSale[]) => EnrichedSale[]) => {
+    setSalesState((prev) => {
+      const next = updater(prev);
+      salesCache = next;
+      return next;
+    });
+  }, []);
+
+  const setStatus = useCallback((s: StreamStatus) => {
+    statusCache = s;
+    setStatusState(s);
+  }, []);
   const itemNameCache = useRef(new Map<number, string>());
   const backoffRef = useRef(1_000);
   const deadRef = useRef(false);
@@ -170,6 +189,7 @@ export function useUniversalisStream() {
 
     return () => {
       deadRef.current = true;
+      statusCache = 'reconnecting';
       wsRef.current?.close();
     };
   }, [worldsKey]);
