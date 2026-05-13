@@ -142,7 +142,7 @@ bring_up_monitoring() {
 
     # 2. Render Prometheus scrape target files.
     mkdir -p docker/monitoring/prometheus/rendered
-    chmod 0750 docker/monitoring/prometheus/rendered
+    chmod 0755 docker/monitoring/prometheus/rendered
     export SCYLLA_PRIVATE_IP APP_PRIVATE_IP
     envsubst < docker/monitoring/prometheus/scylla_servers.yml.tpl > docker/monitoring/prometheus/rendered/scylla_servers.yml
     envsubst < docker/monitoring/prometheus/node_exporter_servers.yml.tpl > docker/monitoring/prometheus/rendered/node_exporter_servers.yml
