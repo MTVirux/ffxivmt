@@ -39,6 +39,12 @@ function isRecord(val: unknown): val is Record<string, unknown> {
 
 export function useUniversalisStream() {
   const worlds = useWorlds();
+  const worldsKey = worlds.data
+    ? Object.values(worlds.data)
+        .flatMap((dcs) => Object.values(dcs).flatMap((ws) => Object.keys(ws)))
+        .sort()
+        .join(',')
+    : null;
   const [sales, setSales] = useState<EnrichedSale[]>([]);
   const [status, setStatus] = useState<StreamStatus>('connecting');
   const itemNameCache = useRef(new Map<number, string>());
@@ -105,8 +111,8 @@ export function useUniversalisStream() {
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
           .filter((s) => typeof s['buyerName'] === 'string' && s['buyerName'])
-          .map((s) => ({
-            key: `${itemId}-${worldId}-${s['timestamp']}`,
+          .map((s, i) => ({
+            key: `${itemId}-${worldId}-${s['timestamp']}-${i}`,
             itemId,
             itemName,
             worldName,
@@ -114,7 +120,7 @@ export function useUniversalisStream() {
             hq: s['hq'] === true,
             quantity: Number(s['quantity']) || 1,
             unitPrice: Number(s['pricePerUnit']) || 0,
-            saleTime: Number(s['timestamp']),
+            saleTime: Number(s['timestamp']) || 0,
           }));
 
         if (newEntries.length === 0) return;
@@ -141,7 +147,7 @@ export function useUniversalisStream() {
       deadRef.current = true;
       wsRef.current?.close();
     };
-  }, [worlds.data]);
+  }, [worldsKey]);
 
   return { sales, status };
 }
