@@ -21,6 +21,8 @@ export type EnrichedSale = {
 const WS_URL = 'wss://universalis.app/api/ws';
 const BUFFER_SIZE = 50;
 const MAX_BACKOFF_MS = 60_000;
+const EXPIRY_S = 3600;
+const PRUNE_INTERVAL_MS = 30_000;
 
 function buildWorldMap(worlds: WorldStructure): Map<number, string> {
   const map = new Map<number, string>();
@@ -151,6 +153,17 @@ export function useUniversalisStream() {
       wsRef.current?.close();
     };
   }, [worldsKey]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const cutoff = Date.now() / 1000 - EXPIRY_S;
+      setSales((prev) => {
+        const next = prev.filter((s) => s.saleTime > cutoff);
+        return next.length === prev.length ? prev : next;
+      });
+    }, PRUNE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
 
   return { sales, status };
 }

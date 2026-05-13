@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUniversalisStream } from '../../hooks/useUniversalisStream';
 import type { EnrichedSale, StreamStatus } from '../../hooks/useUniversalisStream';
@@ -9,6 +10,11 @@ const COL_WIDTHS = '2fr 0.9fr 1fr 1fr 0.55fr';
 
 export default function SaleFeed() {
   const { sales, status } = useUniversalisStream();
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div>
