@@ -5,7 +5,6 @@ import type { EnrichedSale, StreamStatus } from '../../hooks/useUniversalisStrea
 import { formatGilExact } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 
-const SKELETON_COUNT = 5;
 const COL_WIDTHS = '2fr 0.9fr 1fr 1fr 0.55fr';
 const ROW_HEIGHT_PX = 41;
 
@@ -39,8 +38,8 @@ export default function SaleFeed() {
 
       <div ref={listRef} className="flex-1 overflow-hidden rounded-xl border border-border/60">
         {status === 'connecting' && sales.length === 0 ? (
-          <div className="divide-y divide-border/40">
-            {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+          <div className="flex h-full flex-col divide-y divide-border/40">
+            {Array.from({ length: displayCount }).map((_, i) => (
               <SkeletonRow key={i} />
             ))}
           </div>
@@ -49,7 +48,7 @@ export default function SaleFeed() {
             no recent activity
           </div>
         ) : (
-          <div className="divide-y divide-border/40">
+          <div className="flex h-full flex-col divide-y divide-border/40">
             {(() => {
               const now = Date.now() / 1000;
               return sales.slice(0, displayCount).map((sale, i) => (
@@ -77,7 +76,7 @@ function SaleRow({ sale, isNewest }: { sale: EnrichedSale; isNewest: boolean }) 
   const nameIsId = sale.itemName === String(sale.itemId);
   return (
     <div
-      className={`grid items-center gap-4 px-4 py-2.5 text-sm ${
+      className={`flex-1 grid items-center gap-4 px-4 text-sm ${
         isNewest ? 'bg-accent/5' : 'hover:bg-card/40'
       }`}
       style={{ gridTemplateColumns: COL_WIDTHS }}
@@ -113,7 +112,7 @@ function SaleRow({ sale, isNewest }: { sale: EnrichedSale; isNewest: boolean }) 
 function SkeletonRow() {
   return (
     <div
-      className="grid items-center gap-4 px-4 py-2.5"
+      className="flex-1 grid items-center gap-4 px-4"
       style={{ gridTemplateColumns: COL_WIDTHS }}
     >
       <div className="h-3 w-2/3 animate-pulse rounded bg-muted/30" />
