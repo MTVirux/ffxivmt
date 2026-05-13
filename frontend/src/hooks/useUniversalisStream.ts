@@ -131,7 +131,12 @@ export function useUniversalisStream() {
 
         if (newEntries.length === 0) return;
 
-        setSales((prev) => [...newEntries, ...prev].slice(0, BUFFER_SIZE));
+        setSales((prev) => {
+          const existing = new Set(prev.map((s) => s.key));
+          const fresh = newEntries.filter((e) => !existing.has(e.key));
+          if (fresh.length === 0) return prev;
+          return [...fresh, ...prev].slice(0, BUFFER_SIZE);
+        });
 
         if (cachedName === undefined) {
           void resolveItemName(itemId).then((name) => {

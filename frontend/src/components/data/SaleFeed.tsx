@@ -6,6 +6,7 @@ import { formatGilExact } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 
 const SKELETON_COUNT = 5;
+const DISPLAY_COUNT = 8;
 const COL_WIDTHS = '2fr 0.9fr 1fr 1fr 0.55fr';
 
 export default function SaleFeed() {
@@ -23,10 +24,10 @@ export default function SaleFeed() {
           <StatusDot status={status} />
           Live Sales
         </div>
-        <span className="font-mono text-xs text-muted-foreground/40">showing last 50</span>
+        <span className="font-mono text-xs text-muted-foreground/40">last {DISPLAY_COUNT}</span>
       </div>
 
-      <div className="max-h-96 overflow-y-auto rounded-xl border border-border/60">
+      <div className="rounded-xl border border-border/60">
         {status === 'connecting' && sales.length === 0 ? (
           <div className="divide-y divide-border/40">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
@@ -41,7 +42,7 @@ export default function SaleFeed() {
           <div className="divide-y divide-border/40">
             {(() => {
               const now = Date.now() / 1000;
-              return sales.map((sale, i) => (
+              return sales.slice(0, DISPLAY_COUNT).map((sale, i) => (
                 <SaleRow key={sale.key} sale={sale} isNewest={i === 0 && now - sale.saleTime < 30} />
               ));
             })()}
