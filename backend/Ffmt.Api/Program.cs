@@ -29,7 +29,7 @@ builder.Services.AddFfmtMetrics();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
-    // C# property names serialize as snake_case (item_id, world_name, ranking_1h, ...) so the
+    // C# property names serialize as snake_case (item_id, world_name, ...) so the
     // legacy PHP API consumers see byte-compatible field names. Dictionary keys are deliberately
     // left as-is so /api/v1/worlds keeps preserving original region/datacenter casing.
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
