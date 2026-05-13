@@ -49,6 +49,9 @@ tf/*.backup
 tf/*.plan
 tf/*.out
 
+####### LOCAL SCRIPTS #######
+scripts/local/
+
 ####### FILE TYPES #######
 *.db
 *.rdb
