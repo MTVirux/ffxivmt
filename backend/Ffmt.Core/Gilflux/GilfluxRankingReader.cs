@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
@@ -7,8 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
 
-/// <summary>API-shaped row: a GilfluxRanking enriched with item/world fields the
-/// underlying Scylla rows no longer carry.</summary>
 public sealed record EnrichedGilfluxRanking(
     int ItemId,
     string ItemName,
@@ -16,13 +13,7 @@ public sealed record EnrichedGilfluxRanking(
     string? WorldName,
     string Datacenter,
     string Region,
-    [property: JsonPropertyName("ranking_1h")]  long Ranking1h,
-    [property: JsonPropertyName("ranking_3h")]  long Ranking3h,
-    [property: JsonPropertyName("ranking_6h")]  long Ranking6h,
-    [property: JsonPropertyName("ranking_12h")] long Ranking12h,
-    [property: JsonPropertyName("ranking_1d")]  long Ranking1d,
-    [property: JsonPropertyName("ranking_3d")]  long Ranking3d,
-    [property: JsonPropertyName("ranking_7d")]  long Ranking7d,
+    IReadOnlyDictionary<string, long> Rankings,
     long? UpdatedAt,
     long? LastSaleTime);
 
@@ -137,13 +128,7 @@ public sealed class GilfluxRankingReader
                 WorldName: worldName,
                 Datacenter: datacenter,
                 Region: region,
-                Ranking1h: r.Ranking1h,
-                Ranking3h: r.Ranking3h,
-                Ranking6h: r.Ranking6h,
-                Ranking12h: r.Ranking12h,
-                Ranking1d: r.Ranking1d,
-                Ranking3d: r.Ranking3d,
-                Ranking7d: r.Ranking7d,
+                Rankings: r.Rankings,
                 UpdatedAt: r.UpdatedAt,
                 LastSaleTime: r.LastSaleTime));
         }

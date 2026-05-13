@@ -1,12 +1,17 @@
 using System.Diagnostics;
 using Cassandra;
+using Ffmt.Core.Configuration;
 using Ffmt.Core.Metrics;
 using Ffmt.Core.Storage.Scylla;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
 
-public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<ScyllaRankingRefresher> logger) : IRankingRefresher
+public sealed class ScyllaRankingRefresher(
+    IScyllaSession scylla,
+    IOptions<GilfluxOptions> options,
+    ILogger<ScyllaRankingRefresher> logger) : IRankingRefresher
 {
     private const string CqlSumTotalSinceTimeframe = """
         SELECT CAST(SUM(total_price) AS BIGINT) AS gilflux
@@ -22,72 +27,49 @@ public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<Scylla
         GROUP BY item_id, world_id
         """;
 
-    private const string CqlUpsertGilfluxRanking = """
-        INSERT INTO gilflux_ranking
-            (item_id, world_id,
-             ranking_1h, ranking_3h, ranking_6h, ranking_12h,
-             ranking_1d, ranking_3d, ranking_7d,
-             last_sale_time, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    private const string CqlUpsertGilfluxRankings = """
+        INSERT INTO gilflux_rankings
+            (world_id, item_id, rankings, last_sale_time, updated_at)
+        VALUES (?, ?, ?, ?, ?)
         """;
-
-    private const string CqlUpsertGilfluxByWorld = """
-        INSERT INTO gilflux_by_world
-            (world_id, item_id,
-             ranking_1h, ranking_3h, ranking_6h, ranking_12h,
-             ranking_1d, ranking_3d, ranking_7d,
-             last_sale_time, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
-
-    private static readonly TimeSpan[] Timeframes =
-    [
-        TimeSpan.FromHours(1),
-        TimeSpan.FromHours(3),
-        TimeSpan.FromHours(6),
-        TimeSpan.FromHours(12),
-        TimeSpan.FromDays(1),
-        TimeSpan.FromDays(3),
-        TimeSpan.FromDays(7),
-    ];
 
     public async Task RefreshAsync(int worldId, int itemId, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
         try
         {
-            var sumStmt = await scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
-            var maxStmt = await scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
-            var upsertRankingStmt = await scylla.PrepareAsync(CqlUpsertGilfluxRanking, ct).ConfigureAwait(false);
-            var upsertByWorldStmt = await scylla.PrepareAsync(CqlUpsertGilfluxByWorld, ct).ConfigureAwait(false);
+            if (options.Value.TimeframesMs.Count == 0)
+                return;
+
+            var timeframes = options.Value.TimeframesMs
+                .Select(kv => (Key: kv.Key, Duration: TimeSpan.FromMilliseconds(kv.Value)))
+                .ToArray();
+
+            var sumStmt    = await scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
+            var maxStmt    = await scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
+            var upsertStmt = await scylla.PrepareAsync(CqlUpsertGilfluxRankings, ct).ConfigureAwait(false);
 
             var now = DateTimeOffset.UtcNow;
+            var maxDuration = TimeSpan.FromMilliseconds(options.Value.TimeframesMs.Values.Max());
 
-            var sumTasks = Timeframes
-                .Select(tf => scylla.MeasuredExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf), "gilflux_sum"))
+            var sumTasks = timeframes
+                .Select(tf => scylla.MeasuredExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf.Duration), "gilflux_sum"))
                 .ToArray();
-            var maxSaleTask = scylla.MeasuredExecuteAsync(maxStmt.Bind(itemId, worldId, now - Timeframes[^1]), "gilflux_max");
+            var maxSaleTask = scylla.MeasuredExecuteAsync(maxStmt.Bind(itemId, worldId, now - maxDuration), "gilflux_max");
 
             await Task.WhenAll(sumTasks.Concat(new[] { maxSaleTask })).ConfigureAwait(false);
 
-            var sums = sumTasks.Select(t => SumGilflux(t.Result)).ToArray();
+            var rankings = new Dictionary<string, long>();
+            for (var i = 0; i < timeframes.Length; i++)
+            {
+                rankings[timeframes[i].Key] = SumGilflux(sumTasks[i].Result);
+            }
+
             var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result) ?? DateTimeOffset.FromUnixTimeMilliseconds(0);
 
-            var batch = (BatchStatement)new BatchStatement()
-                .SetBatchType(BatchType.Unlogged)
-                .SetConsistencyLevel(ConsistencyLevel.LocalOne);
-
-            batch.Add(upsertRankingStmt.Bind(
-                itemId, worldId,
-                sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
-                lastSaleTime, now));
-
-            batch.Add(upsertByWorldStmt.Bind(
-                worldId, itemId,
-                sums[0], sums[1], sums[2], sums[3], sums[4], sums[5], sums[6],
-                lastSaleTime, now));
-
-            await scylla.MeasuredExecuteAsync(batch, "gilflux_upsert").ConfigureAwait(false);
+            await scylla.MeasuredExecuteAsync(
+                upsertStmt.Bind(worldId, itemId, rankings, lastSaleTime, now),
+                "gilflux_upsert").ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -135,9 +117,7 @@ public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<Scylla
     {
         var row = rs.FirstOrDefault();
         if (row is null || row.GetColumn("gilflux") is null || row.IsNull("gilflux"))
-        {
             return 0L;
-        }
         return row.GetValue<long>("gilflux");
     }
 
@@ -145,9 +125,7 @@ public sealed class ScyllaRankingRefresher(IScyllaSession scylla, ILogger<Scylla
     {
         var row = rs.FirstOrDefault();
         if (row is null || row.GetColumn("last_sale_time") is null || row.IsNull("last_sale_time"))
-        {
             return null;
-        }
         return row.GetValue<DateTimeOffset>("last_sale_time");
     }
 }
