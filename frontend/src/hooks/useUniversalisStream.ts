@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { deserialize } from 'bson';
+import { deserialize, serialize } from 'bson';
 import { useWorlds } from './useWorlds';
 import { apiGet } from '../api/client';
 import type { Item, WorldStructure } from '../api/types';
@@ -84,7 +84,7 @@ export function useUniversalisStream() {
       ws.onopen = () => {
         backoffRef.current = 1_000;
         for (const id of worldIds) {
-          ws.send(JSON.stringify({ event: 'subscribe', channel: `sales/add{world=${id}}` }));
+          ws.send(serialize({ event: 'subscribe', channel: `sales/add{world=${id}}` }));
         }
         setStatus('connected');
       };
