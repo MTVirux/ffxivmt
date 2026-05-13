@@ -7,6 +7,11 @@
 }
 
 {$ZERO_SSL_MAIN_DOMAIN} {
+    log {
+        output stdout
+        format json
+    }
+
     encode gzip zstd
 
     handle /api/* {
