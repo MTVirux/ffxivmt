@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import type { RankingRow } from '../../lib/rankingAggregate';
-import { TIMEFRAMES, type TimeframeKey } from '../../lib/rankingAggregate';
+import { TIMEFRAMES } from '../../lib/rankingAggregate';
 import { formatGil } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 
@@ -21,7 +21,7 @@ type Props = {
 };
 
 export default function RankingTable({ rows, showWorldExpand }: Props) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'ranking_1h', desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: '1h', desc: true }]);
 
   const columns = useMemo<ColumnDef<RankingRow>[]>(() => {
     const cols: ColumnDef<RankingRow>[] = [
@@ -68,7 +68,7 @@ export default function RankingTable({ rows, showWorldExpand }: Props) {
       ...TIMEFRAMES.map<ColumnDef<RankingRow>>((tf) => ({
         id: tf.key,
         header: tf.label,
-        accessorFn: (row) => row[tf.key as TimeframeKey],
+        accessorFn: (row) => row.rankings[tf.key] ?? 0,
         sortingFn: 'basic',
         cell: ({ getValue, row }) => {
           const v = getValue<number>();
