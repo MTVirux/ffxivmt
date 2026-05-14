@@ -101,6 +101,7 @@ app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
 app.MapToolsEndpoints();
 app.MapStatusEndpoints();
+app.MapConfigEndpoints();
 
 app.Run();
 
