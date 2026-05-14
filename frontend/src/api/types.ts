@@ -112,3 +112,9 @@ export type Sale = {
   /** ISO 8601 with timezone offset (e.g. "2026-05-08T12:34:56+00:00"). */
   sale_time: string;
 };
+
+/** GET /api/v1/config — server-side configuration for the frontend. */
+export type AppConfig = {
+  /** Gilflux timeframe keys in ascending duration order (e.g. ["1h","3h","7d"]). */
+  gilflux_timeframes: string[];
+};
