@@ -19,6 +19,15 @@ export default function ItemPage() {
   const [prefs, patchPrefs] = useUserPrefs();
   const worldId = prefs.lastWorldId;
   const setWorldId = (id: number) => patchPrefs({ lastWorldId: id });
+  const isIgnored = itemId !== undefined && prefs.ignoredItemIds.includes(itemId);
+  const toggleIgnore = () => {
+    if (itemId === undefined) return;
+    patchPrefs({
+      ignoredItemIds: isIgnored
+        ? prefs.ignoredItemIds.filter((x) => x !== itemId)
+        : [...prefs.ignoredItemIds, itemId],
+    });
+  };
   const sales = useItemSales(validId ? itemId : undefined, worldId, 100);
 
   const summary = useMemo(() => summarize(sales.data ?? []), [sales.data]);
@@ -55,6 +64,8 @@ export default function ItemPage() {
         marketable={item.data.marketable}
         craftable={item.data.craftable}
         itemId={item.data.id}
+        isIgnored={isIgnored}
+        onToggleIgnore={toggleIgnore}
       />
 
       <section className="space-y-4">
@@ -96,11 +107,15 @@ function ItemHeader({
   marketable,
   craftable,
   itemId,
+  isIgnored,
+  onToggleIgnore,
 }: {
   name: string;
   marketable: boolean;
   craftable: boolean;
   itemId: number;
+  isIgnored: boolean;
+  onToggleIgnore: () => void;
 }) {
   return (
     <header className="flex flex-wrap items-start gap-6">
@@ -113,6 +128,18 @@ function ItemHeader({
         <div className="flex flex-wrap gap-2 text-xs">
           {marketable ? <Tag>Marketable</Tag> : <Tag muted>Not marketable</Tag>}
           {craftable && <Tag accent>Craftable</Tag>}
+          <button
+            type="button"
+            onClick={onToggleIgnore}
+            className={[
+              'rounded-full border px-2 py-0.5 font-medium text-xs transition-colors',
+              isIgnored
+                ? 'border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20'
+                : 'border-border/60 bg-card text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+          >
+            {isIgnored ? 'Hidden' : 'Hide'}
+          </button>
         </div>
       </div>
     </header>
