@@ -27,7 +27,7 @@ export const navItems: NavItem[] = [
   },
   {
     name: 'Buyer search',
-    navLabel: 'Buyer search',
+    navLabel: 'Buyer',
     to: '/tools/buyer-search',
     description: "Look up a character's market-board purchase history.",
   },

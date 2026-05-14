@@ -20,5 +20,6 @@ export function useBuyerSearch({
     },
     enabled: enabled && buyerName.length > 0,
     staleTime: 0,
+    retry: false,
   });
 }

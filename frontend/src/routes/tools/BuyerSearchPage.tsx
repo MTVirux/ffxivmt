@@ -157,8 +157,9 @@ function ResultsTable({
   rows: BuyerSearchRow[];
   worldNameMap: Map<number, string>;
 }) {
-  const sorted = [...rows].sort(
-    (a, b) => Date.parse(b.sale_time) - Date.parse(a.sale_time),
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => Date.parse(b.sale_time) - Date.parse(a.sale_time)),
+    [rows],
   );
 
   return (
