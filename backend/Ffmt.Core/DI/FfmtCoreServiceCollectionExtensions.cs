@@ -3,6 +3,7 @@ using Ffmt.Core.External;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Storage.Elastic;
+using Ffmt.Core.Storage.S3;
 using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +23,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddOptions<GilfluxOptions>().Bind(configuration.GetSection(GilfluxOptions.SectionName)).ValidateOnStart();
         services.AddOptions<LoggingOptions>().Bind(configuration.GetSection(LoggingOptions.SectionName)).ValidateOnStart();
         services.AddOptions<UpdatedbOptions>().Bind(configuration.GetSection(UpdatedbOptions.SectionName)).ValidateOnStart();
+        services.AddOptions<ArchiveOptions>().Bind(configuration.GetSection(ArchiveOptions.SectionName)).ValidateOnStart();
 
         services.AddMemoryCache();
 
@@ -33,6 +35,8 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IDirtyPairQueue, ScyllaDirtyPairQueue>();
         services.AddSingleton<ISaleStore, ScyllaSaleStore>();
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
+        services.AddSingleton<IArchiveStore, ScyllaArchiveStore>();
+        services.AddSingleton<IS3ArchiveUploader, S3ArchiveUploader>();
 
         services.AddSingleton<WorldStructureService>();
         services.AddSingleton<LocationResolver>();
