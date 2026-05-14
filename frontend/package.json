@@ -17,6 +17,7 @@
     "@hookform/resolvers": "^3.9.1",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-table": "^8.20.6",
+    "@tanstack/react-virtual": "^3.13.24",
     "bson": "^7.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

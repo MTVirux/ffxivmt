@@ -8,11 +8,14 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
-import { useMemo, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useMemo, useRef, useState } from 'react';
 import type { RankingRow } from '../../lib/rankingAggregate';
 import { TIMEFRAMES } from '../../lib/rankingAggregate';
 import { formatGil } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
+
+const EST_ROW_HEIGHT = 37;
 
 type Props = {
   rows: RankingRow[];
@@ -53,7 +56,7 @@ export default function RankingTable({
           }
           const isIgnored = ignoredItemIds?.includes(r.item_id) ?? false;
           return (
-            <div className="flex items-center gap-2" style={{ paddingLeft: indent }}>
+            <div className="flex min-w-0 items-center gap-2" style={{ paddingLeft: indent }}>
               {showWorldExpand && row.getCanExpand() ? (
                 <button
                   type="button"
@@ -70,7 +73,7 @@ export default function RankingTable({
               )}
               <Link
                 to={`/item/${r.item_id}`}
-                className="font-medium text-foreground hover:text-accent"
+                className="min-w-0 truncate font-medium text-foreground hover:text-accent"
               >
                 {r.item_name}
               </Link>
@@ -144,6 +147,20 @@ export default function RankingTable({
     getExpandedRowModel: getExpandedRowModel(),
   });
 
+  const modelRows = table.getRowModel().rows;
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const virtualizer = useVirtualizer({
+    count: modelRows.length,
+    getScrollElement: () => scrollerRef.current,
+    estimateSize: () => EST_ROW_HEIGHT,
+    overscan: 12,
+  });
+
+  const gridTemplate = useMemo(() => {
+    const tfCols = timeframes.map(() => 'minmax(64px, max-content)').join(' ');
+    return `minmax(0, 1fr) ${tfCols} minmax(96px, max-content)`;
+  }, [timeframes]);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
@@ -153,71 +170,106 @@ export default function RankingTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60">
-      <table className="w-full text-sm">
-        <thead className="bg-card/60 text-xs uppercase tracking-widest text-muted-foreground">
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
-              {hg.headers.map((h) => {
-                const numeric = h.column.id !== 'item';
-                const sort = h.column.getIsSorted();
-                const canSort = h.column.getCanSort();
-                return (
-                  <th
-                    key={h.id}
-                    scope="col"
-                    className={[
-                      'px-3 py-2 font-medium',
-                      numeric ? 'text-right' : 'text-left',
-                      canSort ? 'cursor-pointer select-none hover:text-foreground' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
+    <div
+      ref={scrollerRef}
+      role="table"
+      aria-rowcount={modelRows.length}
+      className="overflow-auto rounded-xl border border-border/60 text-sm"
+      style={{ maxHeight: 'calc(100vh - 22rem)' }}
+    >
+      <div
+        role="rowgroup"
+        className="sticky top-0 z-10 bg-card/80 backdrop-blur text-xs uppercase tracking-widest text-muted-foreground"
+      >
+        {table.getHeaderGroups().map((hg) => (
+          <div
+            key={hg.id}
+            role="row"
+            className="grid border-b border-border/60"
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
+            {hg.headers.map((h) => {
+              const numeric = h.column.id !== 'item';
+              const sort = h.column.getIsSorted();
+              const canSort = h.column.getCanSort();
+              return (
+                <div
+                  key={h.id}
+                  role="columnheader"
+                  aria-sort={sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none'}
+                  onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
+                  className={[
+                    'px-3 py-2 font-medium',
+                    numeric ? 'text-right' : 'text-left',
+                    canSort ? 'cursor-pointer select-none hover:text-foreground' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <span
+                    className={`inline-flex items-center gap-1 ${numeric ? 'w-full justify-end' : ''}`}
                   >
-                    <span className="inline-flex items-center gap-1">
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                      {sort === 'asc' && <span aria-hidden="true">▲</span>}
-                      {sort === 'desc' && <span aria-hidden="true">▼</span>}
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
+                    {flexRender(h.column.columnDef.header, h.getContext())}
+                    {sort === 'asc' && <span aria-hidden="true">▲</span>}
+                    {sort === 'desc' && <span aria-hidden="true">▼</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div
+        role="rowgroup"
+        style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+      >
+        {virtualizer.getVirtualItems().map((vi) => {
+          const row = modelRows[vi.index];
+          const r = row.original;
+          const isIgnored = r.kind === 'aggregate' && ignoredItemIds?.includes(r.item_id);
+          return (
+            <div
               key={row.id}
+              role="row"
+              aria-rowindex={vi.index + 2}
+              data-index={vi.index}
+              ref={virtualizer.measureElement}
               className={[
-                'border-t border-border/40',
-                row.original.kind === 'world' ? 'bg-card/20' : 'hover:bg-card/40',
-                row.original.kind === 'aggregate' && ignoredItemIds?.includes(row.original.item_id)
-                  ? 'opacity-50'
-                  : '',
+                'grid border-t border-border/40',
+                r.kind === 'world' ? 'bg-card/20' : 'hover:bg-card/40',
+                isIgnored ? 'opacity-50' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${vi.start}px)`,
+                gridTemplateColumns: gridTemplate,
+              }}
             >
               {row.getVisibleCells().map((cell) => {
                 const numeric = cell.column.id !== 'item';
                 return (
-                  <td
+                  <div
                     key={cell.id}
+                    role="cell"
                     className={[
-                      'px-3 py-2',
+                      'min-w-0 px-3 py-2',
                       numeric ? 'text-right' : 'text-left',
                     ].join(' ')}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  </div>
                 );
               })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
