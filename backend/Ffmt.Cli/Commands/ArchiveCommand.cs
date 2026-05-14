@@ -40,7 +40,7 @@ public sealed class ArchiveCommand(
         {
             ct.ThrowIfCancellationRequested();
             await ExportWorldAsync(world, itemIds, pruneThreshold, opts.LookbackDays, dryRun, semaphore, ct).ConfigureAwait(false);
-            await HandleCorrectionsAsync(world, itemIds, pruneThreshold, opts.LookbackDays, dryRun, ct).ConfigureAwait(false);
+            await HandleCorrectionsAsync(world, itemIds, pruneThreshold, opts.LookbackDays, dryRun, semaphore, ct).ConfigureAwait(false);
         }
     }
 
@@ -78,9 +78,8 @@ public sealed class ArchiveCommand(
 
     private async Task HandleCorrectionsAsync(
         World world, IReadOnlyList<int> itemIds, DateOnly pruneThreshold,
-        int lookbackDays, bool dryRun, CancellationToken ct)
+        int lookbackDays, bool dryRun, SemaphoreSlim semaphore, CancellationToken ct)
     {
-        using var semaphore = new SemaphoreSlim(8, 8);
         var byDate = new Dictionary<DateOnly, List<Sale>>();
 
         var tasks = itemIds.Select(async itemId =>
@@ -90,7 +89,7 @@ public sealed class ArchiveCommand(
             {
                 for (var i = 0; i < lookbackDays; i++)
                 {
-                    var date = pruneThreshold.AddDays(-i - 1);
+                    var date = pruneThreshold.AddDays(-i);
                     if (!await archiveStore.IsExportedAsync(world.Id, date, ct).ConfigureAwait(false))
                         continue;
 
