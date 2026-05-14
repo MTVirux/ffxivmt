@@ -1,14 +1,14 @@
-import { xivApiIconUrl } from '../../lib/iconUrl';
+import { itemIconUrl } from '../../lib/iconUrl';
 
 type Props = {
-  icon: number;
+  itemId: number;
   alt: string;
   size?: number;
   className?: string;
 };
 
-export default function ItemIcon({ icon, alt, size = 40, className }: Props) {
-  const url = xivApiIconUrl(icon);
+export default function ItemIcon({ itemId, alt, size = 40, className }: Props) {
+  const url = itemIconUrl(itemId);
   const dim = { width: size, height: size };
 
   if (!url) {

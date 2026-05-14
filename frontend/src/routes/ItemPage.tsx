@@ -50,7 +50,6 @@ export default function ItemPage() {
     <div className="space-y-10">
       <ItemHeader
         name={item.data.name}
-        icon={item.data.icon_image}
         marketable={item.data.marketable}
         craftable={item.data.craftable}
         itemId={item.data.id}
@@ -92,20 +91,18 @@ export default function ItemPage() {
 
 function ItemHeader({
   name,
-  icon,
   marketable,
   craftable,
   itemId,
 }: {
   name: string;
-  icon: number;
   marketable: boolean;
   craftable: boolean;
   itemId: number;
 }) {
   return (
     <header className="flex flex-wrap items-start gap-6">
-      <ItemIcon icon={icon} alt={name} size={80} />
+      <ItemIcon itemId={itemId} alt={name} size={80} />
       <div className="space-y-2">
         <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
           item · {itemId}
