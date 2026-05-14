@@ -118,3 +118,12 @@ export type AppConfig = {
   /** Gilflux timeframe keys in ascending duration order (e.g. ["1h","3h","7d"]). */
   gilflux_timeframes: string[];
 };
+
+/** GET /api/v1/search_buyer — one row per purchase found for the buyer. */
+export type BuyerSearchRow = {
+  item_id: number;
+  world_id: number;
+  buyer_name: string;
+  /** ISO 8601 with timezone offset (e.g. "2026-05-08T12:34:56+00:00"). */
+  sale_time: string;
+};
