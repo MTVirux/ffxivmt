@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import ProfitTable from '../../components/data/ProfitTable';
@@ -36,6 +36,15 @@ export default function ItemProfitPage() {
 
   const [prefs, patchPrefs] = useUserPrefs();
   const [showHidden, setShowHidden] = useState(false);
+
+  const handleIgnore = useCallback(
+    (id: number) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] }),
+    [patchPrefs, prefs.ignoredItemIds],
+  );
+  const handleUnignore = useCallback(
+    (id: number) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) }),
+    [patchPrefs, prefs.ignoredItemIds],
+  );
 
   const allRows = query.data?.status ? query.data.data : [];
   const visibleRows = showHidden
@@ -113,7 +122,7 @@ export default function ItemProfitPage() {
               </span>
               <div className="flex items-center gap-4">
                 <span className="font-mono">{query.data.request_id.slice(0, 8)}</span>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
                   <input
                     type="checkbox"
                     checked={showHidden}
@@ -127,12 +136,8 @@ export default function ItemProfitPage() {
             <ProfitTable
               rows={visibleRows}
               ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
-              onIgnore={(id) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] })}
-              onUnignore={
-                showHidden
-                  ? (id) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) })
-                  : undefined
-              }
+              onIgnore={handleIgnore}
+              onUnignore={showHidden ? handleUnignore : undefined}
             />
           </>
         ) : null}

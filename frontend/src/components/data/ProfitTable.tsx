@@ -70,6 +70,7 @@ export default function ProfitTable({ rows, ignoredItemIds, onIgnore, onUnignore
       base.push({
         id: 'actions',
         header: '',
+        enableSorting: false,
         cell: ({ row }) => {
           const id = row.original.id;
           const isIgnored = ignoredItemIds?.includes(id) ?? false;
@@ -164,7 +165,7 @@ export default function ProfitTable({ rows, ignoredItemIds, onIgnore, onUnignore
                 .join(' ')}
             >
               {row.getVisibleCells().map((cell) => {
-                const numeric = cell.column.id !== 'name';
+                const numeric = cell.column.id !== 'name' && cell.column.id !== 'actions';
                 return (
                   <td
                     key={cell.id}
