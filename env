@@ -25,12 +25,6 @@ COMPOSE_PROJECT_NAME=ffmt
 # Re-exposed by docker-compose.dev.yml for direct probing of the .NET backend.
 BACKEND_DOTNET_HOST_PORT=8080
 
-#MariaDB
-MARIADB_HOST_PORT=3306
-
-#DB Management
-PMA_HOST_PORT=8001
-
 
 # ######################## SSL CERT CONFIG ######################## #
 
