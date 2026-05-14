@@ -19,6 +19,7 @@ internal static class RootCommandBuilder
         root.AddCommand(BuildUpdateElastic(services));
         root.AddCommand(BuildUpdateGarland(services));
         root.AddCommand(BuildUpdateMarketability(services));
+        root.AddCommand(BuildArchive(services));
 
         return root;
     }
@@ -93,6 +94,32 @@ internal static class RootCommandBuilder
                 await sp.GetRequiredService<UpdateMarketabilityStage>().RunAsync(ct).ConfigureAwait(false));
         });
         return cmd;
+    }
+
+    private static Command BuildArchive(IServiceProvider services)
+    {
+        var dryRunOption = new Option<bool>("--dry-run", "Log what would be exported without writing or deleting anything.");
+
+        var archiveCmd = new Command("archive", "Export completed sale days to Hetzner Object Storage and prune from Scylla.");
+        archiveCmd.AddOption(dryRunOption);
+        archiveCmd.SetHandler(async (InvocationContext ctx) =>
+        {
+            var dryRun = ctx.ParseResult.GetValueForOption(dryRunOption);
+            await Run(services, ctx, (sp, ct) =>
+                sp.GetRequiredService<ArchiveCommand>().RunAsync(dryRun, ct));
+        });
+
+        var mergeCmd = new Command("merge", "Merge all outstanding corrections files into their main archive files.");
+        mergeCmd.AddOption(dryRunOption);
+        mergeCmd.SetHandler(async (InvocationContext ctx) =>
+        {
+            var dryRun = ctx.ParseResult.GetValueForOption(dryRunOption);
+            await Run(services, ctx, (sp, ct) =>
+                sp.GetRequiredService<ArchiveMergeCommand>().RunAsync(dryRun, ct));
+        });
+
+        archiveCmd.AddCommand(mergeCmd);
+        return archiveCmd;
     }
 
     private static async Task Run(IServiceProvider services, InvocationContext ctx, Func<IServiceProvider, CancellationToken, Task> action)

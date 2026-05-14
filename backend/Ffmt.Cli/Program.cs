@@ -31,6 +31,8 @@ builder.Services.AddSingleton<UpdateElasticStage>();
 builder.Services.AddSingleton<UpdateGarlandStage>();
 builder.Services.AddSingleton<UpdateMarketabilityStage>();
 builder.Services.AddSingleton<UpdatedbOrchestrator>();
+builder.Services.AddSingleton<ArchiveCommand>();
+builder.Services.AddSingleton<ArchiveMergeCommand>();
 
 using var host = builder.Build();
 await host.StartAsync();
