@@ -40,7 +40,7 @@ public sealed class S3ArchiveUploader : IS3ArchiveUploader, IDisposable
     {
         try
         {
-            var response = await _client.GetObjectAsync(_bucket, key, ct).ConfigureAwait(false);
+            using var response = await _client.GetObjectAsync(_bucket, key, ct).ConfigureAwait(false);
             using var ms = new MemoryStream();
             await response.ResponseStream.CopyToAsync(ms, ct).ConfigureAwait(false);
             return ms.ToArray();
