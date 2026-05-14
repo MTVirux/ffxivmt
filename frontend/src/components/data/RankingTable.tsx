@@ -19,9 +19,19 @@ type Props = {
   /** True when the response covers more than one world. Toggles the expand column. */
   showWorldExpand: boolean;
   timeframes?: readonly { key: string; label: string }[];
+  ignoredItemIds?: number[];
+  onIgnore?: (id: number) => void;
+  onUnignore?: (id: number) => void;
 };
 
-export default function RankingTable({ rows, showWorldExpand, timeframes: timeframesProp }: Props) {
+export default function RankingTable({
+  rows,
+  showWorldExpand,
+  timeframes: timeframesProp,
+  ignoredItemIds,
+  onIgnore,
+  onUnignore,
+}: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: '1h', desc: true }]);
   const timeframes = timeframesProp ?? TIMEFRAMES;
 
@@ -41,6 +51,7 @@ export default function RankingTable({ rows, showWorldExpand, timeframes: timefr
               </div>
             );
           }
+          const isIgnored = ignoredItemIds?.includes(r.item_id) ?? false;
           return (
             <div className="flex items-center gap-2" style={{ paddingLeft: indent }}>
               {showWorldExpand && row.getCanExpand() ? (
@@ -63,6 +74,25 @@ export default function RankingTable({ rows, showWorldExpand, timeframes: timefr
               >
                 {r.item_name}
               </Link>
+              {isIgnored && onUnignore ? (
+                <button
+                  type="button"
+                  onClick={() => onUnignore(r.item_id)}
+                  className="ml-1 text-xs text-muted-foreground hover:text-foreground"
+                  aria-label="Unhide item"
+                >
+                  Unhide
+                </button>
+              ) : !isIgnored && onIgnore ? (
+                <button
+                  type="button"
+                  onClick={() => onIgnore(r.item_id)}
+                  className="ml-1 text-xs text-muted-foreground hover:text-destructive"
+                  aria-label="Ignore item"
+                >
+                  ×
+                </button>
+              ) : null}
             </div>
           );
         },
@@ -101,7 +131,7 @@ export default function RankingTable({ rows, showWorldExpand, timeframes: timefr
       },
     ];
     return cols;
-  }, [showWorldExpand, timeframes]);
+  }, [showWorldExpand, timeframes, ignoredItemIds, onIgnore, onUnignore]);
 
   const table = useReactTable({
     data: rows,
@@ -163,7 +193,12 @@ export default function RankingTable({ rows, showWorldExpand, timeframes: timefr
               className={[
                 'border-t border-border/40',
                 row.original.kind === 'world' ? 'bg-card/20' : 'hover:bg-card/40',
-              ].join(' ')}
+                row.original.kind === 'aggregate' && ignoredItemIds?.includes(row.original.item_id)
+                  ? 'opacity-50'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
             >
               {row.getVisibleCells().map((cell) => {
                 const numeric = cell.column.id !== 'item';
