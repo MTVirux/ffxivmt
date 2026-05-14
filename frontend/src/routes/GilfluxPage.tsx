@@ -11,6 +11,7 @@ import type { Location, LocationKind } from '../api/types';
 
 export default function GilfluxPage() {
   const [prefs, patchPrefs] = useUserPrefs();
+  const [showHidden, setShowHidden] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const location = useMemo<Location | undefined>(() => {
@@ -65,6 +66,9 @@ export default function GilfluxPage() {
 
   const query = useGilfluxRanking(location, craftedOnly);
   const rows = useMemo(() => aggregateRankings(query.data ?? []), [query.data]);
+  const visibleRows = showHidden
+    ? rows
+    : rows.filter((r) => !prefs.ignoredItemIds.includes(r.item_id));
   const showWorldExpand = location?.kind !== 'world';
 
   return (
@@ -81,6 +85,7 @@ export default function GilfluxPage() {
       <div className="flex flex-wrap items-end justify-between gap-6 rounded-xl border border-border/60 bg-card/40 p-4">
         <TieredLocationSelect value={location} onChange={setLocation} />
         <CraftedToggle checked={craftedOnly} onChange={setCraftedOnly} />
+        <ShowHiddenToggle checked={showHidden} onChange={setShowHidden} />
       </div>
 
       <TimeframeToggles
@@ -102,7 +107,18 @@ export default function GilfluxPage() {
             Failed to load rankings.
           </div>
         ) : (
-          <RankingTable rows={rows} showWorldExpand={showWorldExpand} timeframes={visibleTimeframes} />
+          <RankingTable
+            rows={visibleRows}
+            showWorldExpand={showWorldExpand}
+            timeframes={visibleTimeframes}
+            ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
+            onIgnore={(id) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] })}
+            onUnignore={
+              showHidden
+                ? (id) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) })
+                : undefined
+            }
+          />
         )}
       </section>
     </div>
@@ -125,6 +141,26 @@ function CraftedToggle({
         className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
       />
       Crafted items only
+    </label>
+  );
+}
+
+function ShowHiddenToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
+      />
+      Show hidden items
     </label>
   );
 }
