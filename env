@@ -44,3 +44,11 @@ ZERO_SSL_MONITORING_DOMAIN=${ZERO_SSL_MONITORING_DOMAIN}
 # Cloud-init substitutes this with the Scylla VM's private IP. Empty in single-host dev.
 SCYLLA_PRIVATE_IP=${SCYLLA_PRIVATE_IP}
 APP_PRIVATE_IP=${APP_PRIVATE_IP}
+
+
+# ######################## Archive (Hetzner Object Storage) ######################## #
+
+Archive__Endpoint=
+Archive__Bucket=
+Archive__AccessKey=
+Archive__SecretKey=
