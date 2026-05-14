@@ -17,6 +17,10 @@ services:
       - Redis__Host=ffmt_redis
       - Redis__Port=6379
       - FfmtLogging__LogDirectory=/app/logs
+      - Archive__Endpoint=${Archive__Endpoint}
+      - Archive__Bucket=${Archive__Bucket}
+      - Archive__AccessKey=${Archive__AccessKey}
+      - Archive__SecretKey=${Archive__SecretKey}
     volumes:
       - ./logs/backend:/app/logs
     networks:
