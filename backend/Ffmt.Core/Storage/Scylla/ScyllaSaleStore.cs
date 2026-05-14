@@ -43,6 +43,25 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         LIMIT ?
         """;
 
+    private const string CqlGetByItemAndWorldInRange = """
+        SELECT item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price
+        FROM sales
+        WHERE item_id = ? AND world_id = ?
+          AND sale_time >= ? AND sale_time < ?
+        ORDER BY sale_time ASC
+        """;
+
+    private const string CqlDeleteSalesInRange = """
+        DELETE FROM sales
+        WHERE item_id = ? AND world_id = ?
+          AND sale_time >= ? AND sale_time < ?
+        """;
+
+    private const string CqlDeleteSaleByBuyer = """
+        DELETE FROM sales_by_buyer
+        WHERE buyer_name = ? AND world_id = ? AND sale_time = ?
+        """;
+
     private const int BatchRows = 200;
 
     private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
@@ -150,6 +169,40 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
             result.Add(MapSaleRow(row));
         }
         return result;
+    }
+
+    public async Task<IReadOnlyList<Sale>> GetByItemAndWorldInRangeAsync(
+        int itemId, int worldId, DateOnly date, CancellationToken ct = default)
+    {
+        var start = new DateTimeOffset(date.Year, date.Month, date.Day, 0, 0, 0, TimeSpan.Zero);
+        var end = start.AddDays(1);
+        var stmt = await scylla.PrepareAsync(CqlGetByItemAndWorldInRange, ct).ConfigureAwait(false);
+        var rows = await scylla.Session.ExecuteAsync(stmt.Bind(itemId, worldId, start, end)).ConfigureAwait(false);
+        return rows.Select(MapSaleRow).ToList();
+    }
+
+    public async Task DeleteByItemAndWorldInRangeAsync(
+        int itemId, int worldId, DateOnly date, IReadOnlyList<Sale> sales, CancellationToken ct = default)
+    {
+        var start = new DateTimeOffset(date.Year, date.Month, date.Day, 0, 0, 0, TimeSpan.Zero);
+        var end = start.AddDays(1);
+
+        var rangeStmt = await scylla.PrepareAsync(CqlDeleteSalesInRange, ct).ConfigureAwait(false);
+        var buyerStmt = await scylla.PrepareAsync(CqlDeleteSaleByBuyer, ct).ConfigureAwait(false);
+
+        await scylla.Session.ExecuteAsync(rangeStmt.Bind(itemId, worldId, start, end)).ConfigureAwait(false);
+
+        if (sales.Count == 0) return;
+
+        var byBuyer = sales.GroupBy(s => s.BuyerName);
+        foreach (var group in byBuyer)
+        {
+            ct.ThrowIfCancellationRequested();
+            var batch = NewBatch();
+            foreach (var s in group)
+                batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
+            await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
+        }
     }
 
     private static Sale MapSaleRow(Row row) => new(
