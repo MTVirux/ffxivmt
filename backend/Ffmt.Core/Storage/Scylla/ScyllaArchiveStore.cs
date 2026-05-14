@@ -1,4 +1,5 @@
 using Cassandra;
+using Ffmt.Core.Metrics;
 
 namespace Ffmt.Core.Storage.Scylla;
 
@@ -14,7 +15,7 @@ public sealed class ScyllaArchiveStore(IScyllaSession scylla) : IArchiveStore
     {
         var stmt = await scylla.PrepareAsync(CqlSelect, ct).ConfigureAwait(false);
         var localDate = new LocalDate(date.Year, date.Month, date.Day);
-        var rows = await scylla.Session.ExecuteAsync(stmt.Bind(worldId, localDate)).ConfigureAwait(false);
+        var rows = await scylla.MeasuredExecuteAsync(stmt.Bind(worldId, localDate), "archive_state_read").ConfigureAwait(false);
         return rows.FirstOrDefault() is not null;
     }
 
@@ -22,6 +23,6 @@ public sealed class ScyllaArchiveStore(IScyllaSession scylla) : IArchiveStore
     {
         var stmt = await scylla.PrepareAsync(CqlInsert, ct).ConfigureAwait(false);
         var localDate = new LocalDate(date.Year, date.Month, date.Day);
-        await scylla.Session.ExecuteAsync(stmt.Bind(worldId, localDate, DateTimeOffset.UtcNow)).ConfigureAwait(false);
+        await scylla.MeasuredExecuteAsync(stmt.Bind(worldId, localDate, DateTimeOffset.UtcNow), "archive_state_write").ConfigureAwait(false);
     }
 }
