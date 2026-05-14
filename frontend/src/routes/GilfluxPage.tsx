@@ -5,6 +5,7 @@ import TieredLocationSelect from '../components/form/TieredLocationSelect';
 import { useGilfluxRanking } from '../hooks/useGilfluxRanking';
 import { aggregateRankings } from '../lib/rankingAggregate';
 import { formatNumber } from '../lib/format';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { Location, LocationKind } from '../api/types';
 
 export default function GilfluxPage() {
@@ -44,6 +45,9 @@ export default function GilfluxPage() {
     );
   };
 
+  const config = useAppConfig();
+  const timeframes = config.gilflux_timeframes.map((key) => ({ key, label: key }));
+
   const query = useGilfluxRanking(location, craftedOnly);
   const rows = useMemo(() => aggregateRankings(query.data ?? []), [query.data]);
   const showWorldExpand = location?.kind !== 'world';
@@ -77,7 +81,7 @@ export default function GilfluxPage() {
             Failed to load rankings.
           </div>
         ) : (
-          <RankingTable rows={rows} showWorldExpand={showWorldExpand} />
+          <RankingTable rows={rows} showWorldExpand={showWorldExpand} timeframes={timeframes} />
         )}
       </section>
     </div>

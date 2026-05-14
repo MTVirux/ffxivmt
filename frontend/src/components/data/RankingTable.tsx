@@ -18,10 +18,12 @@ type Props = {
   rows: RankingRow[];
   /** True when the response covers more than one world. Toggles the expand column. */
   showWorldExpand: boolean;
+  timeframes?: readonly { key: string; label: string }[];
 };
 
-export default function RankingTable({ rows, showWorldExpand }: Props) {
+export default function RankingTable({ rows, showWorldExpand, timeframes: timeframesProp }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: '1h', desc: true }]);
+  const timeframes = timeframesProp ?? TIMEFRAMES;
 
   const columns = useMemo<ColumnDef<RankingRow>[]>(() => {
     const cols: ColumnDef<RankingRow>[] = [
@@ -65,7 +67,7 @@ export default function RankingTable({ rows, showWorldExpand }: Props) {
           );
         },
       },
-      ...TIMEFRAMES.map<ColumnDef<RankingRow>>((tf) => ({
+      ...timeframes.map<ColumnDef<RankingRow>>((tf) => ({
         id: tf.key,
         header: tf.label,
         accessorFn: (row) => row.rankings[tf.key] ?? 0,
@@ -99,7 +101,7 @@ export default function RankingTable({ rows, showWorldExpand }: Props) {
       },
     ];
     return cols;
-  }, [showWorldExpand]);
+  }, [showWorldExpand, timeframes]);
 
   const table = useReactTable({
     data: rows,
