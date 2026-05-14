@@ -69,9 +69,9 @@ export default function BuyerSearchPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">
             Buyer's world
-          </label>
+          </span>
           <WorldSelect
             value={world}
             onChange={setWorld}
