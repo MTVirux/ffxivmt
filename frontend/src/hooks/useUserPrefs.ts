@@ -12,17 +12,32 @@ const KEY = 'ffmt:prefs';
 const DEFAULTS: UserPrefs = { hiddenTimeframes: [], ignoredItemIds: [] };
 
 export function parsePrefs(raw: string | null): UserPrefs {
-  if (!raw) return DEFAULTS;
+  if (!raw) return { ...DEFAULTS };
   try {
     const parsed = JSON.parse(raw) as Partial<UserPrefs>;
+
+    const loc = parsed.lastLocation as unknown;
+    const validKinds = ['world', 'datacenter', 'region'];
+    let lastLocation: UserPrefs['lastLocation'] | undefined;
+    if (
+      loc !== null &&
+      typeof loc === 'object' &&
+      'name' in (loc as object) &&
+      'kind' in (loc as object) &&
+      typeof (loc as { name: unknown }).name === 'string' &&
+      validKinds.includes((loc as { kind: unknown }).kind as string)
+    ) {
+      lastLocation = loc as UserPrefs['lastLocation'];
+    }
+
     return {
-      hiddenTimeframes: Array.isArray(parsed.hiddenTimeframes) ? parsed.hiddenTimeframes : [],
-      ignoredItemIds: Array.isArray(parsed.ignoredItemIds) ? parsed.ignoredItemIds : [],
-      ...(parsed.lastLocation ? { lastLocation: parsed.lastLocation } : {}),
+      hiddenTimeframes: Array.isArray(parsed.hiddenTimeframes) ? [...parsed.hiddenTimeframes] : [],
+      ignoredItemIds: Array.isArray(parsed.ignoredItemIds) ? [...parsed.ignoredItemIds] : [],
+      ...(lastLocation ? { lastLocation } : {}),
       ...(typeof parsed.lastWorldId === 'number' ? { lastWorldId: parsed.lastWorldId } : {}),
     };
   } catch {
-    return DEFAULTS;
+    return { ...DEFAULTS };
   }
 }
 

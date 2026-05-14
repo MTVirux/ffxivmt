@@ -36,4 +36,10 @@ describe('parsePrefs', () => {
       lastWorldId: 7,
     });
   });
+  it('drops invalid lastLocation', () => {
+    expect(parsePrefs('{"lastLocation":"bad"}')).toEqual({
+      hiddenTimeframes: [],
+      ignoredItemIds: [],
+    });
+  });
 });
