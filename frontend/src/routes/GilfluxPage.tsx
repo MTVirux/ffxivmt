@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import RankingTable from '../components/data/RankingTable';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';
@@ -51,6 +51,18 @@ export default function GilfluxPage() {
   const config = useAppConfig();
   const timeframes = config.gilflux_timeframes.map((key) => ({ key, label: key }));
 
+  const visibleTimeframes = timeframes.filter((tf) => !prefs.hiddenTimeframes.includes(tf.key));
+
+  const toggleTimeframe = (key: string) => {
+    const isHidden = prefs.hiddenTimeframes.includes(key);
+    if (!isHidden && visibleTimeframes.length === 1) return;
+    patchPrefs({
+      hiddenTimeframes: isHidden
+        ? prefs.hiddenTimeframes.filter((k) => k !== key)
+        : [...prefs.hiddenTimeframes, key],
+    });
+  };
+
   const query = useGilfluxRanking(location, craftedOnly);
   const rows = useMemo(() => aggregateRankings(query.data ?? []), [query.data]);
   const showWorldExpand = location?.kind !== 'world';
@@ -71,6 +83,12 @@ export default function GilfluxPage() {
         <CraftedToggle checked={craftedOnly} onChange={setCraftedOnly} />
       </div>
 
+      <TimeframeToggles
+        timeframes={timeframes}
+        hiddenTimeframes={prefs.hiddenTimeframes}
+        onToggle={toggleTimeframe}
+      />
+
       <section className="space-y-3">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <Subtitle location={location} />
@@ -84,7 +102,7 @@ export default function GilfluxPage() {
             Failed to load rankings.
           </div>
         ) : (
-          <RankingTable rows={rows} showWorldExpand={showWorldExpand} timeframes={timeframes} />
+          <RankingTable rows={rows} showWorldExpand={showWorldExpand} timeframes={visibleTimeframes} />
         )}
       </section>
     </div>
@@ -133,4 +151,37 @@ function Subtitle({ location }: { location: Location | undefined }) {
 function RowCount({ loading, count }: { loading: boolean; count: number }) {
   if (loading) return <span>loading…</span>;
   return <span>{formatNumber(count)} items</span>;
+}
+
+function TimeframeToggles({
+  timeframes,
+  hiddenTimeframes,
+  onToggle,
+}: {
+  timeframes: readonly { key: string; label: string }[];
+  hiddenTimeframes: string[];
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {timeframes.map((tf) => {
+        const hidden = hiddenTimeframes.includes(tf.key);
+        return (
+          <button
+            key={tf.key}
+            type="button"
+            onClick={() => onToggle(tf.key)}
+            className={[
+              'rounded px-2 py-0.5 font-mono text-xs transition-colors',
+              hidden
+                ? 'bg-card/40 text-muted-foreground hover:text-foreground'
+                : 'bg-accent/20 text-accent hover:bg-accent/30',
+            ].join(' ')}
+          >
+            {tf.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
