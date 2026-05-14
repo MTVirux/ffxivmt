@@ -48,7 +48,7 @@ APP_PRIVATE_IP=${APP_PRIVATE_IP}
 
 # ######################## Archive (Hetzner Object Storage) ######################## #
 
-Archive__Endpoint=
-Archive__Bucket=
-Archive__AccessKey=
-Archive__SecretKey=
+Archive__Endpoint=${Archive__Endpoint}
+Archive__Bucket=${Archive__Bucket}
+Archive__AccessKey=${Archive__AccessKey}
+Archive__SecretKey=${Archive__SecretKey}
