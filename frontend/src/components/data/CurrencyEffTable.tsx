@@ -7,106 +7,143 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { CurrencyEfficiencyRow } from '../../api/types';
 import { formatGil, formatNumber } from '../../lib/format';
 
-const columns: ColumnDef<CurrencyEfficiencyRow>[] = [
-  {
-    id: 'name',
-    header: 'Item',
-    accessorKey: 'name',
-    cell: ({ row, getValue }) => (
-      <Link
-        to={`/item/${row.original.id}`}
-        className="font-medium text-foreground hover:text-accent"
-      >
-        {getValue<string>()}
-      </Link>
-    ),
-  },
-  {
-    id: 'price',
-    header: 'Cost',
-    accessorKey: 'price',
-    sortingFn: 'basic',
-    cell: ({ getValue, row }) => (
-      <span className="font-mono tabular-nums text-sm text-muted-foreground">
-        {formatNumber(getValue<number>())}{' '}
-        <span className="text-xs">{row.original.currency_name}</span>
-      </span>
-    ),
-  },
-  {
-    id: 'min_price',
-    header: 'Min price',
-    accessorKey: 'min_price',
-    sortingFn: 'basic',
-    cell: ({ getValue }) => (
-      <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
-    ),
-  },
-  {
-    id: 'regular_sale_velocity',
-    header: 'Velocity',
-    accessorKey: 'regular_sale_velocity',
-    sortingFn: 'basic',
-    cell: ({ getValue }) => (
-      <span className="font-mono tabular-nums text-sm text-muted-foreground">
-        {formatNumber(getValue<number>())}/d
-      </span>
-    ),
-  },
-  {
-    id: 'median_stack_size',
-    header: 'Stack',
-    accessorKey: 'median_stack_size',
-    sortingFn: 'basic',
-    cell: ({ getValue }) => (
-      <span className="font-mono tabular-nums text-sm text-muted-foreground">
-        {formatNumber(getValue<number>())}
-      </span>
-    ),
-  },
-  {
-    id: 'daily_market_cap',
-    header: 'Daily cap',
-    accessorKey: 'daily_market_cap',
-    sortingFn: 'basic',
-    cell: ({ getValue }) => (
-      <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
-    ),
-  },
-  {
-    id: 'daily_market_cap_percent',
-    header: 'Share',
-    accessorKey: 'daily_market_cap_percent',
-    sortingFn: 'basic',
-    cell: ({ getValue }) => (
-      <span className="font-mono tabular-nums text-sm text-muted-foreground">
-        {getValue<number>().toFixed(2)}%
-      </span>
-    ),
-  },
-  {
-    id: 'ffmt_score',
-    header: 'Score',
-    accessorKey: 'ffmt_score',
-    sortingFn: 'basic',
-    cell: ({ getValue }) => (
-      <span className="font-mono tabular-nums text-sm font-medium text-accent">
-        {formatNumber(Math.round(getValue<number>() * 100) / 100)}
-      </span>
-    ),
-  },
-];
-
 type Props = {
   rows: CurrencyEfficiencyRow[];
+  ignoredItemIds?: number[];
+  onIgnore?: (id: number) => void;
+  onUnignore?: (id: number) => void;
 };
 
-export default function CurrencyEffTable({ rows }: Props) {
+export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUnignore }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'ffmt_score', desc: true }]);
+
+  const columns = useMemo<ColumnDef<CurrencyEfficiencyRow>[]>(() => {
+    const base: ColumnDef<CurrencyEfficiencyRow>[] = [
+      {
+        id: 'name',
+        header: 'Item',
+        accessorKey: 'name',
+        cell: ({ row, getValue }) => (
+          <Link
+            to={`/item/${row.original.id}`}
+            className="font-medium text-foreground hover:text-accent"
+          >
+            {getValue<string>()}
+          </Link>
+        ),
+      },
+      {
+        id: 'price',
+        header: 'Cost',
+        accessorKey: 'price',
+        sortingFn: 'basic',
+        cell: ({ getValue, row }) => (
+          <span className="font-mono tabular-nums text-sm text-muted-foreground">
+            {formatNumber(getValue<number>())}{' '}
+            <span className="text-xs">{row.original.currency_name}</span>
+          </span>
+        ),
+      },
+      {
+        id: 'min_price',
+        header: 'Min price',
+        accessorKey: 'min_price',
+        sortingFn: 'basic',
+        cell: ({ getValue }) => (
+          <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
+        ),
+      },
+      {
+        id: 'regular_sale_velocity',
+        header: 'Velocity',
+        accessorKey: 'regular_sale_velocity',
+        sortingFn: 'basic',
+        cell: ({ getValue }) => (
+          <span className="font-mono tabular-nums text-sm text-muted-foreground">
+            {formatNumber(getValue<number>())}/d
+          </span>
+        ),
+      },
+      {
+        id: 'median_stack_size',
+        header: 'Stack',
+        accessorKey: 'median_stack_size',
+        sortingFn: 'basic',
+        cell: ({ getValue }) => (
+          <span className="font-mono tabular-nums text-sm text-muted-foreground">
+            {formatNumber(getValue<number>())}
+          </span>
+        ),
+      },
+      {
+        id: 'daily_market_cap',
+        header: 'Daily cap',
+        accessorKey: 'daily_market_cap',
+        sortingFn: 'basic',
+        cell: ({ getValue }) => (
+          <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
+        ),
+      },
+      {
+        id: 'daily_market_cap_percent',
+        header: 'Share',
+        accessorKey: 'daily_market_cap_percent',
+        sortingFn: 'basic',
+        cell: ({ getValue }) => (
+          <span className="font-mono tabular-nums text-sm text-muted-foreground">
+            {getValue<number>().toFixed(2)}%
+          </span>
+        ),
+      },
+      {
+        id: 'ffmt_score',
+        header: 'Score',
+        accessorKey: 'ffmt_score',
+        sortingFn: 'basic',
+        cell: ({ getValue }) => (
+          <span className="font-mono tabular-nums text-sm font-medium text-accent">
+            {formatNumber(Math.round(getValue<number>() * 100) / 100)}
+          </span>
+        ),
+      },
+    ];
+    if (onIgnore || onUnignore) {
+      base.push({
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const id = row.original.id;
+          const isIgnored = ignoredItemIds?.includes(id) ?? false;
+          if (isIgnored && onUnignore) {
+            return (
+              <button type="button" onClick={() => onUnignore(id)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+                aria-label="Unhide item">
+                Unhide
+              </button>
+            );
+          }
+          if (!isIgnored && onIgnore) {
+            return (
+              <button type="button" onClick={() => onIgnore(id)}
+                className="text-xs text-muted-foreground hover:text-destructive"
+                aria-label="Ignore item">
+                ×
+              </button>
+            );
+          }
+          return null;
+        },
+      });
+    }
+    return base;
+  }, [ignoredItemIds, onIgnore, onUnignore]);
+
   const table = useReactTable({
     data: rows,
     columns,
@@ -131,7 +168,7 @@ export default function CurrencyEffTable({ rows }: Props) {
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
               {hg.headers.map((h) => {
-                const numeric = h.column.id !== 'name';
+                const numeric = h.column.id !== 'name' && h.column.id !== 'actions';
                 const sort = h.column.getIsSorted();
                 return (
                   <th
@@ -156,9 +193,17 @@ export default function CurrencyEffTable({ rows }: Props) {
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="border-t border-border/40 hover:bg-card/30">
+            <tr
+              key={row.id}
+              className={[
+                'border-t border-border/40 hover:bg-card/30',
+                ignoredItemIds?.includes(row.original.id) ? 'opacity-50' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               {row.getVisibleCells().map((cell) => {
-                const numeric = cell.column.id !== 'name';
+                const numeric = cell.column.id !== 'name' && cell.column.id !== 'actions';
                 return (
                   <td
                     key={cell.id}

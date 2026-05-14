@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, type ReactNode } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import CurrencyEffTable from '../../components/data/CurrencyEffTable';
 import TextField from '../../components/form/TextField';
 import TieredLocationSelect from '../../components/form/TieredLocationSelect';
 import { useCurrencyEfficiency } from '../../hooks/useCurrencyEfficiency';
+import { useUserPrefs } from '../../hooks/useUserPrefs';
 import { formatGil } from '../../lib/format';
 import type { Location } from '../../api/types';
 
@@ -34,6 +35,23 @@ export default function CurrencyEffPage() {
     enabled: submission !== null,
   });
 
+  const [prefs, patchPrefs] = useUserPrefs();
+  const [showHidden, setShowHidden] = useState(false);
+
+  const allRows = query.data?.status ? query.data.data : [];
+  const visibleRows = showHidden
+    ? allRows
+    : allRows.filter((r) => !prefs.ignoredItemIds.includes(r.id));
+
+  const handleIgnore = useCallback(
+    (id: number) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] }),
+    [patchPrefs, prefs.ignoredItemIds],
+  );
+  const handleUnignore = useCallback(
+    (id: number) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) }),
+    [patchPrefs, prefs.ignoredItemIds],
+  );
+
   const onSubmit = handleSubmit((values) => {
     if (!location) {
       setLocationError('Pick a location');
@@ -43,9 +61,7 @@ export default function CurrencyEffPage() {
     setSubmission({ searchTerm: values.searchTerm, location: location.name });
   });
 
-  const totalCap = query.data?.status
-    ? query.data.data.reduce((s, r) => s + r.daily_market_cap, 0)
-    : 0;
+  const totalCap = visibleRows.reduce((s, r) => s + r.daily_market_cap, 0);
 
   return (
     <div className="space-y-8">
@@ -105,11 +121,27 @@ export default function CurrencyEffPage() {
                 <span className="font-mono text-foreground">{query.data.item_name}</span>
                 <span className="ml-2">on {query.data.location}</span>
               </span>
-              <span className="font-mono">
-                Daily market cap {formatGil(totalCap)} · {query.data.request_id.slice(0, 8)}
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="font-mono">
+                  Daily market cap {formatGil(totalCap)} · {query.data.request_id.slice(0, 8)}
+                </span>
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={showHidden}
+                    onChange={(e) => setShowHidden(e.target.checked)}
+                    className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
+                  />
+                  Show hidden items
+                </label>
+              </div>
             </header>
-            <CurrencyEffTable rows={query.data.data} />
+            <CurrencyEffTable
+              rows={visibleRows}
+              ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
+              onIgnore={handleIgnore}
+              onUnignore={showHidden ? handleUnignore : undefined}
+            />
           </>
         ) : null}
       </section>
