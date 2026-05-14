@@ -6,22 +6,25 @@ import { useGilfluxRanking } from '../hooks/useGilfluxRanking';
 import { aggregateRankings } from '../lib/rankingAggregate';
 import { formatNumber } from '../lib/format';
 import { useAppConfig } from '../hooks/useAppConfig';
+import { useUserPrefs } from '../hooks/useUserPrefs';
 import type { Location, LocationKind } from '../api/types';
 
 export default function GilfluxPage() {
+  const [prefs, patchPrefs] = useUserPrefs();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const location = useMemo<Location | undefined>(() => {
     const name = searchParams.get('loc');
     const kind = searchParams.get('kind') as LocationKind | null;
-    if (!name || !kind) return undefined;
+    if (!name || !kind) return prefs.lastLocation;
     const wid = searchParams.get('wid');
     return { kind, name, ...(kind === 'world' && wid ? { worldId: Number(wid) } : {}) };
-  }, [searchParams]);
+  }, [searchParams, prefs.lastLocation]);
 
   const craftedOnly = searchParams.get('crafted') === '1';
 
   const setLocation = (next: Location) => {
+    patchPrefs({ lastLocation: next });
     setSearchParams(
       (prev) => {
         prev.set('loc', next.name);
