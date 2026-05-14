@@ -21,6 +21,8 @@
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
     <PackageReference Include="prometheus-net.AspNetCore" />
     <PackageReference Include="prometheus-net.DotNetRuntime" />
+    <PackageReference Include="Parquet.Net" />
+    <PackageReference Include="AWSSDK.S3" />
   </ItemGroup>
 
 </Project>
