@@ -1,34 +1,15 @@
-####### WS_WORKER SERVER DIR #######
-docker/ws_worker_old_python/server/__pycache__/*
-docker/ws_worker_old_python/server/logs/*.log
-docker/ws_worker_old_python/server/logs/action/*.log
-docker/ws_worker_old_python/server/logs/error/*.log
-docker/ws_worker_old_python/server/logs/system/*.log
-docker/ws_worker_old_python/sales_importer/python/__pycache__/*
-docker/ws_worker_old_python/common/__pycache__/*
-docker/ws_worker_old_python/server/logs/debug/*.log
-docker/ws_worker_old_python/server/logs/panic/*.log
-
 ####### WS_WORKER .NET #######
 docker/ws_worker/WsWorker/bin/
 docker/ws_worker/WsWorker/obj/
 
-docker/redis/server/__pycache__/*
-docker/redis/server/logs/*.log
-docker/redis/server/logs/action/*.log
-docker/redis/server/logs/error/*.log
-docker/redis/server/logs/system/*.log
-
+####### SCYLLA #######
 docker/scylla/persistent
 
+####### EDITOR / TOOLING #######
 .vscode/*
 .claude/*
 .cache
-.pycahce
 CLAUDE.md
-
-####### MARIADB DOCKER DIR #######
-docker/mariadb/var/*
 
 ####### ROOT DIR #######
 /*.bat
@@ -38,16 +19,6 @@ docker/mariadb/var/*
 
 ####### MONITORING #######
 docker/monitoring/prometheus/rendered/
-
-####### TERRAFORM #######
-tf/.terraform
-tf/.terraform.lock.hcl
-tf/*.tfvars
-!tf/example.tfvars
-tf/*.tfstate
-tf/*.backup
-tf/*.plan
-tf/*.out
 
 ####### LOCAL SCRIPTS #######
 scripts/local/

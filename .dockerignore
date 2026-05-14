@@ -1,4 +1,4 @@
-# Existing
+# Scylla data
 docker/scylla/persistent
 
 # .NET build outputs — scoped to project paths so docker/scylla/usr/local/bin
@@ -17,6 +17,7 @@ frontend/.pnpm-store
 .git
 .gitattributes
 .gitignore
+.github
 .vscode
 .idea
 
@@ -33,6 +34,8 @@ backend/**/.coverage
 .DS_Store
 Thumbs.db
 
-# Old PHP-era leftovers still in the tree
-docker/ws_worker_old_python
-docker/backend/etc/apache2
+# Local-only / not part of any image
+.claude
+CLAUDE.md
+spooky_docs
+scripts/local
