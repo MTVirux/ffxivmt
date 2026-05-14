@@ -31,8 +31,7 @@ public sealed class S3ArchiveUploader : IS3ArchiveUploader, IDisposable
             BucketName = _bucket,
             Key = key,
             InputStream = new MemoryStream(data),
-            ContentType = "application/octet-stream",
-            CannedACL = S3CannedACL.PublicRead
+            ContentType = "application/octet-stream"
         }, ct).ConfigureAwait(false);
     }
 
