@@ -25,4 +25,10 @@ export const navItems: NavItem[] = [
     to: '/tools/item-product-profit-calculator',
     description: 'The most profitable craft for any material on the market board.',
   },
+  {
+    name: 'Buyer search',
+    navLabel: 'Buyer search',
+    to: '/tools/buyer-search',
+    description: "Look up a character's market-board purchase history.",
+  },
 ];

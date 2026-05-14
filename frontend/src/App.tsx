@@ -7,6 +7,7 @@ import GilfluxPage from './routes/GilfluxPage';
 import NotFoundPage from './routes/NotFoundPage';
 import ItemProfitPage from './routes/tools/ItemProfitPage';
 import CurrencyEffPage from './routes/tools/CurrencyEffPage';
+import BuyerSearchPage from './routes/tools/BuyerSearchPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/gilflux" element={<GilfluxPage />} />
             <Route path="/tools/item-product-profit-calculator" element={<ItemProfitPage />} />
             <Route path="/tools/currency-efficiency-calculator" element={<CurrencyEffPage />} />
+            <Route path="/tools/buyer-search" element={<BuyerSearchPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
