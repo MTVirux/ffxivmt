@@ -5,7 +5,7 @@ import PriceChart from '../components/data/PriceChart';
 import LocationSelect from '../components/form/LocationSelect';
 import { useItem } from '../hooks/useItem';
 import { useItemSales } from '../hooks/useItemSales';
-import { useLastWorldId } from '../hooks/useLastWorldId';
+import { useUserPrefs } from '../hooks/useUserPrefs';
 import { formatGilExact, formatNumber } from '../lib/format';
 import { relativeTime } from '../lib/time';
 import type { Sale } from '../api/types';
@@ -16,7 +16,9 @@ export default function ItemPage() {
   const validId = itemId !== undefined && Number.isFinite(itemId) && itemId > 0;
 
   const item = useItem(validId ? itemId : undefined);
-  const [worldId, setWorldId] = useLastWorldId();
+  const [prefs, patchPrefs] = useUserPrefs();
+  const worldId = prefs.lastWorldId;
+  const setWorldId = (id: number) => patchPrefs({ lastWorldId: id });
   const sales = useItemSales(validId ? itemId : undefined, worldId, 100);
 
   const summary = useMemo(() => summarize(sales.data ?? []), [sales.data]);
