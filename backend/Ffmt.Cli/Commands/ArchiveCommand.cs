@@ -26,7 +26,7 @@ public sealed class ArchiveCommand(
         var opts = archiveOptions.Value;
         var maxWindowMs = gilfluxOpts.TimeframesMs.Values.Max();
         var pruneThreshold = DateOnly.FromDateTime(
-            DateTimeOffset.UtcNow.Subtract(TimeSpan.FromMilliseconds(maxWindowMs)).UtcDateTime);
+            DateTimeOffset.UtcNow.Subtract(TimeSpan.FromMilliseconds(maxWindowMs)).UtcDateTime).AddDays(-1);
 
         var worlds = await worldStore.GetAllAsync(ct).ConfigureAwait(false);
         var itemIds = await worldStructure.GetMarketableItemIdsAsync(ct).ConfigureAwait(false);
@@ -119,7 +119,7 @@ public sealed class ArchiveCommand(
             {
                 var existing = await uploader.DownloadAsync(key, ct).ConfigureAwait(false);
                 var merged = existing is not null
-                    ? MergeAndDeduplicate(await ArchiveParquetWriter.ReadAsync(existing).ConfigureAwait(false), newRows)
+                    ? ArchiveParquetWriter.Merge(await ArchiveParquetWriter.ReadAsync(existing).ConfigureAwait(false), newRows)
                     : newRows;
 
                 var parquet = await ArchiveParquetWriter.WriteAsync(merged).ConfigureAwait(false);
@@ -161,19 +161,6 @@ public sealed class ArchiveCommand(
             if (!bySalesItem.TryGetValue(itemId, out var itemSales)) continue;
             await saleStore.DeleteByItemAndWorldInRangeAsync(itemId, worldId, date, itemSales, ct).ConfigureAwait(false);
         }
-    }
-
-    private static List<Sale> MergeAndDeduplicate(IReadOnlyList<Sale> existing, IReadOnlyList<Sale> incoming)
-    {
-        var seen = new HashSet<(int ItemId, int WorldId, DateTimeOffset SaleTime)>(
-            existing.Select(s => (s.ItemId, s.WorldId, s.SaleTime)));
-        var result = new List<Sale>(existing);
-        foreach (var s in incoming)
-        {
-            if (seen.Add((s.ItemId, s.WorldId, s.SaleTime)))
-                result.Add(s);
-        }
-        return result;
     }
 
     private static string ArchiveKey(DateOnly date, string dc, string world) =>

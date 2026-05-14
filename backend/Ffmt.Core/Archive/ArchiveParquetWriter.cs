@@ -50,6 +50,19 @@ public static class ArchiveParquetWriter
         return ms.ToArray();
     }
 
+    public static List<Sale> Merge(IReadOnlyList<Sale> existing, IReadOnlyList<Sale> incoming)
+    {
+        var seen = new HashSet<(int, int, DateTimeOffset)>(
+            existing.Select(s => (s.ItemId, s.WorldId, s.SaleTime)));
+        var result = new List<Sale>(existing);
+        foreach (var s in incoming)
+        {
+            if (seen.Add((s.ItemId, s.WorldId, s.SaleTime)))
+                result.Add(s);
+        }
+        return result;
+    }
+
     public static async Task<List<Sale>> ReadAsync(byte[] data)
     {
         using var ms = new MemoryStream(data);

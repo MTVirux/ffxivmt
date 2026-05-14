@@ -41,7 +41,7 @@ public sealed class ArchiveMergeCommand(
                 ? await ArchiveParquetWriter.ReadAsync(archiveBytes).ConfigureAwait(false)
                 : new List<Sale>();
 
-            var merged = MergeAndDeduplicate(archiveSales, corrSales);
+            var merged = ArchiveParquetWriter.Merge(archiveSales, corrSales);
             var mergedParquet = await ArchiveParquetWriter.WriteAsync(merged).ConfigureAwait(false);
 
             await uploader.UploadAsync(archiveKey, mergedParquet, ct).ConfigureAwait(false);
@@ -52,16 +52,4 @@ public sealed class ArchiveMergeCommand(
         }
     }
 
-    private static List<Sale> MergeAndDeduplicate(IReadOnlyList<Sale> existing, IReadOnlyList<Sale> incoming)
-    {
-        var seen = new HashSet<(int, int, DateTimeOffset)>(
-            existing.Select(s => (s.ItemId, s.WorldId, s.SaleTime)));
-        var result = new List<Sale>(existing);
-        foreach (var s in incoming)
-        {
-            if (seen.Add((s.ItemId, s.WorldId, s.SaleTime)))
-                result.Add(s);
-        }
-        return result;
-    }
 }
