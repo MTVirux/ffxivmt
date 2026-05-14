@@ -6,6 +6,7 @@ import ProfitTable from '../../components/data/ProfitTable';
 import TextField from '../../components/form/TextField';
 import TieredLocationSelect from '../../components/form/TieredLocationSelect';
 import { useItemProductProfit } from '../../hooks/useItemProductProfit';
+import { useUserPrefs } from '../../hooks/useUserPrefs';
 import type { Location } from '../../api/types';
 
 const schema = z.object({
@@ -32,6 +33,14 @@ export default function ItemProfitPage() {
     location: submission?.location ?? '',
     enabled: submission !== null,
   });
+
+  const [prefs, patchPrefs] = useUserPrefs();
+  const [showHidden, setShowHidden] = useState(false);
+
+  const allRows = query.data?.status ? query.data.data : [];
+  const visibleRows = showHidden
+    ? allRows
+    : allRows.filter((r) => !prefs.ignoredItemIds.includes(r.id));
 
   const onSubmit = handleSubmit((values) => {
     if (!location) {
@@ -94,17 +103,37 @@ export default function ItemProfitPage() {
           <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
             {(query.error as Error)?.message ?? 'Failed to compute profit.'}
           </div>
-        ) : query.data ? (
+        ) : query.data?.status ? (
           <>
-            <header className="flex items-baseline justify-between text-xs text-muted-foreground">
+            <header className="flex flex-wrap items-baseline justify-between gap-3 text-xs text-muted-foreground">
               <span>
                 <span className="uppercase tracking-widest">resolved</span>{' '}
                 <span className="font-mono text-foreground">{query.data.item_name}</span>
                 <span className="ml-2 text-muted-foreground">on {query.data.location}</span>
               </span>
-              <span className="font-mono">{query.data.request_id.slice(0, 8)}</span>
+              <div className="flex items-center gap-4">
+                <span className="font-mono">{query.data.request_id.slice(0, 8)}</span>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={showHidden}
+                    onChange={(e) => setShowHidden(e.target.checked)}
+                    className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
+                  />
+                  Show hidden items
+                </label>
+              </div>
             </header>
-            <ProfitTable rows={query.data.data} />
+            <ProfitTable
+              rows={visibleRows}
+              ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
+              onIgnore={(id) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] })}
+              onUnignore={
+                showHidden
+                  ? (id) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) })
+                  : undefined
+              }
+            />
           </>
         ) : null}
       </section>
