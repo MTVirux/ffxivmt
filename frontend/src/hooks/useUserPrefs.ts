@@ -31,17 +31,25 @@ export function parsePrefs(raw: string | null): UserPrefs {
     }
 
     return {
-      hiddenTimeframes: Array.isArray(parsed.hiddenTimeframes) ? [...parsed.hiddenTimeframes] : [],
-      ignoredItemIds: Array.isArray(parsed.ignoredItemIds) ? [...parsed.ignoredItemIds] : [],
+      hiddenTimeframes: Array.isArray(parsed.hiddenTimeframes)
+        ? parsed.hiddenTimeframes.filter((x): x is string => typeof x === 'string')
+        : [],
+      ignoredItemIds: Array.isArray(parsed.ignoredItemIds)
+        ? parsed.ignoredItemIds.filter((x): x is number => typeof x === 'number')
+        : [],
       ...(lastLocation ? { lastLocation } : {}),
-      ...(typeof parsed.lastWorldId === 'number' ? { lastWorldId: parsed.lastWorldId } : {}),
+      ...(typeof parsed.lastWorldId === 'number' && Number.isFinite(parsed.lastWorldId) && parsed.lastWorldId > 0
+        ? { lastWorldId: parsed.lastWorldId }
+        : {}),
     };
   } catch {
     return { ...DEFAULTS };
   }
 }
 
-export function useUserPrefs(): [UserPrefs, (patch: Partial<UserPrefs>) => void] {
+type PatchArg = Partial<UserPrefs> | ((prev: UserPrefs) => Partial<UserPrefs>);
+
+export function useUserPrefs(): [UserPrefs, (patch: PatchArg) => void] {
   const [prefs, setPrefs] = useState<UserPrefs>(() =>
     typeof window === 'undefined' ? DEFAULTS : parsePrefs(window.localStorage.getItem(KEY)),
   );
@@ -54,13 +62,18 @@ export function useUserPrefs(): [UserPrefs, (patch: Partial<UserPrefs>) => void]
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const patch = useCallback((update: Partial<UserPrefs>) => {
+  const patchPrefs = useCallback((patch: PatchArg) => {
     setPrefs((prev) => {
-      const next = { ...prev, ...update };
-      window.localStorage.setItem(KEY, JSON.stringify(next));
+      const partial = typeof patch === 'function' ? patch(prev) : patch;
+      const next = { ...prev, ...partial };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(next));
+        } catch {}
+      }
       return next;
     });
   }, []);
 
-  return [prefs, patch];
+  return [prefs, patchPrefs];
 }

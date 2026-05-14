@@ -97,7 +97,7 @@ export default function GilfluxPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <Subtitle location={location} />
-          <RowCount loading={query.isLoading} count={rows.length} />
+          <RowCount loading={query.isLoading} count={visibleRows.length} />
         </div>
 
         {query.isLoading ? (
@@ -112,10 +112,10 @@ export default function GilfluxPage() {
             showWorldExpand={showWorldExpand}
             timeframes={visibleTimeframes}
             ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
-            onIgnore={(id) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] })}
+            onIgnore={(id) => patchPrefs((prev) => ({ ignoredItemIds: [...prev.ignoredItemIds, id] }))}
             onUnignore={
               showHidden
-                ? (id) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) })
+                ? (id) => patchPrefs((prev) => ({ ignoredItemIds: prev.ignoredItemIds.filter((x) => x !== id) }))
                 : undefined
             }
           />

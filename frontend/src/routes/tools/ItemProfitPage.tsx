@@ -38,12 +38,12 @@ export default function ItemProfitPage() {
   const [showHidden, setShowHidden] = useState(false);
 
   const handleIgnore = useCallback(
-    (id: number) => patchPrefs({ ignoredItemIds: [...prefs.ignoredItemIds, id] }),
-    [patchPrefs, prefs.ignoredItemIds],
+    (id: number) => patchPrefs((prev) => ({ ignoredItemIds: [...prev.ignoredItemIds, id] })),
+    [patchPrefs],
   );
   const handleUnignore = useCallback(
-    (id: number) => patchPrefs({ ignoredItemIds: prefs.ignoredItemIds.filter((x) => x !== id) }),
-    [patchPrefs, prefs.ignoredItemIds],
+    (id: number) => patchPrefs((prev) => ({ ignoredItemIds: prev.ignoredItemIds.filter((x) => x !== id) })),
+    [patchPrefs],
   );
 
   const allRows = query.data?.status ? query.data.data : [];

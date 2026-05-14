@@ -22,11 +22,11 @@ export default function ItemPage() {
   const isIgnored = itemId !== undefined && prefs.ignoredItemIds.includes(itemId);
   const toggleIgnore = () => {
     if (itemId === undefined) return;
-    patchPrefs({
-      ignoredItemIds: isIgnored
-        ? prefs.ignoredItemIds.filter((x) => x !== itemId)
-        : [...prefs.ignoredItemIds, itemId],
-    });
+    patchPrefs((prev) => ({
+      ignoredItemIds: prev.ignoredItemIds.includes(itemId)
+        ? prev.ignoredItemIds.filter((x) => x !== itemId)
+        : [...prev.ignoredItemIds, itemId],
+    }));
   };
   const sales = useItemSales(validId ? itemId : undefined, worldId, 100);
 
