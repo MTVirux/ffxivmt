@@ -3,9 +3,11 @@ import {
   flexRender,
   getCoreRowModel,
   getExpandedRowModel,
+  getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type FilterFn,
   type SortingState,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -14,6 +16,8 @@ import type { RankingRow } from '../../lib/rankingAggregate';
 import { TIMEFRAMES } from '../../lib/rankingAggregate';
 import { formatGil } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
+import TableSearch from '../form/TableSearch';
+import { matchesItemName } from '../../lib/itemFilter';
 
 const EST_ROW_HEIGHT = 37;
 
@@ -27,6 +31,9 @@ type Props = {
   onUnignore?: (id: number) => void;
 };
 
+const nameFilter: FilterFn<RankingRow> = (row, _columnId, value) =>
+  matchesItemName(row.original.item_name, value as string);
+
 export default function RankingTable({
   rows,
   showWorldExpand,
@@ -36,6 +43,7 @@ export default function RankingTable({
   onUnignore,
 }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: '1h', desc: true }]);
+  const [globalFilter, setGlobalFilter] = useState('');
   const timeframes = timeframesProp ?? TIMEFRAMES;
 
   const columns = useMemo<ColumnDef<RankingRow>[]>(() => {
@@ -139,12 +147,15 @@ export default function RankingTable({
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting },
+    state: { sorting, globalFilter },
     onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: nameFilter,
     getSubRows: (row) => (showWorldExpand ? row.subRows : undefined),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const modelRows = table.getRowModel().rows;
@@ -169,107 +180,121 @@ export default function RankingTable({
     );
   }
 
+  const topLevelMatches = table.getFilteredRowModel().rows.length;
+
   return (
-    <div
-      ref={scrollerRef}
-      role="table"
-      aria-rowcount={modelRows.length}
-      className="overflow-auto rounded-xl border border-border/60 text-sm"
-      style={{ maxHeight: 'calc(100vh - 22rem)' }}
-    >
-      <div
-        role="rowgroup"
-        className="sticky top-0 z-10 bg-card/80 backdrop-blur text-xs uppercase tracking-widest text-muted-foreground"
-      >
-        {table.getHeaderGroups().map((hg) => (
+    <div>
+      <TableSearch
+        value={globalFilter}
+        onChange={setGlobalFilter}
+        resultCount={topLevelMatches}
+        totalCount={rows.length}
+      />
+      {topLevelMatches === 0 ? (
+        <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
+          No items match “{globalFilter}”.
+        </div>
+      ) : (
+        <div
+          ref={scrollerRef}
+          role="table"
+          aria-rowcount={modelRows.length}
+          className="overflow-auto rounded-xl border border-border/60 text-sm"
+          style={{ maxHeight: 'calc(100vh - 22rem)' }}
+        >
           <div
-            key={hg.id}
-            role="row"
-            className="grid border-b border-border/60"
-            style={{ gridTemplateColumns: gridTemplate }}
+            role="rowgroup"
+            className="sticky top-0 z-10 bg-card/80 backdrop-blur text-xs uppercase tracking-widest text-muted-foreground"
           >
-            {hg.headers.map((h) => {
-              const numeric = h.column.id !== 'item';
-              const sort = h.column.getIsSorted();
-              const canSort = h.column.getCanSort();
+            {table.getHeaderGroups().map((hg) => (
+              <div
+                key={hg.id}
+                role="row"
+                className="grid border-b border-border/60"
+                style={{ gridTemplateColumns: gridTemplate }}
+              >
+                {hg.headers.map((h) => {
+                  const numeric = h.column.id !== 'item';
+                  const sort = h.column.getIsSorted();
+                  const canSort = h.column.getCanSort();
+                  return (
+                    <div
+                      key={h.id}
+                      role="columnheader"
+                      aria-sort={
+                        sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none'
+                      }
+                      onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
+                      className={[
+                        'px-3 py-2 font-medium',
+                        numeric ? 'text-right' : 'text-left',
+                        canSort ? 'cursor-pointer select-none hover:text-foreground' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      <span
+                        className={`inline-flex items-center gap-1 ${numeric ? 'w-full justify-end' : ''}`}
+                      >
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        {sort === 'asc' && <span aria-hidden="true">▲</span>}
+                        {sort === 'desc' && <span aria-hidden="true">▼</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          <div role="rowgroup" style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((vi) => {
+              const row = modelRows[vi.index];
+              const r = row.original;
+              const isIgnored = r.kind === 'aggregate' && ignoredItemIds?.includes(r.item_id);
               return (
                 <div
-                  key={h.id}
-                  role="columnheader"
-                  aria-sort={sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none'}
-                  onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
+                  key={row.id}
+                  role="row"
+                  aria-rowindex={vi.index + 2}
+                  data-index={vi.index}
+                  ref={virtualizer.measureElement}
                   className={[
-                    'px-3 py-2 font-medium',
-                    numeric ? 'text-right' : 'text-left',
-                    canSort ? 'cursor-pointer select-none hover:text-foreground' : '',
+                    'grid border-t border-border/40',
+                    r.kind === 'world' ? 'bg-card/20' : 'hover:bg-card/40',
+                    isIgnored ? 'opacity-50' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${vi.start}px)`,
+                    gridTemplateColumns: gridTemplate,
+                  }}
                 >
-                  <span
-                    className={`inline-flex items-center gap-1 ${numeric ? 'w-full justify-end' : ''}`}
-                  >
-                    {flexRender(h.column.columnDef.header, h.getContext())}
-                    {sort === 'asc' && <span aria-hidden="true">▲</span>}
-                    {sort === 'desc' && <span aria-hidden="true">▼</span>}
-                  </span>
+                  {row.getVisibleCells().map((cell) => {
+                    const numeric = cell.column.id !== 'item';
+                    return (
+                      <div
+                        key={cell.id}
+                        role="cell"
+                        className={['min-w-0 px-3 py-2', numeric ? 'text-right' : 'text-left'].join(
+                          ' ',
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
           </div>
-        ))}
-      </div>
-
-      <div
-        role="rowgroup"
-        style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
-      >
-        {virtualizer.getVirtualItems().map((vi) => {
-          const row = modelRows[vi.index];
-          const r = row.original;
-          const isIgnored = r.kind === 'aggregate' && ignoredItemIds?.includes(r.item_id);
-          return (
-            <div
-              key={row.id}
-              role="row"
-              aria-rowindex={vi.index + 2}
-              data-index={vi.index}
-              ref={virtualizer.measureElement}
-              className={[
-                'grid border-t border-border/40',
-                r.kind === 'world' ? 'bg-card/20' : 'hover:bg-card/40',
-                isIgnored ? 'opacity-50' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${vi.start}px)`,
-                gridTemplateColumns: gridTemplate,
-              }}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const numeric = cell.column.id !== 'item';
-                return (
-                  <div
-                    key={cell.id}
-                    role="cell"
-                    className={[
-                      'min-w-0 px-3 py-2',
-                      numeric ? 'text-right' : 'text-left',
-                    ].join(' ')}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
