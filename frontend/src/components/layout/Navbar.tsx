@@ -4,7 +4,7 @@ import { navItems } from '../../config/navigation';
 export default function Navbar() {
   return (
     <header className="sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="flex w-full items-center justify-between gap-6 px-6 py-4">
+      <div className="mx-auto flex w-full lg:w-4/5 items-center justify-between gap-6 px-6 py-4">
         <NavLink
           to="/"
           className="flex items-baseline gap-1 font-mono text-lg tracking-tight"
