@@ -168,8 +168,8 @@ export default function RankingTable({
   });
 
   const gridTemplate = useMemo(() => {
-    const tfCols = timeframes.map(() => 'minmax(64px, max-content)').join(' ');
-    return `minmax(0, 1fr) ${tfCols} minmax(96px, max-content)`;
+    const tfCols = timeframes.map(() => '7.5rem').join(' ');
+    return `minmax(0, 1fr) ${tfCols} 8rem`;
   }, [timeframes]);
 
   if (rows.length === 0) {
