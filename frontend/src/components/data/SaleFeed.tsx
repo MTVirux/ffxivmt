@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUniversalisStream } from '../../hooks/useUniversalisStream';
 import type { EnrichedSale, StreamStatus } from '../../hooks/useUniversalisStream';
-import { formatGilExact } from '../../lib/format';
+import { formatNumber } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 
 const COL_WIDTHS = '2fr 0.9fr 1fr 1fr 0.55fr';
@@ -97,7 +97,7 @@ function SaleRow({ sale, isNewest }: { sale: EnrichedSale; isNewest: boolean }) 
       <div className="truncate text-muted-foreground">{sale.worldName}</div>
       <div className="truncate text-muted-foreground">{sale.buyerName}</div>
       <div className="truncate text-right font-mono tabular-nums">
-        {formatGilExact(sale.unitPrice)}
+        {formatNumber(sale.unitPrice)}
         {sale.quantity > 1 && (
           <span className="ml-1 text-xs text-muted-foreground/60">×{sale.quantity}</span>
         )}

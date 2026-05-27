@@ -6,7 +6,7 @@ import LocationSelect from '../components/form/LocationSelect';
 import { useItem } from '../hooks/useItem';
 import { useItemSales } from '../hooks/useItemSales';
 import { useUserPrefs } from '../hooks/useUserPrefs';
-import { formatGilExact, formatNumber } from '../lib/format';
+import { formatNumber } from '../lib/format';
 import { relativeTime } from '../lib/time';
 import type { Sale } from '../api/types';
 
@@ -213,10 +213,10 @@ function RecentSalesTable({ sales }: { sales: Sale[] }) {
               </Td>
               <Td>×{s.quantity}</Td>
               <Td align="right" mono>
-                {formatGilExact(s.unit_price)}
+                {formatNumber(s.unit_price)}
               </Td>
               <Td align="right" mono>
-                {formatGilExact(s.total)}
+                {formatNumber(s.total)}
               </Td>
               <Td>
                 {s.hq ? (

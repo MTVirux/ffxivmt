@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-table';
 import { useState, useMemo } from 'react';
 import type { CurrencyEfficiencyRow } from '../../api/types';
-import { formatGil, formatNumber } from '../../lib/format';
+import { formatGilCompact, formatNumber } from '../../lib/format';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
 
@@ -62,7 +62,7 @@ export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUni
         accessorKey: 'min_price',
         sortingFn: 'basic',
         cell: ({ getValue }) => (
-          <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
+          <span className="font-mono tabular-nums text-sm">{formatGilCompact(getValue<number>())}</span>
         ),
       },
       {
@@ -93,7 +93,7 @@ export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUni
         accessorKey: 'daily_market_cap',
         sortingFn: 'basic',
         cell: ({ getValue }) => (
-          <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
+          <span className="font-mono tabular-nums text-sm">{formatGilCompact(getValue<number>())}</span>
         ),
       },
       {

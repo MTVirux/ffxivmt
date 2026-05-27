@@ -14,7 +14,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useMemo, useRef, useState } from 'react';
 import type { RankingRow } from '../../lib/rankingAggregate';
 import { TIMEFRAMES } from '../../lib/rankingAggregate';
-import { formatGil } from '../../lib/format';
+import { formatGilCompact } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
@@ -121,7 +121,7 @@ export default function RankingTable({
                 row.original.kind === 'world' ? 'text-muted-foreground' : 'text-foreground'
               }`}
             >
-              {v > 0 ? formatGil(v) : <span className="text-muted-foreground">—</span>}
+              {v > 0 ? formatGilCompact(v) : <span className="text-muted-foreground">—</span>}
             </span>
           );
         },

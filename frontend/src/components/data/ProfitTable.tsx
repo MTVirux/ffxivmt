@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import type { ProfitRow } from '../../api/types';
-import { formatGil, formatNumber } from '../../lib/format';
+import { formatGilCompact, formatNumber } from '../../lib/format';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
 
@@ -47,7 +47,7 @@ export default function ProfitTable({ rows, ignoredItemIds, onIgnore, onUnignore
         accessorKey: 'min_price',
         sortingFn: 'basic',
         cell: ({ getValue }) => (
-          <span className="font-mono tabular-nums text-sm">{formatGil(getValue<number>())}</span>
+          <span className="font-mono tabular-nums text-sm">{formatGilCompact(getValue<number>())}</span>
         ),
       },
       {

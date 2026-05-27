@@ -10,6 +10,11 @@ export function formatGil(n: number): string {
   return `${compact.format(n)} gil`;
 }
 
+export function formatGilCompact(n: number): string {
+  if (!Number.isFinite(n)) return '—';
+  return compact.format(n);
+}
+
 export function formatGilExact(n: number): string {
   if (!Number.isFinite(n)) return '—';
   return `${exact.format(n)} gil`;
