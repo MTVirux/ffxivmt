@@ -2,14 +2,18 @@ import { Link } from 'react-router-dom';
 import {
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type FilterFn,
   type SortingState,
 } from '@tanstack/react-table';
 import { useState, useMemo } from 'react';
 import type { CurrencyEfficiencyRow } from '../../api/types';
 import { formatGil, formatNumber } from '../../lib/format';
+import TableSearch from '../form/TableSearch';
+import { matchesItemName } from '../../lib/itemFilter';
 
 type Props = {
   rows: CurrencyEfficiencyRow[];
@@ -18,8 +22,12 @@ type Props = {
   onUnignore?: (id: number) => void;
 };
 
+const nameFilter: FilterFn<CurrencyEfficiencyRow> = (row, _columnId, value) =>
+  matchesItemName(row.original.name, value as string);
+
 export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUnignore }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'ffmt_score', desc: true }]);
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const columns = useMemo<ColumnDef<CurrencyEfficiencyRow>[]>(() => {
     const base: ColumnDef<CurrencyEfficiencyRow>[] = [
@@ -147,10 +155,13 @@ export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUni
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting },
+    state: { sorting, globalFilter },
     onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: nameFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
   });
 
   if (rows.length === 0) {
@@ -161,65 +172,81 @@ export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUni
     );
   }
 
+  const filteredRows = table.getRowModel().rows;
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-border/60">
-      <table className="w-full text-sm">
-        <thead className="bg-card/60 text-xs uppercase tracking-widest text-muted-foreground">
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
-              {hg.headers.map((h) => {
-                const numeric = h.column.id !== 'name' && h.column.id !== 'actions';
-                const sort = h.column.getIsSorted();
-                return (
-                  <th
-                    key={h.id}
-                    scope="col"
-                    className={[
-                      'cursor-pointer select-none whitespace-nowrap px-3 py-2 font-medium hover:text-foreground',
-                      numeric ? 'text-right' : 'text-left',
-                    ].join(' ')}
-                    onClick={h.column.getToggleSortingHandler()}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                      {sort === 'asc' && <span aria-hidden="true">▲</span>}
-                      {sort === 'desc' && <span aria-hidden="true">▼</span>}
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
-              key={row.id}
-              className={[
-                'border-t border-border/40 hover:bg-card/30',
-                ignoredItemIds?.includes(row.original.id) ? 'opacity-50' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const numeric = cell.column.id !== 'name' && cell.column.id !== 'actions';
-                return (
-                  <td
-                    key={cell.id}
-                    className={[
-                      'whitespace-nowrap px-3 py-2',
-                      numeric ? 'text-right' : 'text-left',
-                    ].join(' ')}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <TableSearch
+        value={globalFilter}
+        onChange={setGlobalFilter}
+        resultCount={filteredRows.length}
+        totalCount={rows.length}
+      />
+      {filteredRows.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
+          No items match “{globalFilter}”.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border/60">
+          <table className="w-full text-sm">
+            <thead className="bg-card/60 text-xs uppercase tracking-widest text-muted-foreground">
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  {hg.headers.map((h) => {
+                    const numeric = h.column.id !== 'name' && h.column.id !== 'actions';
+                    const sort = h.column.getIsSorted();
+                    return (
+                      <th
+                        key={h.id}
+                        scope="col"
+                        className={[
+                          'cursor-pointer select-none whitespace-nowrap px-3 py-2 font-medium hover:text-foreground',
+                          numeric ? 'text-right' : 'text-left',
+                        ].join(' ')}
+                        onClick={h.column.getToggleSortingHandler()}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {flexRender(h.column.columnDef.header, h.getContext())}
+                          {sort === 'asc' && <span aria-hidden="true">▲</span>}
+                          {sort === 'desc' && <span aria-hidden="true">▼</span>}
+                        </span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {filteredRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={[
+                    'border-t border-border/40 hover:bg-card/30',
+                    ignoredItemIds?.includes(row.original.id) ? 'opacity-50' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const numeric = cell.column.id !== 'name' && cell.column.id !== 'actions';
+                    return (
+                      <td
+                        key={cell.id}
+                        className={[
+                          'whitespace-nowrap px-3 py-2',
+                          numeric ? 'text-right' : 'text-left',
+                        ].join(' ')}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
