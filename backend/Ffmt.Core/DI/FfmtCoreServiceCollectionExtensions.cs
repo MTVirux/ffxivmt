@@ -41,6 +41,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<WorldStructureService>();
         services.AddSingleton<LocationResolver>();
         services.AddSingleton<GilfluxRankingReader>();
+        services.AddSingleton<ItemSalesReader>();
 
         services.AddHttpClient<IUniversalisClient, UniversalisClient>(UniversalisClient.HttpClientName, (sp, http) =>
             {
