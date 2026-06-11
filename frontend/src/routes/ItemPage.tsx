@@ -1,14 +1,16 @@
-import { useId, useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ItemIcon from '../components/data/ItemIcon';
 import PriceChart from '../components/data/PriceChart';
-import LocationSelect from '../components/form/LocationSelect';
+import TieredLocationSelect from '../components/form/TieredLocationSelect';
+import { useWorlds } from '../hooks/useWorlds';
+import { buildWorldNameMap } from '../lib/worlds';
 import { useItem } from '../hooks/useItem';
 import { useItemSales } from '../hooks/useItemSales';
 import { useUserPrefs } from '../hooks/useUserPrefs';
 import { formatNumber } from '../lib/format';
 import { relativeTime } from '../lib/time';
-import type { Sale } from '../api/types';
+import type { Location, Sale } from '../api/types';
 
 export default function ItemPage() {
   const { id: idParam } = useParams<{ id: string }>();
@@ -17,8 +19,8 @@ export default function ItemPage() {
 
   const item = useItem(validId ? itemId : undefined);
   const [prefs, patchPrefs] = useUserPrefs();
-  const worldId = prefs.lastWorldId;
-  const setWorldId = (id: number) => patchPrefs({ lastWorldId: id });
+  const location = prefs.lastLocation;
+  const setLocation = (next: Location) => patchPrefs({ lastLocation: next });
   const isIgnored = itemId !== undefined && prefs.ignoredItemIds.includes(itemId);
   const toggleIgnore = () => {
     if (itemId === undefined) return;
@@ -28,7 +30,8 @@ export default function ItemPage() {
         : [...prev.ignoredItemIds, itemId],
     }));
   };
-  const sales = useItemSales(validId ? itemId : undefined, worldId, 100);
+  const sales = useItemSales(validId ? itemId : undefined, location, 100);
+  const showWorld = location !== undefined && location.kind !== 'world';
 
   const summary = useMemo(() => summarize(sales.data ?? []), [sales.data]);
 
@@ -80,11 +83,11 @@ export default function ItemPage() {
                 : 'No sales in the last 8 days.'}
             </p>
           </div>
-          <WorldPickerInline worldId={worldId} onChange={setWorldId} />
+          <TieredLocationSelect value={location} onChange={setLocation} />
         </header>
 
-        {worldId === undefined ? (
-          <EmptyHint>Pick a world to load sales.</EmptyHint>
+        {location === undefined ? (
+          <EmptyHint>Pick a location to load sales.</EmptyHint>
         ) : sales.isLoading ? (
           <div className="h-[220px] animate-pulse rounded-lg bg-card/40" />
         ) : sales.isError ? (
@@ -94,7 +97,7 @@ export default function ItemPage() {
         ) : (
           <>
             <PriceChart sales={sales.data ?? []} height={240} />
-            <RecentSalesTable sales={sales.data ?? []} />
+            <RecentSalesTable sales={sales.data ?? []} showWorld={showWorld} />
           </>
         )}
       </section>
@@ -165,25 +168,9 @@ function Tag({
   );
 }
 
-function WorldPickerInline({
-  worldId,
-  onChange,
-}: {
-  worldId: number | undefined;
-  onChange: (n: number) => void;
-}) {
-  const id = useId();
-  return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={id} className="text-xs uppercase tracking-widest text-muted-foreground">
-        World
-      </label>
-      <LocationSelect id={id} worldId={worldId} onChange={onChange} />
-    </div>
-  );
-}
-
-function RecentSalesTable({ sales }: { sales: Sale[] }) {
+function RecentSalesTable({ sales, showWorld }: { sales: Sale[]; showWorld: boolean }) {
+  const worlds = useWorlds();
+  const worldNames = useMemo(() => buildWorldNameMap(worlds.data), [worlds.data]);
   if (sales.length === 0) return null;
   // Newest first for the table; chart already sorts ascending for the line.
   const rows = [...sales]
@@ -195,6 +182,7 @@ function RecentSalesTable({ sales }: { sales: Sale[] }) {
         <thead className="bg-card/60 text-xs uppercase tracking-widest text-muted-foreground">
           <tr>
             <Th>When</Th>
+            {showWorld && <Th>World</Th>}
             <Th>Q</Th>
             <Th align="right">Unit</Th>
             <Th align="right">Total</Th>
@@ -211,6 +199,13 @@ function RecentSalesTable({ sales }: { sales: Sale[] }) {
               <Td>
                 <span title={s.sale_time}>{relativeTime(s.sale_time)}</span>
               </Td>
+              {showWorld && (
+                <Td>
+                  <span className="text-muted-foreground">
+                    {worldNames.get(s.world_id) ?? s.world_id}
+                  </span>
+                </Td>
+              )}
               <Td>×{s.quantity}</Td>
               <Td align="right" mono>
                 {formatNumber(s.unit_price)}
