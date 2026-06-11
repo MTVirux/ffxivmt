@@ -14,7 +14,7 @@ export function useItemSales(
   limit = 100,
 ) {
   return useQuery({
-    queryKey: ['item-sales', itemId, location?.kind, location?.name, location?.worldId, limit] as const,
+    queryKey: ['item-sales', itemId, location, limit] as const,
     queryFn: ({ signal }) => apiGet<Sale[]>(buildSalesPath(itemId!, location!, limit), { signal }),
     enabled:
       itemId !== undefined &&
