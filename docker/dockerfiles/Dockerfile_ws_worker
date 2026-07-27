@@ -1,8 +1,0 @@
-#
-# MTVirux Redis Dockerfile
-#
-#
-
-FROM mtvirux/ubuntu-lunar-python3.10.5:latest
-
-CMD ["/usr/local/bin/run_entrypoints.sh"]
