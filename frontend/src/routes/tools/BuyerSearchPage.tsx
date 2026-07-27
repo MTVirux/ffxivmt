@@ -56,7 +56,7 @@ export default function BuyerSearchPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">buyer search</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Buyer search</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Look up market-board purchases by character name. Filter by the buyer's home world to
+          Look up market-board purchases by character name. Filter by the purchase world to
           narrow results.
         </p>
       </header>
@@ -77,7 +77,7 @@ export default function BuyerSearchPage() {
 
         <div className="flex flex-col gap-1.5">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">
-            Buyer's world
+            Purchase World
           </span>
           <WorldSelect
             value={world}
@@ -181,7 +181,7 @@ function ResultsTable({
         <thead className="bg-card/60 text-xs uppercase tracking-widest text-muted-foreground">
           <tr>
             <Th>Item</Th>
-            <Th>World</Th>
+            <Th>Purchase World</Th>
             <Th>Buyer</Th>
             <Th>When</Th>
           </tr>
