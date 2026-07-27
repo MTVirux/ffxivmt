@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import TextField from '../../components/form/TextField';
 import { useBuyerSearch } from '../../hooks/useBuyerSearch';
+import { useItemNames } from '../../hooks/useItemNames';
 import { useWorlds } from '../../hooks/useWorlds';
 import { relativeTime } from '../../lib/time';
 import type { BuyerSearchRow, WorldStructure } from '../../api/types';
@@ -38,6 +39,12 @@ export default function BuyerSearchPage() {
     () => (worlds.data ? buildWorldNameMap(worlds.data) : new Map<number, string>()),
     [worlds.data],
   );
+
+  const itemIds = useMemo(
+    () => (query.data ? query.data.map((row) => row.item_id) : []),
+    [query.data],
+  );
+  const itemNameMap = useItemNames(itemIds);
 
   const onSubmit = handleSubmit((values) => {
     setSubmission({ buyerName: values.buyerName, world });
@@ -101,7 +108,11 @@ export default function BuyerSearchPage() {
         ) : !query.data || query.data.length === 0 ? (
           <Hint>No purchases found.</Hint>
         ) : (
-          <ResultsTable rows={query.data} worldNameMap={worldNameMap} />
+          <ResultsTable
+            rows={query.data}
+            worldNameMap={worldNameMap}
+            itemNameMap={itemNameMap}
+          />
         )}
       </section>
     </div>
@@ -153,9 +164,11 @@ function WorldSelect({
 function ResultsTable({
   rows,
   worldNameMap,
+  itemNameMap,
 }: {
   rows: BuyerSearchRow[];
   worldNameMap: Map<number, string>;
+  itemNameMap: Map<number, string>;
 }) {
   const sorted = useMemo(
     () => [...rows].sort((a, b) => Date.parse(b.sale_time) - Date.parse(a.sale_time)),
@@ -180,11 +193,8 @@ function ResultsTable({
               className="border-t border-border/40 even:bg-card/20"
             >
               <Td>
-                <Link
-                  to={`/item/${row.item_id}`}
-                  className="font-mono text-accent hover:underline"
-                >
-                  #{row.item_id}
+                <Link to={`/item/${row.item_id}`} className="text-accent hover:underline">
+                  {itemNameMap.get(row.item_id) ?? `#${row.item_id}`}
                 </Link>
               </Td>
               <Td>{worldNameMap.get(row.world_id) ?? String(row.world_id)}</Td>
