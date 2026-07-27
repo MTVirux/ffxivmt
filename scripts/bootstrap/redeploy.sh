@@ -60,7 +60,7 @@ bring_up_monitoring
 
 if [ "$ARG_UPDATEDB" -eq 1 ]; then
     log_info "Running ffmt updatedb..."
-    bash scripts/sh/update_db_data_dotnet.sh
+    bash scripts/sh/update_db_data.sh
 fi
 
 docker compose -f docker-compose.yml -f docker-compose.app-vm.yml ps

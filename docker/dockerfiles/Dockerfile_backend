@@ -44,7 +44,7 @@ RUN apt-get update \
 COPY --from=build /app/api ./api
 COPY --from=build /app/cli ./cli
 
-# Convenience: `docker exec ffmt_backend_dotnet ffmt updatedb` instead of the full dotnet path.
+# Convenience: `docker exec ffmt_backend ffmt updatedb` instead of the full dotnet path.
 RUN printf '#!/bin/sh\nexec dotnet /app/cli/Ffmt.Cli.dll "$@"\n' > /usr/local/bin/ffmt \
  && chmod +x /usr/local/bin/ffmt
 

@@ -6,12 +6,12 @@ services:
   ffmt_backend_dotnet:
     build:
       context: .
-      dockerfile: ./docker/dockerfiles/Dockerfile_backend_dotnet_dev
+      dockerfile: ./docker/dockerfiles/Dockerfile_backend_dev
     image: ffmt_backend_dotnet_dev
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     ports:
-      - "${BACKEND_DOTNET_HOST_PORT:-8080}:8080"
+      - "${BACKEND_HOST_PORT:-8080}:8080"
     volumes:
       - ./backend:/src/backend
       - ./logs/backend:/app/logs

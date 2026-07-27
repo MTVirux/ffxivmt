@@ -49,7 +49,7 @@ bring_up_monitoring
 # 7. First-time DB seed
 if [ ! -f /var/lib/ffmt/.updatedb-done ]; then
     log_info "Running first-time ffmt updatedb..."
-    bash scripts/sh/update_db_data_dotnet.sh
+    bash scripts/sh/update_db_data.sh
     mkdir -p /var/lib/ffmt
     touch /var/lib/ffmt/.updatedb-done
 else
