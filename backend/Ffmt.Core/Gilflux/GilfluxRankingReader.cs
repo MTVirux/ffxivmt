@@ -126,7 +126,7 @@ public sealed class GilfluxRankingReader
         var result = new List<EnrichedGilfluxRanking>();
         foreach (var r in rows)
         {
-            var rankings = RankingDecay.Apply(r.Rankings, timeframesMs, r.UpdatedAt, now);
+            var rankings = RankingDecay.Apply(r.Rankings, timeframesMs, r.UpdatedAt, r.LastSaleTime, now);
             if (RankingDecay.IsExhausted(rankings))
             {
                 continue;

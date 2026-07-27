@@ -62,6 +62,21 @@ public sealed class GilfluxRankingReaderDecayTests
     }
 
     [Fact]
+    public async Task EnrichAsync_DropsRowsWhoseLastSaleHasAgedOutEvenWhenTheRowLooksFresh()
+    {
+        var reader = NewReader();
+        var now = DateTimeOffset.UtcNow;
+        var row = new GilfluxRanking(5057, SprigganId,
+            new Dictionary<string, long> { ["1h"] = 100, ["7d"] = 100 },
+            now.AddHours(-1).ToUnixTimeMilliseconds(),
+            now.AddDays(-13).ToUnixTimeMilliseconds());
+
+        var enriched = await reader.EnrichAsync([row]);
+
+        enriched.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task EnrichAsync_KeepsAFreshRowIntact()
     {
         var reader = NewReader();
