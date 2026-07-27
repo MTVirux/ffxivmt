@@ -1,7 +1,0 @@
-FROM mtvirux/php-8.0-apache-mysqli-sockets:latest
-
-COPY ./docker/backend /
-
-#INITIATE CONTAINER
-RUN chmod +x /usr/local/bin/run_entrypoints.sh
-CMD ["/usr/local/bin/run_entrypoints.sh"]
