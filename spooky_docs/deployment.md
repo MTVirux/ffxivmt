@@ -210,7 +210,7 @@ it's the first thing to check. Then SSH to the Scylla VM and confirm
 
 **`ffmt updatedb` failed and now the app is up but empty.** The sentinel
 didn't get written, so `redeploy.sh --updatedb` (or just running
-`bash /opt/ffmt/scripts/sh/update_db_data_dotnet.sh` directly) will retry.
+`bash /opt/ffmt/scripts/sh/update_db_data.sh` directly) will retry.
 Common causes: Garland or the items CSV being temporarily unreachable. The
 script is mostly idempotent; rerunning is safe.
 
@@ -226,11 +226,8 @@ volume reattachment dance, but `ffmt updatedb` will run again on the fresh
 VM since the sentinel is gone).
 
 **The SPA renders but `/api/*` returns 502.** Caddy can't reach the
-backend. If you upgraded from an older version of this repo, check the
-Caddyfile is referencing `ffmt_backend` and not `ffmt_backend_dotnet` —
-that was the old service name. Otherwise, `docker logs ffmt_proxy` for
-hostname resolution errors and `docker logs ffmt_backend` for whether the
-backend's actually up.
+backend. `docker logs ffmt_proxy` for hostname resolution errors and
+`docker logs ffmt_backend` for whether the backend's actually up.
 
 If none of those match, SSH in, `docker compose ps`, and start poking. The
 stack is small enough you can hold the whole thing in your head.

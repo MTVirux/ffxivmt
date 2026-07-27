@@ -1,7 +1,7 @@
 # ffmt-frontend
 
 React + Vite + TypeScript SPA for [FFXIV Market Tools](https://mtvirux.app). Talks to the
-.NET 9 backend (`backend_dotnet/Ffmt.Api`) over `/api/v1/*`.
+.NET 9 backend (`backend/Ffmt.Api`) over `/api/v1/*`.
 
 ## Dev workflow
 
@@ -17,7 +17,7 @@ The `vite.config.ts` proxy assumes the .NET backend is reachable on
 `http://localhost:8080`. Run it locally with:
 
 ```sh
-cd ../backend_dotnet
+cd ../backend
 dotnet run --project Ffmt.Api
 ```
 
@@ -48,13 +48,14 @@ The production Docker image (`docker/dockerfiles/Dockerfile_frontend`) runs
 
 ## API types
 
-OpenAPI-driven. After Phase 2 lands Swashbuckle on the .NET side:
+OpenAPI-driven. With the backend live on `:8080`:
 
 ```sh
 pnpm openapi:gen          # writes src/api/generated/schema.ts
 ```
 
-The generated file is committed; regenerate when the backend contract changes.
+The generated file is gitignored (only `.gitkeep` is tracked) — regenerate
+locally when the backend contract changes.
 
 ## Layout
 
@@ -68,30 +69,7 @@ src/
 └── styles/      Tailwind v4 globals + @theme tokens
 ```
 
-## Phase status
-
-- ✅ **Phase 1:** skeleton, container, routing, placeholder pages
-- ✅ **Phase 2:** `apiFetch`/`apiGet`, `useWorlds`/`useItem`, XIVAPI icon helper,
-  real `HomePage`. Backend exposes `/openapi/v1.json`; Item endpoint includes `icon_image`.
-- ✅ **Phase 3a:** real `ItemPage` — info card, world picker, Recharts `PriceChart`,
-  recent-sales table. Backend gains `GET /api/v1/item/:id/sales?world_id=&limit=`.
-- ✅ **Phase 3b:** real `GilfluxPage` — `TieredLocationSelect` (region/DC/world cascading),
-  crafted-only toggle, `RankingTable` with sortable timeframes and per-world subrows.
-- ✅ **Phase 3c:** calculator pages — RHF + Zod, sortable tables, default sort by `ffmt_score`.
-  Backend gained `/api/v1/tools/currency_efficiency_calculator` (Garland tradeCurrency walk
-  + Universalis stackSizeHistogram).
-- ✅ **Phase 4:** Razor Pages dropped from `Ffmt.Api`. `Pages/` and `wwwroot/` deleted;
-  `Program.cs` no longer registers `AddRazorPages`/`MapRazorPages`/`UseStaticFiles`;
-  `UseStatusCodePagesWithReExecute("/error/{0}")` collapsed to plain `UseStatusCodePages()`.
-
-### Regenerating API types
-
-Once a backend is reachable on `http://localhost:8080`:
-
-```sh
-pnpm openapi:gen
-```
-
-This writes `src/api/generated/schema.ts`. Until then, `src/api/types.ts` is the
-hand-rolled boundary that `apiFetch` and the data hooks import from. Switching
-to the generated file is a single-line change in `client.ts` per type.
+`src/api/types.ts` is the hand-rolled boundary that `apiFetch` and the data
+hooks import from. It must use **snake_case** field names — the backend
+serializes that way (`Program.cs` `ConfigureHttpJsonOptions`). Switching a type
+over to the generated file is a single-line change in `client.ts`.
