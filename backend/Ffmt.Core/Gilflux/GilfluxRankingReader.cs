@@ -25,6 +25,7 @@ public sealed class GilfluxRankingReader
     private readonly LocationResolver _resolver;
     private readonly IMemoryCache _cache;
     private readonly TimeSpan _ttl;
+    private readonly IReadOnlyDictionary<string, long> _timeframesMs;
 
     public GilfluxRankingReader(
         IGilfluxRankingStore store,
@@ -40,6 +41,7 @@ public sealed class GilfluxRankingReader
         _resolver = resolver;
         _cache = cache;
         _ttl = TimeSpan.FromSeconds(Math.Max(1, options.Value.RankingCacheSeconds));
+        _timeframesMs = options.Value.TimeframesMs;
     }
 
     public async Task<RankingByLocationResult?> GetByLocationAsync(string targetLocation, bool craftedOnly, CancellationToken ct = default)
@@ -59,12 +61,13 @@ public sealed class GilfluxRankingReader
         var allWorlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
         var worldsById = allWorlds.ToDictionary(w => w.Id);
         var itemNames = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
+        var now = DateTimeOffset.UtcNow;
 
         IReadOnlyList<EnrichedGilfluxRanking> enrichedAll = resolution.Kind switch
         {
-            LocationKind.World      => Enrich(await _store.GetByWorldAsync(resolution.WorldId!.Value, ct).ConfigureAwait(false), worldsById, itemNames),
-            LocationKind.Datacenter => Enrich(await MergeRawByDatacenterAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames),
-            LocationKind.Region     => Enrich(await MergeRawByRegionAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames),
+            LocationKind.World      => Enrich(await _store.GetByWorldAsync(resolution.WorldId!.Value, ct).ConfigureAwait(false), worldsById, itemNames, _timeframesMs, now),
+            LocationKind.Datacenter => Enrich(await MergeRawByDatacenterAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames, _timeframesMs, now),
+            LocationKind.Region     => Enrich(await MergeRawByRegionAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames, _timeframesMs, now),
             _ => Array.Empty<EnrichedGilfluxRanking>(),
         };
 
@@ -90,7 +93,7 @@ public sealed class GilfluxRankingReader
         var allWorlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
         var worldsById = allWorlds.ToDictionary(w => w.Id);
         var itemNames = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
-        return Enrich(rows, worldsById, itemNames);
+        return Enrich(rows, worldsById, itemNames, _timeframesMs, DateTimeOffset.UtcNow);
     }
 
     private async Task<IReadOnlyList<GilfluxRanking>> MergeRawByDatacenterAsync(string datacenter, CancellationToken ct)
@@ -111,14 +114,24 @@ public sealed class GilfluxRankingReader
         return perWorldTasks.SelectMany(t => t.Result).ToList();
     }
 
+    /// <summary>Rows are only rewritten when a sale lands, so stored sums must be decayed against
+    /// <paramref name="now"/> before they are served; a row with nothing left is not a mover at all.</summary>
     private static IReadOnlyList<EnrichedGilfluxRanking> Enrich(
         IEnumerable<GilfluxRanking> rows,
         IReadOnlyDictionary<int, World> worldsById,
-        IReadOnlyDictionary<int, string> itemNames)
+        IReadOnlyDictionary<int, string> itemNames,
+        IReadOnlyDictionary<string, long> timeframesMs,
+        DateTimeOffset now)
     {
         var result = new List<EnrichedGilfluxRanking>();
         foreach (var r in rows)
         {
+            var rankings = RankingDecay.Apply(r.Rankings, timeframesMs, r.UpdatedAt, now);
+            if (RankingDecay.IsExhausted(rankings))
+            {
+                continue;
+            }
+
             var (worldName, datacenter, region) = ResolveLocation(r.WorldId, worldsById);
             var itemName = itemNames.TryGetValue(r.ItemId, out var n) ? n : string.Empty;
             result.Add(new EnrichedGilfluxRanking(
@@ -128,7 +141,7 @@ public sealed class GilfluxRankingReader
                 WorldName: worldName,
                 Datacenter: datacenter,
                 Region: region,
-                Rankings: r.Rankings,
+                Rankings: rankings,
                 UpdatedAt: r.UpdatedAt,
                 LastSaleTime: r.LastSaleTime));
         }

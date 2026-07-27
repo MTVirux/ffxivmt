@@ -39,4 +39,13 @@ public sealed class RankingRefresherCqlTests
 
         captured.Should().Contain(c => c.Contains("MAX(sale_time)") && c.Contains("FROM sales"));
     }
+
+    [Fact]
+    public async Task RefreshAsync_WritesRankingsWithATtlSoDeadPairsSelfReap()
+    {
+        var (refresher, captured) = NewRefresher();
+        try { await refresher.RefreshAsync(21, 12345); } catch { /* no real session */ }
+
+        captured.Should().Contain(c => c.Contains("INSERT INTO gilflux_rankings") && c.Contains("USING TTL ?"));
+    }
 }

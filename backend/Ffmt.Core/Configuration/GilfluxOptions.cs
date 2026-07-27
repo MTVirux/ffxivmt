@@ -17,6 +17,15 @@ public sealed class GilfluxOptions
     public int DeferredSweepConcurrency { get; init; } = 4;
     public int DirtyPairBucket { get; init; } = 0;
 
+    /// <summary>Added on top of the widest timeframe to derive the gilflux_rankings row TTL.</summary>
+    public int RankingTtlGraceSeconds { get; init; } = 86_400;
+
+    public bool DecaySweepEnabled { get; init; } = true;
+    public int DecaySweepIntervalSeconds { get; init; } = 300;
+    public int DecaySweepStaleAfterSeconds { get; init; } = 900;
+    public int DecaySweepMaxRefreshPerWorld { get; init; } = 25;
+    public int DecaySweepMaxDeletePerWorld { get; init; } = 500;
+
     public Dictionary<string, long> TimeframesMs { get; init; } = new()
     {
         ["7d"]  = 604_800_000,

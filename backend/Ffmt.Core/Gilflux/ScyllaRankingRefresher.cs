@@ -31,6 +31,7 @@ public sealed class ScyllaRankingRefresher(
         INSERT INTO gilflux_rankings
             (world_id, item_id, rankings, last_sale_time, updated_at)
         VALUES (?, ?, ?, ?, ?)
+        USING TTL ?
         """;
 
     public async Task RefreshAsync(int worldId, int itemId, CancellationToken ct = default)
@@ -65,10 +66,14 @@ public sealed class ScyllaRankingRefresher(
                 rankings[timeframes[i].Key] = SumGilflux(sumTasks[i].Result);
             }
 
-            var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result) ?? DateTimeOffset.FromUnixTimeMilliseconds(0);
+            var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result);
+
+            // Nothing refreshes a pair that stops selling, so the row has to expire on its own.
+            var ttlSeconds = (int)Math.Ceiling(maxDuration.TotalSeconds)
+                + Math.Max(0, options.Value.RankingTtlGraceSeconds);
 
             await scylla.MeasuredExecuteAsync(
-                upsertStmt.Bind(worldId, itemId, rankings, lastSaleTime, now),
+                upsertStmt.Bind(worldId, itemId, rankings, lastSaleTime, now, ttlSeconds),
                 "gilflux_upsert").ConfigureAwait(false);
         }
         catch (Exception)
