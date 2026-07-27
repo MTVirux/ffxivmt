@@ -8,7 +8,7 @@ public sealed class MetricsCatalogTests
     [Fact]
     public void All_instruments_are_registered_and_non_null()
     {
-        MetricsCatalog.All.Should().HaveCount(17, "spec calls out 17 named instruments");
+        MetricsCatalog.All.Should().HaveCount(20, "spec calls out 20 named instruments");
         MetricsCatalog.All.Should().AllSatisfy(c => c.Should().NotBeNull());
     }
 

@@ -34,4 +34,26 @@ public sealed class GilfluxRankingStoreCqlTests
         captured.Should().Contain(c => c.Contains("FROM gilflux_rankings") && c.Contains("WHERE world_id = ?") && c.Contains("AND item_id = ?"));
         captured.Should().NotContain(c => c.Contains("FROM gilflux_rankings") && c.Contains("ALLOW FILTERING"));
     }
+
+    [Fact]
+    public async Task DeleteManyAsync_PreparesAPrimaryKeyScopedDelete()
+    {
+        var (store, captured) = NewStore();
+        try { await store.DeleteManyAsync([(21, 12345)]); } catch { /* no real session */ }
+
+        captured.Should().Contain(c =>
+            c.Contains("DELETE FROM gilflux_rankings") &&
+            c.Contains("WHERE world_id = ?") &&
+            c.Contains("AND item_id = ?"));
+    }
+
+    [Fact]
+    public async Task DeleteManyAsync_IsANoOpForAnEmptyBatch()
+    {
+        var (store, captured) = NewStore();
+
+        await store.DeleteManyAsync([]);
+
+        captured.Should().BeEmpty();
+    }
 }

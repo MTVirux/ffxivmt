@@ -25,6 +25,11 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
         WHERE world_id = ? AND item_id = ?
         """;
 
+    private const string CqlDelete = """
+        DELETE FROM gilflux_rankings
+        WHERE world_id = ? AND item_id = ?
+        """;
+
     private readonly RequestCoalescer<int, IReadOnlyList<GilfluxRanking>> _worldCoalescer = new();
     private readonly RequestCoalescer<int, IReadOnlyList<GilfluxRanking>> _itemCoalescer = new();
     private readonly RequestCoalescer<(int, int), IReadOnlyList<GilfluxRanking>> _itemWorldCoalescer = new();
@@ -49,6 +54,30 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
             var stmt = await scylla.PrepareAsync(CqlByItemAndWorld).ConfigureAwait(false);
             return await ExecuteAndMapAsync(stmt.Bind(worldId, itemId)).ConfigureAwait(false);
         });
+
+    public async Task DeleteManyAsync(IReadOnlyCollection<(int WorldId, int ItemId)> pairs, CancellationToken ct = default)
+    {
+        if (pairs.Count == 0)
+        {
+            return;
+        }
+
+        var stmt = await scylla.PrepareAsync(CqlDelete, ct).ConfigureAwait(false);
+
+        const int rowsPerBatch = 200;
+        var asList = pairs as IReadOnlyList<(int WorldId, int ItemId)> ?? pairs.ToList();
+        for (var i = 0; i < asList.Count; i += rowsPerBatch)
+        {
+            var batch = (BatchStatement)new BatchStatement()
+                .SetBatchType(BatchType.Unlogged)
+                .SetConsistencyLevel(ConsistencyLevel.LocalOne);
+            for (var j = i; j < Math.Min(i + rowsPerBatch, asList.Count); j++)
+            {
+                batch.Add(stmt.Bind(asList[j].WorldId, asList[j].ItemId));
+            }
+            await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
+        }
+    }
 
     private async Task<IReadOnlyList<GilfluxRanking>> ExecuteAndMapAsync(IStatement stmt)
     {

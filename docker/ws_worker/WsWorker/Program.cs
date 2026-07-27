@@ -36,6 +36,8 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<RankingCoalescer>(
 
 builder.Services.AddHostedService<DeferredSweepWorker>();
 
+builder.Services.AddHostedService<RankingDecaySweepWorker>();
+
 builder.Services.AddSingleton<UniversalisWsConsumer>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UniversalisWsConsumer>());
 

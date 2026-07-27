@@ -90,6 +90,18 @@ public static class MetricsCatalog
         "ffmt_dirty_pairs_drained_total",
         "Dirty pairs drained from the deferred-sweep queue.");
 
+    public static readonly Counter DecaySweepRowsScannedTotal = Prometheus.Metrics.CreateCounter(
+        "ffmt_gilflux_decay_sweep_rows_scanned_total",
+        "gilflux_rankings rows examined by the decay sweep.");
+
+    public static readonly Counter DecaySweepRowsDeletedTotal = Prometheus.Metrics.CreateCounter(
+        "ffmt_gilflux_decay_sweep_rows_deleted_total",
+        "gilflux_rankings rows deleted by the decay sweep because every timeframe had lapsed.");
+
+    public static readonly Counter DecaySweepRowsEnqueuedTotal = Prometheus.Metrics.CreateCounter(
+        "ffmt_gilflux_decay_sweep_rows_enqueued_total",
+        "Stale gilflux_rankings rows the decay sweep re-queued for a recompute.");
+
     // Backfill
     public static readonly Counter BackfillPagesTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_backfill_pages_total",
@@ -123,6 +135,9 @@ public static class MetricsCatalog
         GilfluxRefreshDurationSeconds,
         GilfluxRefreshErrorsTotal,
         DirtyPairsDrainedTotal,
+        DecaySweepRowsScannedTotal,
+        DecaySweepRowsDeletedTotal,
+        DecaySweepRowsEnqueuedTotal,
         BackfillPagesTotal,
         BackfillRowsTotal,
         BackfillState,
