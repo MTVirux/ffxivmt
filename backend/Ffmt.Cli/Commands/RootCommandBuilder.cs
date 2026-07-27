@@ -11,7 +11,7 @@ internal static class RootCommandBuilder
 {
     public static RootCommand Build(IServiceProvider services)
     {
-        var root = new RootCommand("ffmt - FFXIV Market Tools CLI (replaces the legacy PHP Updatedb controller)");
+        var root = new RootCommand("ffmt - FFXIV Market Tools CLI");
 
         root.AddCommand(BuildUpdatedb(services));
         root.AddCommand(BuildUpdateWorlds(services));
@@ -26,7 +26,7 @@ internal static class RootCommandBuilder
 
     private static Command BuildUpdatedb(IServiceProvider services)
     {
-        var cmd = new Command("updatedb", "Run every updatedb stage in order (PHP Updatedb::index equivalent).");
+        var cmd = new Command("updatedb", "Run every updatedb stage in order.");
         cmd.SetHandler(async (InvocationContext ctx) =>
         {
             await Run(services, ctx, async (sp, ct) =>

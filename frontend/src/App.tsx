@@ -12,8 +12,8 @@ import BuyerSearchPage from './routes/tools/BuyerSearchPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Gilflux server cache is 20s (config/cache_timers.php); align so we don't
-      // refetch faster than the backend can produce fresh values.
+      // Gilflux server cache is 20s (GilfluxOptions.RankingCacheSeconds); align so we
+      // don't refetch faster than the backend can produce fresh values.
       staleTime: 20_000,
       refetchOnWindowFocus: false,
     },

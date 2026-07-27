@@ -29,14 +29,14 @@ builder.Services.AddFfmtMetrics();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
-    // C# property names serialize as snake_case (item_id, world_name, ...) so the
-    // legacy PHP API consumers see byte-compatible field names. Dictionary keys are deliberately
+    // C# property names serialize as snake_case (item_id, world_name, ...); the SPA's
+    // hand-written types in src/api/types.ts match that casing. Dictionary keys are deliberately
     // left as-is so /api/v1/worlds keeps preserving original region/datacenter casing.
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
 
-    // Inbound payloads from Universalis (and the Python importer that forwards them) mix
-    // `worldID` and `worldId` casings depending on the upstream endpoint hit. Match
-    // case-insensitively so both bind to the same C# property.
+    // Inbound payloads from Universalis mix `worldID` and `worldId` casings depending on
+    // the upstream endpoint hit. Match case-insensitively so both bind to the same
+    // C# property.
     options.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
