@@ -9,6 +9,7 @@ using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.DI;
@@ -35,7 +36,13 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IGilfluxRankingStore, ScyllaGilfluxRankingStore>();
         services.AddSingleton<IRankingRefresher, ScyllaRankingRefresher>();
         services.AddSingleton<IDirtyPairQueue, ScyllaDirtyPairQueue>();
-        services.AddSingleton<ISaleStore, ScyllaSaleStore>();
+        services.AddSingleton<ScyllaSaleStore>();
+        services.AddSingleton<ISaleStore>(sp => new FilteringSaleStore(
+            sp.GetRequiredService<ScyllaSaleStore>(),
+            sp.GetRequiredService<ISaleAnomalyFilter>(),
+            sp.GetRequiredService<IQuarantineStore>(),
+            sp.GetRequiredService<IOptions<QuarantineOptions>>(),
+            sp.GetRequiredService<ILogger<FilteringSaleStore>>()));
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
         services.AddSingleton<IArchiveStore, ScyllaArchiveStore>();
         services.AddSingleton<IS3ArchiveUploader, S3ArchiveUploader>();
