@@ -3,6 +3,7 @@ using Cassandra;
 using Ffmt.Core.Logging;
 using Ffmt.Core.Metrics;
 using Ffmt.Core.Models;
+using Ffmt.Core.Quarantine;
 using Microsoft.Extensions.Logging;
 
 namespace Ffmt.Core.Storage.Scylla;
@@ -60,6 +61,22 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
     private const string CqlDeleteSaleByBuyer = """
         DELETE FROM sales_by_buyer
         WHERE buyer_name = ? AND world_id = ? AND sale_time = ?
+        """;
+
+    private const string CqlGetPricePointsSince = """
+        SELECT hq, unit_price
+        FROM sales
+        WHERE item_id = ? AND world_id = ? AND sale_time >= ?
+        """;
+
+    private const string CqlDeleteSaleExact = """
+        DELETE FROM sales
+        WHERE item_id = ? AND world_id = ? AND sale_time = ? AND buyer_name = ?
+        """;
+
+    private const string CqlUpdateTotalPriceGil = """
+        UPDATE sales SET total_price_gil = ?
+        WHERE item_id = ? AND world_id = ? AND sale_time = ? AND buyer_name = ?
         """;
 
     private const int BatchRows = 200;
@@ -205,6 +222,89 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
             foreach (var s in group)
                 batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
             await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
+        }
+    }
+
+    public async Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(
+        int itemId, int worldId, DateTimeOffset since, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlGetPricePointsSince, ct).ConfigureAwait(false);
+        var rows = await scylla.MeasuredExecuteAsync(
+            stmt.Bind(itemId, worldId, since), "price_points_read").ConfigureAwait(false);
+
+        var result = new List<PricePoint>();
+        foreach (var row in rows)
+        {
+            result.Add(new PricePoint(
+                !row.IsNull("hq") && row.GetValue<bool>("hq"),
+                row.GetValue<int>("unit_price")));
+        }
+        return result;
+    }
+
+    public async Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
+    {
+        if (sales.Count == 0) return;
+
+        var saleStmt = await scylla.PrepareAsync(CqlDeleteSaleExact, ct).ConfigureAwait(false);
+        var buyerStmt = await scylla.PrepareAsync(CqlDeleteSaleByBuyer, ct).ConfigureAwait(false);
+
+        foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
+        {
+            ct.ThrowIfCancellationRequested();
+            var batch = NewBatch();
+            var inBatch = 0;
+
+            foreach (var s in partition)
+            {
+                batch.Add(saleStmt.Bind(s.ItemId, s.WorldId, s.SaleTime, s.BuyerName));
+                batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
+                inBatch++;
+
+                if (inBatch == BatchRows)
+                {
+                    await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
+                    batch = NewBatch();
+                    inBatch = 0;
+                }
+            }
+
+            if (inBatch > 0)
+            {
+                await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
+            }
+        }
+    }
+
+    public async Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
+    {
+        if (sales.Count == 0) return;
+
+        var stmt = await scylla.PrepareAsync(CqlUpdateTotalPriceGil, ct).ConfigureAwait(false);
+
+        foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
+        {
+            ct.ThrowIfCancellationRequested();
+            var batch = NewBatch();
+            var inBatch = 0;
+
+            foreach (var s in partition)
+            {
+                batch.Add(stmt.Bind((long)s.Quantity * s.UnitPrice, s.ItemId, s.WorldId, s.SaleTime, s.BuyerName));
+                inBatch++;
+
+                if (inBatch == BatchRows)
+                {
+                    await scylla.MeasuredExecuteAsync(batch, "sale_backfill").ConfigureAwait(false);
+                    batch = NewBatch();
+                    inBatch = 0;
+                }
+            }
+
+            if (inBatch > 0)
+            {
+                await scylla.MeasuredExecuteAsync(batch, "sale_backfill").ConfigureAwait(false);
+            }
         }
     }
 

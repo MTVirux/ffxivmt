@@ -1,4 +1,5 @@
 using Ffmt.Core.Models;
+using Ffmt.Core.Quarantine;
 
 namespace Ffmt.Core.Storage.Scylla;
 
@@ -16,4 +17,14 @@ public interface ISaleStore
 
     Task DeleteByItemAndWorldInRangeAsync(
         int itemId, int worldId, DateOnly date, IReadOnlyList<Sale> sales, CancellationToken ct = default);
+
+    /// <summary>Narrow projection for the baseline job, which touches millions of partitions.</summary>
+    Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(
+        int itemId, int worldId, DateTimeOffset since, CancellationToken ct = default);
+
+    /// <summary>Deletes exactly these rows from sales and sales_by_buyer. Unlike
+    /// DeleteByItemAndWorldInRangeAsync this does not take neighbouring sales with it.</summary>
+    Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
+
+    Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
 }
