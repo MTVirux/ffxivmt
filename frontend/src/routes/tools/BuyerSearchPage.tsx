@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import TextField from '../../components/form/TextField';

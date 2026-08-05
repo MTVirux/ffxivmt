@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { navItems } from '../config/navigation';
 import { useWorlds } from '../hooks/useWorlds';
 import SaleFeed from '../components/data/SaleFeed';

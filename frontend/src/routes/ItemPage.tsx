@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import ItemIcon from '../components/data/ItemIcon';
 import PriceChart from '../components/data/PriceChart';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';

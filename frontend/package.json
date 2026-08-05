@@ -19,10 +19,10 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.26",
     "bson": "^7.2.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-hook-form": "^7.75.0",
-    "react-router-dom": "^7.18.2",
+    "react-router": "^8.3.0",
     "recharts": "^2.15.4",
     "zod": "^3.25.76"
   },

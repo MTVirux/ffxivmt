@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useUniversalisStream } from '../../hooks/useUniversalisStream';
 import type { EnrichedSale, StreamStatus } from '../../hooks/useUniversalisStream';
 import { formatNumber } from '../../lib/format';

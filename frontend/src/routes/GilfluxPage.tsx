@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import RankingTable from '../components/data/RankingTable';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';
 import { useGilfluxRanking } from '../hooks/useGilfluxRanking';

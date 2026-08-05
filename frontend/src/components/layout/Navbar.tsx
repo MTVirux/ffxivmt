@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router';
 import { navItems } from '../../config/navigation';
 
 export default function Navbar() {
