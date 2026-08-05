@@ -118,6 +118,30 @@ public static class MetricsCatalog
         "Backfill loop state per world: 0=idle, 1=running, 2=paused, 3=error.",
         new GaugeConfiguration { LabelNames = ["world"] });
 
+    // Sale anomaly quarantine
+    public static readonly Counter SalesQuarantinedTotal = Prometheus.Metrics.CreateCounter(
+        "ffmt_sales_quarantined_total",
+        "Sales diverted to sales_quarantine as price anomalies.",
+        new CounterConfiguration { LabelNames = ["world", "reason"] });
+
+    public static readonly Counter SalesNoBaselineTotal = Prometheus.Metrics.CreateCounter(
+        "ffmt_sales_no_baseline_total",
+        "Sales accepted unevaluated because no trusted price baseline existed for the slice.",
+        new CounterConfiguration { LabelNames = ["world"] });
+
+    public static readonly Gauge PriceBaselineRows = Prometheus.Metrics.CreateGauge(
+        "ffmt_price_baseline_rows",
+        "Rows in the in-process price-baseline snapshot.");
+
+    public static readonly Gauge PriceBaselineAgeSeconds = Prometheus.Metrics.CreateGauge(
+        "ffmt_price_baseline_age_seconds",
+        "Age of the in-process price-baseline snapshot.");
+
+    public static readonly Histogram BaselineJobDurationSeconds = Prometheus.Metrics.CreateHistogram(
+        "ffmt_baseline_job_duration_seconds",
+        "Duration of one update-baselines run.",
+        new HistogramConfiguration { Buckets = Histogram.ExponentialBuckets(1, 2, 14) });
+
     /// <summary>Used by tests to enumerate the catalog. Order matches definition order above.</summary>
     public static IReadOnlyList<Collector> All =>
     [
@@ -141,5 +165,10 @@ public static class MetricsCatalog
         BackfillPagesTotal,
         BackfillRowsTotal,
         BackfillState,
+        SalesQuarantinedTotal,
+        SalesNoBaselineTotal,
+        PriceBaselineRows,
+        PriceBaselineAgeSeconds,
+        BaselineJobDurationSeconds,
     ];
 }

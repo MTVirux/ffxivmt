@@ -8,14 +8,14 @@ public sealed class MetricsCatalogTests
     [Fact]
     public void All_instruments_are_registered_and_non_null()
     {
-        MetricsCatalog.All.Should().HaveCount(20, "spec calls out 20 named instruments");
+        MetricsCatalog.All.Should().HaveCount(25, "spec calls out 25 named instruments");
         MetricsCatalog.All.Should().AllSatisfy(c => c.Should().NotBeNull());
     }
 
     [Fact]
     public void Instrument_names_have_ffmt_prefix_and_known_suffixes()
     {
-        var allowedSuffixes = new[] { "_total", "_seconds", "_inflight", "_connected", "_depth", "_busy", "_state" };
+        var allowedSuffixes = new[] { "_total", "_seconds", "_inflight", "_connected", "_depth", "_busy", "_state", "_rows" };
         foreach (var collector in MetricsCatalog.All)
         {
             collector.Name.Should().StartWith("ffmt_", "all FFMT instruments use the ffmt_ prefix");
