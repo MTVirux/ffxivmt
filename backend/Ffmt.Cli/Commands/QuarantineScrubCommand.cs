@@ -18,6 +18,7 @@ public sealed class QuarantineScrubCommand(
     IDirtyPairQueue dirtyPairs,
     IOptions<GilfluxOptions> gilflux,
     IOptions<QuarantineOptions> quarantine,
+    IOptions<ArchiveOptions> archiveOptions,
     ILogger<QuarantineScrubCommand> logger)
 {
     public async Task RunAsync(bool dryRun, CancellationToken ct)
@@ -43,48 +44,66 @@ public sealed class QuarantineScrubCommand(
         var totalQuarantined = 0;
         var affected = new HashSet<(int WorldId, int ItemId)>();
 
+        // Sequentially this walk is worlds x items x days round trips, which runs for
+        // most of a day. Bounded the same way ffmt archive bounds its identical walk.
+        var concurrency = Math.Max(1, archiveOptions.Value.ExportConcurrency);
+        using var semaphore = new SemaphoreSlim(concurrency, concurrency);
+
         foreach (var world in worlds)
         {
             var perWorld = 0;
 
-            foreach (var itemId in itemIds)
+            var tasks = itemIds.Select(async itemId =>
             {
-                ct.ThrowIfCancellationRequested();
-
-                for (var i = 0; i <= windowDays; i++)
+                await semaphore.WaitAsync(ct).ConfigureAwait(false);
+                try
                 {
-                    var date = today.AddDays(-i);
-                    var sales = await saleStore
-                        .GetByItemAndWorldInRangeAsync(itemId, world.Id, date, ct).ConfigureAwait(false);
-                    if (sales.Count == 0)
+                    for (var i = 0; i <= windowDays; i++)
                     {
-                        continue;
-                    }
+                        ct.ThrowIfCancellationRequested();
 
-                    var partition = await filter.PartitionAsync(sales, ct).ConfigureAwait(false);
+                        var date = today.AddDays(-i);
+                        var sales = await saleStore
+                            .GetByItemAndWorldInRangeAsync(itemId, world.Id, date, ct).ConfigureAwait(false);
+                        if (sales.Count == 0)
+                        {
+                            continue;
+                        }
 
-                    if (!dryRun)
-                    {
-                        await saleStore.BackfillTotalPriceAsync(partition.Accepted, ct).ConfigureAwait(false);
-                    }
+                        var partition = await filter.PartitionAsync(sales, ct).ConfigureAwait(false);
 
-                    if (partition.Quarantined.Count == 0)
-                    {
-                        continue;
-                    }
+                        if (!dryRun)
+                        {
+                            await saleStore.BackfillTotalPriceAsync(partition.Accepted, ct).ConfigureAwait(false);
+                        }
 
-                    perWorld += partition.Quarantined.Count;
-                    totalQuarantined += partition.Quarantined.Count;
-                    affected.Add((world.Id, itemId));
+                        if (partition.Quarantined.Count == 0)
+                        {
+                            continue;
+                        }
 
-                    if (!dryRun)
-                    {
-                        await quarantineStore.AddBatchAsync(partition.Quarantined, ct).ConfigureAwait(false);
-                        await saleStore.DeleteExactAsync(
-                            partition.Quarantined.Select(q => q.Sale).ToList(), ct).ConfigureAwait(false);
+                        Interlocked.Add(ref perWorld, partition.Quarantined.Count);
+                        Interlocked.Add(ref totalQuarantined, partition.Quarantined.Count);
+                        lock (affected)
+                        {
+                            affected.Add((world.Id, itemId));
+                        }
+
+                        if (!dryRun)
+                        {
+                            await quarantineStore.AddBatchAsync(partition.Quarantined, ct).ConfigureAwait(false);
+                            await saleStore.DeleteExactAsync(
+                                partition.Quarantined.Select(q => q.Sale).ToList(), ct).ConfigureAwait(false);
+                        }
                     }
                 }
-            }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
 
             if (perWorld > 0)
             {

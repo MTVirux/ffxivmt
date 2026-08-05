@@ -141,6 +141,7 @@ public sealed class QuarantineScrubTests
             dirtyPairs,
             Options.Create(new GilfluxOptions()),
             Options.Create(new QuarantineOptions()),
+            Options.Create(new ArchiveOptions()),
             NullLogger<QuarantineScrubCommand>.Instance);
     }
 
