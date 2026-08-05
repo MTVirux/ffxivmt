@@ -1,7 +1,9 @@
+using Ffmt.Core.Configuration;
 using Ffmt.Core.Worlds;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 
 namespace Ffmt.Api.Endpoints;
 
@@ -11,9 +13,14 @@ public static class WorldsEndpoints
     {
         var group = app.MapGroup("/api/v1/worlds");
 
-        group.MapGet("", async (WorldStructureService svc, CancellationToken ct) =>
+        group.MapGet("", async (
+            WorldStructureService svc,
+            IOptions<UniversalisOptions> universalis,
+            CancellationToken ct) =>
         {
-            var structure = await svc.GetAsync(ct);
+            var structure = WorldStructureService.FilterToRegions(
+                await svc.GetAsync(ct), universalis.Value.RegionsToUse);
+
             if (structure.Count == 0)
             {
                 return Results.Json(

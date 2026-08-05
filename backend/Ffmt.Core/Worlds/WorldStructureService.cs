@@ -89,7 +89,20 @@ public sealed class WorldStructureService
         return ids;
     }
 
-    internal static IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>
+    /// <summary>Restricts the tree to the regions we ingest, so the API never advertises a world
+    /// we hold no sales for.</summary>
+    public static IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>
+        FilterToRegions(
+            IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>> tree,
+            IEnumerable<string> regions)
+    {
+        var allowed = new HashSet<string>(regions, StringComparer.OrdinalIgnoreCase);
+        return tree
+            .Where(kv => allowed.Contains(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+    }
+
+    public static IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>
         Build(IReadOnlyList<World> worlds)
     {
         var byRegion = new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>(StringComparer.Ordinal);
