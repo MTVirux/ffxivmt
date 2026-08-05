@@ -24,6 +24,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddOptions<LoggingOptions>().Bind(configuration.GetSection(LoggingOptions.SectionName)).ValidateOnStart();
         services.AddOptions<UpdatedbOptions>().Bind(configuration.GetSection(UpdatedbOptions.SectionName)).ValidateOnStart();
         services.AddOptions<ArchiveOptions>().Bind(configuration.GetSection(ArchiveOptions.SectionName)).ValidateOnStart();
+        services.AddOptions<QuarantineOptions>().Bind(configuration.GetSection(QuarantineOptions.SectionName)).ValidateOnStart();
 
         services.AddMemoryCache();
 
