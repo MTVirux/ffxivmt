@@ -2,6 +2,7 @@ using Ffmt.Core.Configuration;
 using Ffmt.Core.External;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
+using Ffmt.Core.Quarantine;
 using Ffmt.Core.Storage.Elastic;
 using Ffmt.Core.Storage.S3;
 using Ffmt.Core.Storage.Scylla;
@@ -38,6 +39,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IElasticItemSearch, ElasticItemSearch>();
         services.AddSingleton<IArchiveStore, ScyllaArchiveStore>();
         services.AddSingleton<IS3ArchiveUploader, S3ArchiveUploader>();
+        services.AddSingleton<IPriceBaselineProvider, PriceBaselineProvider>();
 
         services.AddSingleton<WorldStructureService>();
         services.AddSingleton<LocationResolver>();
