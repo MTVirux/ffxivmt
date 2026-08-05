@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Ffmt.Core\Ffmt.Core.csproj" />
     <ProjectReference Include="..\Ffmt.Api\Ffmt.Api.csproj" />
+    <ProjectReference Include="..\Ffmt.Cli\Ffmt.Cli.csproj" />
   </ItemGroup>
 
 </Project>

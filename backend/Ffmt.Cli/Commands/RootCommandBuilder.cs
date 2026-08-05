@@ -20,6 +20,7 @@ internal static class RootCommandBuilder
         root.AddCommand(BuildUpdateGarland(services));
         root.AddCommand(BuildUpdateMarketability(services));
         root.AddCommand(BuildArchive(services));
+        root.AddCommand(BuildUpdateBaselines(services));
 
         return root;
     }
@@ -120,6 +121,21 @@ internal static class RootCommandBuilder
 
         archiveCmd.AddCommand(mergeCmd);
         return archiveCmd;
+    }
+
+    private static Command BuildUpdateBaselines(IServiceProvider services)
+    {
+        var dryRunOption = new Option<bool>("--dry-run", "Log what would be computed without writing anything.");
+
+        var cmd = new Command("update-baselines", "Recompute per (item, region, hq) median unit prices used to detect price anomalies.");
+        cmd.AddOption(dryRunOption);
+        cmd.SetHandler(async (InvocationContext ctx) =>
+        {
+            var dryRun = ctx.ParseResult.GetValueForOption(dryRunOption);
+            await Run(services, ctx, (sp, ct) =>
+                sp.GetRequiredService<UpdateBaselinesCommand>().RunAsync(dryRun, ct));
+        });
+        return cmd;
     }
 
     private static async Task Run(IServiceProvider services, InvocationContext ctx, Func<IServiceProvider, CancellationToken, Task> action)
