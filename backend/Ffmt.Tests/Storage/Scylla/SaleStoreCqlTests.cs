@@ -48,6 +48,21 @@ public sealed class SaleStoreCqlTests
         captured.Should().NotContain(c => c.Contains("FROM sales_by_buyer") && c.Contains("ALLOW FILTERING"));
     }
 
+    [Fact]
+    public async Task AddBatchAsync_writes_the_bigint_total_alongside_the_legacy_int_column()
+    {
+        var (store, captured) = NewStore();
+        var sale = new Ffmt.Core.Models.Sale(2, 21, "Alisaie", false, false, 1, 100,
+            new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero));
+
+        try { await store.AddBatchAsync([sale]); } catch { }
+
+        captured.Should().Contain(c =>
+            c.Contains("INSERT INTO sales") &&
+            c.Contains("total_price") &&
+            c.Contains("total_price_gil"));
+    }
+
     private static (ScyllaSaleStore Store, List<string> Captured) NewStore()
     {
         var session = Substitute.For<IScyllaSession>();
