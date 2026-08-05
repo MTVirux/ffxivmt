@@ -34,6 +34,7 @@ builder.Services.AddSingleton<UpdatedbOrchestrator>();
 builder.Services.AddSingleton<ArchiveCommand>();
 builder.Services.AddSingleton<ArchiveMergeCommand>();
 builder.Services.AddSingleton<UpdateBaselinesCommand>();
+builder.Services.AddSingleton<QuarantineScrubCommand>();
 
 using var host = builder.Build();
 await host.StartAsync();

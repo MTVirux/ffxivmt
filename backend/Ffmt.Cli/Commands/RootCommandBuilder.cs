@@ -21,6 +21,7 @@ internal static class RootCommandBuilder
         root.AddCommand(BuildUpdateMarketability(services));
         root.AddCommand(BuildArchive(services));
         root.AddCommand(BuildUpdateBaselines(services));
+        root.AddCommand(BuildQuarantineScrub(services));
 
         return root;
     }
@@ -134,6 +135,21 @@ internal static class RootCommandBuilder
             var dryRun = ctx.ParseResult.GetValueForOption(dryRunOption);
             await Run(services, ctx, (sp, ct) =>
                 sp.GetRequiredService<UpdateBaselinesCommand>().RunAsync(dryRun, ct));
+        });
+        return cmd;
+    }
+
+    private static Command BuildQuarantineScrub(IServiceProvider services)
+    {
+        var dryRunOption = new Option<bool>("--dry-run", "Log what would be quarantined without writing or deleting anything.");
+
+        var cmd = new Command("quarantine-scrub", "Apply the anomaly filter to the existing Scylla sales window and requeue affected gilflux pairs.");
+        cmd.AddOption(dryRunOption);
+        cmd.SetHandler(async (InvocationContext ctx) =>
+        {
+            var dryRun = ctx.ParseResult.GetValueForOption(dryRunOption);
+            await Run(services, ctx, (sp, ct) =>
+                sp.GetRequiredService<QuarantineScrubCommand>().RunAsync(dryRun, ct));
         });
         return cmd;
     }
