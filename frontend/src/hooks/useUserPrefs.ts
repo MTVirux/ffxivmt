@@ -69,7 +69,9 @@ export function useUserPrefs(): [UserPrefs, (patch: PatchArg) => void] {
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(KEY, JSON.stringify(next));
-        } catch {}
+        } catch {
+          // quota exceeded or storage blocked - prefs stay in-memory for this session
+        }
       }
       return next;
     });
