@@ -41,6 +41,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IS3ArchiveUploader, S3ArchiveUploader>();
         services.AddSingleton<IPriceBaselineProvider, PriceBaselineProvider>();
         services.AddSingleton<IQuarantineStore, ScyllaQuarantineStore>();
+        services.AddSingleton<ISaleAnomalyFilter, SaleAnomalyFilter>();
 
         services.AddSingleton<WorldStructureService>();
         services.AddSingleton<LocationResolver>();
