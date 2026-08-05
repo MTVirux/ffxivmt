@@ -62,11 +62,14 @@ wait_for_http "https://$DOMAIN/" 300
 # 9. Log-rotation cron
 ensure_cron "0 0 * * * FFMT_REPO=/opt/ffmt /opt/ffmt/scripts/cron/store_logs.sh >> /var/log/ffmt-cron.log 2>&1"
 
-# 10. Archive crons
+# 10. Price-baseline cron (runs before the archive so it reads the fullest window)
+ensure_cron "0 1 * * * docker exec ffmt_backend ffmt update-baselines >> /var/log/ffmt-baselines.log 2>&1"
+
+# 11. Archive crons
 ensure_cron "0 2 * * * docker exec ffmt_backend ffmt archive >> /var/log/ffmt-archive.log 2>&1"
 ensure_cron "0 3 1 * * docker exec ffmt_backend ffmt archive merge >> /var/log/ffmt-archive-merge.log 2>&1"
 
-# 11. Sentinel
+# 12. Sentinel
 mkdir -p /var/lib/ffmt
 touch /var/lib/ffmt/.app-bootstrap-done
 log_info "=== app.sh done ==="

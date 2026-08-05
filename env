@@ -46,3 +46,11 @@ Archive__Endpoint=${Archive__Endpoint}
 Archive__Bucket=${Archive__Bucket}
 Archive__AccessKey=${Archive__AccessKey}
 Archive__SecretKey=${Archive__SecretKey}
+
+
+# ######################## Sale anomaly quarantine ######################## #
+
+# Operator knobs, not envsubst placeholders. ShadowMode=true evaluates and
+# records anomalies but still writes them to sales; set false to divert.
+Quarantine__ShadowMode=true
+Quarantine__MedianMultiplier=20
