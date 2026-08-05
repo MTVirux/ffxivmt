@@ -52,5 +52,5 @@ Archive__SecretKey=${Archive__SecretKey}
 
 # Operator knobs, not envsubst placeholders. ShadowMode=true evaluates and
 # records anomalies but still writes them to sales; set false to divert.
-Quarantine__ShadowMode=true
+Quarantine__ShadowMode=false
 Quarantine__MedianMultiplier=20
