@@ -1,5 +1,6 @@
 using Cassandra;
 using Ffmt.Core.Configuration;
+using Ffmt.Core.External;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.Metrics;
 using Ffmt.Core.Models;
@@ -8,7 +9,7 @@ using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using System.Text.Json;
+
 using WsWorker.Options;
 
 namespace WsWorker.Workers;
@@ -401,7 +402,7 @@ public sealed class SalesBackfillService : BackgroundService
 
             try
             {
-                var sales = ParseHistoryResponse(json);
+                var sales = UniversalisHistoryParser.Parse(json);
                 MetricsCatalog.BackfillPagesTotal.WithLabels(region, "ok").Inc();
                 MetricsCatalog.BackfillRowsTotal.WithLabels(region).Inc(sales.Count);
                 return sales;
@@ -412,57 +413,6 @@ public sealed class SalesBackfillService : BackgroundService
                 _logger.LogWarning(ex, "FetchChunk [{Region}] failed parsing JSON", region);
                 return null;
             }
-        }
-    }
-
-    private List<Sale> ParseHistoryResponse(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var sales = new List<Sale>();
-
-        if (root.TryGetProperty("items", out var itemsArray) && itemsArray.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var itemEl in itemsArray.EnumerateArray())
-                ParseItemElement(itemEl, sales);
-        }
-        else if (root.TryGetProperty("entries", out _))
-        {
-            ParseItemElement(root, sales);
-        }
-
-        return sales;
-    }
-
-    private static void ParseItemElement(JsonElement itemEl, List<Sale> sales)
-    {
-        if (!itemEl.TryGetProperty("itemID", out var itemIdEl) ||
-            !itemEl.TryGetProperty("entries", out var entriesEl) ||
-            entriesEl.ValueKind != JsonValueKind.Array)
-            return;
-
-        var itemId = itemIdEl.GetInt32();
-
-        foreach (var entry in entriesEl.EnumerateArray())
-        {
-            var worldId = entry.TryGetProperty("worldID", out var wIdEl) ? wIdEl.GetInt32() : 0;
-            var hq = entry.TryGetProperty("hq", out var hqEl) && hqEl.ValueKind == JsonValueKind.True;
-            var onMannequin = entry.TryGetProperty("onMannequin", out var omEl) && omEl.ValueKind == JsonValueKind.True;
-            var pricePerUnit = entry.TryGetProperty("pricePerUnit", out var ppuEl) ? ppuEl.GetInt32() : 0;
-            var quantity = entry.TryGetProperty("quantity", out var qEl) ? qEl.GetInt32() : 0;
-            var buyerName = entry.TryGetProperty("buyerName", out var bnEl) ? bnEl.GetString() ?? string.Empty : string.Empty;
-            var saleTimeSeconds = entry.TryGetProperty("timestamp", out var tsEl) ? tsEl.GetInt64() : 0L;
-
-            sales.Add(new Sale(
-                ItemId:      itemId,
-                WorldId:     worldId,
-                BuyerName:   buyerName,
-                Hq:          hq,
-                OnMannequin: onMannequin,
-                Quantity:    quantity,
-                UnitPrice:   pricePerUnit,
-                SaleTime:    DateTimeOffset.FromUnixTimeSeconds(saleTimeSeconds)));
         }
     }
 
