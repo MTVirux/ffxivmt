@@ -1,7 +1,10 @@
+using Ffmt.Core.Configuration;
+using Ffmt.Core.External;
 using Ffmt.Core.DI;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Metrics;
+using Microsoft.Extensions.Options;
 using Serilog;
 using WsWorker.Health;
 using WsWorker.Options;
@@ -26,9 +29,16 @@ builder.Services.AddFfmtMetrics();
 
 builder.Services.Configure<BackfillOptions>(builder.Configuration.GetSection("Backfill"));
 
+// Without a retry policy every transient 429/504 from Universalis becomes a permanently
+// missing chunk, which is indistinguishable from "this window held no sales".
 builder.Services.AddHttpClient("backfill_universalis", (_, client) =>
 {
     client.Timeout = TimeSpan.FromSeconds(60);
+})
+.AddPolicyHandler((sp, _) =>
+{
+    var opts = sp.GetRequiredService<IOptions<UniversalisOptions>>().Value;
+    return HttpRetryPolicy.Build(opts.MaxRetries, opts.InitialBackoffSeconds, opts.MaxBackoffSeconds);
 });
 
 builder.Services.AddSingleton<RankingCoalescer>();

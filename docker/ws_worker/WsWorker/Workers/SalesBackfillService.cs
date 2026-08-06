@@ -326,7 +326,7 @@ public sealed class SalesBackfillService : BackgroundService
 
         var results = new System.Collections.Concurrent.ConcurrentBag<Sale>();
         var failed = 0;
-        using var semaphore = new SemaphoreSlim(8, 8);
+        using var semaphore = new SemaphoreSlim(4, 4);
 
         var tasks = chunks.Select(async chunk =>
         {

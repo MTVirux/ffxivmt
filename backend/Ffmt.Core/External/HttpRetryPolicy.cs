@@ -3,7 +3,7 @@ using Polly;
 
 namespace Ffmt.Core.External;
 
-internal static class HttpRetryPolicy
+public static class HttpRetryPolicy
 {
     public static IAsyncPolicy<HttpResponseMessage> Build(int maxRetries, double initialBackoffSeconds, double maxBackoffSeconds)
     {
