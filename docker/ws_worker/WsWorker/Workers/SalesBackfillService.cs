@@ -128,8 +128,18 @@ public sealed class SalesBackfillService : BackgroundService
             var entriesWithinSeconds = (long)gap.TotalSeconds;
             _logger.LogInformation("LiveGapFillLoop [{Region}]: fetching {Gap:F1} min of history", region, gap.TotalMinutes);
 
-            var sales = await FetchHistory(region, entriesWithinSeconds, ct);
+            var (sales, failedChunks) = await FetchHistory(region, entriesWithinSeconds, ct);
             _logger.LogInformation("LiveGapFillLoop [{Region}]: fetched {Count} sales", region, sales.Count);
+
+            // Advancing last_import_at past a window we only partly fetched would leave a hole
+            // that nothing ever revisits.
+            if (failedChunks > 0)
+            {
+                _logger.LogWarning(
+                    "LiveGapFillLoop [{Region}]: {Failed} chunk request(s) failed — not advancing the pointer, the gap will be refetched",
+                    region, failedChunks);
+                return;
+            }
 
             var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
             var dirtyPairs = sales
@@ -215,8 +225,18 @@ public sealed class SalesBackfillService : BackgroundService
                 "HistoricalCrawlLoop [{Region}]: crawling chunk {ChunkStart:u} → {EarliestImportAt:u}",
                 region, chunkStart, earliestImportAt.Value);
 
-            var allSales = await FetchHistory(region, entriesWithinSeconds, ct);
+            var (allSales, failedChunks) = await FetchHistory(region, entriesWithinSeconds, ct);
             _logger.LogInformation("HistoricalCrawlLoop [{Region}]: fetched {Count} total sales for chunk", region, allSales.Count);
+
+            // A failed fetch is not evidence that the history ran out. Leave the pointer where it is
+            // and retry the same window next pass, or one transient 5xx retires the crawl for good.
+            if (failedChunks > 0)
+            {
+                _logger.LogWarning(
+                    "HistoricalCrawlLoop [{Region}]: {Failed} chunk request(s) failed — leaving the pointer put and retrying next pass",
+                    region, failedChunks);
+                return;
+            }
 
             var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
 
@@ -293,12 +313,18 @@ public sealed class SalesBackfillService : BackgroundService
         await _scylla.Session.ExecuteAsync(_upsertState.Bind(region, newLast, newEarliest));
     }
 
-    private async Task<List<Sale>> FetchHistory(string region, long entriesWithinSeconds, CancellationToken ct)
+    /// <summary>
+    /// Returns the fetched sales plus the number of chunk requests that failed. Callers must not
+    /// treat an empty result as "no history left" unless Failed is zero - a transient 5xx would
+    /// otherwise retire the crawl permanently.
+    /// </summary>
+    private async Task<(List<Sale> Sales, int Failed)> FetchHistory(string region, long entriesWithinSeconds, CancellationToken ct)
     {
         var itemIds = await _catalog.GetMarketableItemIdsAsync(ct);
         var chunks = Chunk(itemIds, _uniOptions.ItemsPerRequest);
 
         var results = new System.Collections.Concurrent.ConcurrentBag<Sale>();
+        var failed = 0;
         using var semaphore = new SemaphoreSlim(8, 8);
 
         var tasks = chunks.Select(async chunk =>
@@ -308,6 +334,12 @@ public sealed class SalesBackfillService : BackgroundService
             {
                 await _rateLimiter.ConsumeAsync(ct);
                 var chunkSales = await FetchChunk(region, chunk, entriesWithinSeconds, ct);
+                if (chunkSales is null)
+                {
+                    Interlocked.Increment(ref failed);
+                    return;
+                }
+
                 foreach (var s in chunkSales)
                     results.Add(s);
             }
@@ -318,10 +350,11 @@ public sealed class SalesBackfillService : BackgroundService
         });
 
         await Task.WhenAll(tasks);
-        return results.ToList();
+        return (results.ToList(), failed);
     }
 
-    private async Task<List<Sale>> FetchChunk(string region, IReadOnlyList<int> itemIds, long entriesWithinSeconds, CancellationToken ct)
+    /// <summary>Null means the request failed; an empty list means the window genuinely held no sales.</summary>
+    private async Task<List<Sale>?> FetchChunk(string region, IReadOnlyList<int> itemIds, long entriesWithinSeconds, CancellationToken ct)
     {
         var itemIdStr = string.Join(",", itemIds);
         var url = $"{_uniOptions.BaseUrl.TrimEnd('/')}/history/{region}/{itemIdStr}?entriesWithin={entriesWithinSeconds}&entriesToReturn=99999";
@@ -336,13 +369,13 @@ public sealed class SalesBackfillService : BackgroundService
         {
             MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
             _logger.LogWarning("FetchChunk [{Region}] HTTP request failed: {Message}", region, ex.Message);
-            return [];
+            return null;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
             _logger.LogWarning("FetchChunk [{Region}] timed out for items {Items}", region, itemIdStr);
-            return [];
+            return null;
         }
 
         using (response)
@@ -351,7 +384,7 @@ public sealed class SalesBackfillService : BackgroundService
             {
                 MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
                 _logger.LogWarning("FetchChunk [{Region}] returned {StatusCode} for {Url}", region, (int)response.StatusCode, url);
-                return [];
+                return null;
             }
 
             string json;
@@ -363,7 +396,7 @@ public sealed class SalesBackfillService : BackgroundService
             {
                 MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
                 _logger.LogWarning(ex, "FetchChunk [{Region}] failed reading response body", region);
-                return [];
+                return null;
             }
 
             try
@@ -377,7 +410,7 @@ public sealed class SalesBackfillService : BackgroundService
             {
                 MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
                 _logger.LogWarning(ex, "FetchChunk [{Region}] failed parsing JSON", region);
-                return [];
+                return null;
             }
         }
     }
