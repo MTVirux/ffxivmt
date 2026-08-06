@@ -229,17 +229,37 @@ public sealed class SalesBackfillService : BackgroundService
             var (allSales, failedChunks) = await FetchHistory(region, entriesWithinSeconds, ct);
             _logger.LogInformation("HistoricalCrawlLoop [{Region}]: fetched {Count} total sales for chunk", region, allSales.Count);
 
-            // A failed fetch is not evidence that the history ran out. Leave the pointer where it is
-            // and retry the same window next pass, or one transient 5xx retires the crawl for good.
+            var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
+
+            // Sales are idempotent upserts on their primary key, so writing a partial window is
+            // safe - a later refetch of the same window simply overwrites with the same rows.
+            if (toWrite.Count > 0)
+            {
+                var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+                var dirtyPairs = toWrite
+                    .Where(s => s.SaleTime > sevenDaysAgo)
+                    .Select(s => (s.WorldId, s.ItemId))
+                    .ToHashSet();
+
+                await _saleStore.AddBatchAsync(toWrite, ct);
+
+                if (dirtyPairs.Count > 0)
+                {
+                    await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
+                    _logger.LogInformation("HistoricalCrawlLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
+                }
+            }
+
+            // A failed fetch is not evidence that the history ran out. Keep what we got, leave the
+            // pointer where it is, and retry the same window next pass - otherwise one transient
+            // 5xx retires the crawl for good.
             if (failedChunks > 0)
             {
                 _logger.LogWarning(
-                    "HistoricalCrawlLoop [{Region}]: {Failed} chunk request(s) failed — leaving the pointer put and retrying next pass",
-                    region, failedChunks);
+                    "HistoricalCrawlLoop [{Region}]: {Failed} chunk request(s) failed — wrote {Written} sales, leaving the pointer put to refetch",
+                    region, failedChunks, toWrite.Count);
                 return;
             }
-
-            var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
 
             if (toWrite.Count == 0)
             {
@@ -248,20 +268,7 @@ public sealed class SalesBackfillService : BackgroundService
                 return;
             }
 
-            var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-            var dirtyPairs = toWrite
-                .Where(s => s.SaleTime > sevenDaysAgo)
-                .Select(s => (s.WorldId, s.ItemId))
-                .ToHashSet();
-
-            await _saleStore.AddBatchAsync(toWrite, ct);
             await WriteState(region, lastImportAt: null, earliestImportAt: chunkStart);
-
-            if (dirtyPairs.Count > 0)
-            {
-                await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
-                _logger.LogInformation("HistoricalCrawlLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
-            }
         }
         catch
         {
