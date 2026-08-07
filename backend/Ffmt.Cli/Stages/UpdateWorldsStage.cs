@@ -12,7 +12,7 @@ public sealed class UpdateWorldsStage(
 {
     public async Task RunAsync(CancellationToken ct)
     {
-        using var _ = log.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaDb });
+        using var _ = LogChannelScope.Begin(log, LogChannels.ScyllaDb);
 
         var fetched = await universalis.GetAllWorldsAsync(ct).ConfigureAwait(false);
         var added = 0;
