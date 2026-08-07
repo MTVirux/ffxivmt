@@ -90,10 +90,10 @@ ensure_cron() {
 # reaches VMs that have already booted - cloud-init only ever runs first-boot.
 ensure_app_crons() {
     ensure_cron "0 0 * * * FFMT_REPO=/opt/ffmt /opt/ffmt/scripts/cron/store_logs.sh >> /var/log/ffmt-cron.log 2>&1"
-    # Baselines run before the archive so they read the fullest window.
     ensure_cron "0 1 * * * docker exec ffmt_backend ffmt update-baselines >> /var/log/ffmt-baselines.log 2>&1"
-    ensure_cron "0 2 * * * docker exec ffmt_backend ffmt archive >> /var/log/ffmt-archive.log 2>&1"
-    ensure_cron "0 3 1 * * docker exec ffmt_backend ffmt archive merge >> /var/log/ffmt-archive-merge.log 2>&1"
+    # The archive crons are deliberately not installed - archiving stays manual
+    # for now. ensure_cron only ever adds, so re-listing them here would silently
+    # switch archiving back on for every VM on the next deploy.
     # update-garland is the only writer of the craftable flag, and update-items
     # clears it. Without a recurring re-derive, a half-finished updatedb leaves
     # the gilflux crafted filter matching nothing until someone reruns it by hand.
