@@ -86,7 +86,6 @@ export default function ItemProfitPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Location</span>
           <TieredLocationSelect value={location} onChange={setLocation} />
           {locationError && (
             <span className="text-xs text-destructive">{locationError}</span>
