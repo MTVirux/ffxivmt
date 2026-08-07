@@ -6,7 +6,6 @@ public sealed class GilfluxOptions
 
     public int RankingCacheSeconds { get; init; } = 20;
     public int WorldStructureCacheSeconds { get; init; } = 300;
-    public int RankingUpdateMaxConcurrency { get; init; } = 0; // 0 = unlimited (Task.WhenAll fan-out)
 
     public double CoalesceWindowSeconds { get; init; } = 2.0;
     public int CoalesceWorkers { get; init; } = 8;
