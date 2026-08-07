@@ -85,6 +85,17 @@ export default function GilfluxPage() {
   );
   const showWorldExpand = location?.kind !== 'world';
 
+  const table = () => (
+    <RankingTable
+      rows={visibleRows}
+      showWorldExpand={showWorldExpand}
+      timeframes={visibleTimeframes}
+      ignoredItemIds={showHidden ? ignoredItemIds : undefined}
+      onIgnore={ignore}
+      onUnignore={showHidden ? unignore : undefined}
+    />
+  );
+
   return (
     <div className="space-y-8">
       <header>
@@ -117,18 +128,14 @@ export default function GilfluxPage() {
           <RowCount loading={query.isLoading} count={visibleRows.length} />
         </div>
 
-        <QueryBoundary query={query} errorText="Failed to load rankings.">
-          {() => (
-            <RankingTable
-              rows={visibleRows}
-              showWorldExpand={showWorldExpand}
-              timeframes={visibleTimeframes}
-              ignoredItemIds={showHidden ? ignoredItemIds : undefined}
-              onIgnore={ignore}
-              onUnignore={showHidden ? unignore : undefined}
-            />
-          )}
-        </QueryBoundary>
+        {/* The query stays disabled until a location exists - show the table's empty state, not nothing. */}
+        {location === undefined ? (
+          table()
+        ) : (
+          <QueryBoundary query={query} errorText="Failed to load rankings.">
+            {table}
+          </QueryBoundary>
+        )}
       </section>
     </div>
   );
