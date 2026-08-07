@@ -1,8 +1,7 @@
-using Cassandra;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
-using NSubstitute;
 
 namespace Ffmt.Tests.Storage.Scylla;
 
@@ -10,10 +9,7 @@ public sealed class SaleStoreScrubCqlTests
 {
     private static (ScyllaSaleStore Store, List<string> Captured) NewStore()
     {
-        var session = Substitute.For<IScyllaSession>();
-        var captured = new List<string>();
-        session.PrepareAsync(Arg.Do<string>(c => captured.Add(c)), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<PreparedStatement>(null!));
+        var (session, captured) = CapturingScyllaSession.New();
         return (new ScyllaSaleStore(session, NullLogger<ScyllaSaleStore>.Instance), captured);
     }
 

@@ -1,23 +1,23 @@
-using Cassandra;
 using Ffmt.Core.Models;
 using Ffmt.Core.Quarantine;
 using Ffmt.Core.Storage.Scylla;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
-using NSubstitute;
 
 namespace Ffmt.Tests.Storage.Scylla;
 
 public sealed class QuarantineStoreCqlTests
 {
+    private static (ScyllaQuarantineStore Store, List<string> Captured) NewStore()
+    {
+        var (session, captured) = CapturingScyllaSession.New();
+        return (new ScyllaQuarantineStore(session, NullLogger<ScyllaQuarantineStore>.Instance), captured);
+    }
+
     [Fact]
     public async Task AddBatchAsync_inserts_into_sales_quarantine_with_the_audit_columns()
     {
-        var session = Substitute.For<IScyllaSession>();
-        var captured = new List<string>();
-        session.PrepareAsync(Arg.Do<string>(c => captured.Add(c)), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<PreparedStatement>(null!));
-
-        var store = new ScyllaQuarantineStore(session, NullLogger<ScyllaQuarantineStore>.Instance);
+        var (store, captured) = NewStore();
         var sale = new Sale(2, 21, "Alisaie", false, false, 1, 999_999_999,
             new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero));
 
@@ -40,12 +40,7 @@ public sealed class QuarantineStoreCqlTests
     [Fact]
     public async Task AddBatchAsync_is_a_no_op_for_an_empty_batch()
     {
-        var session = Substitute.For<IScyllaSession>();
-        var captured = new List<string>();
-        session.PrepareAsync(Arg.Do<string>(c => captured.Add(c)), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<PreparedStatement>(null!));
-
-        var store = new ScyllaQuarantineStore(session, NullLogger<ScyllaQuarantineStore>.Instance);
+        var (store, captured) = NewStore();
 
         await store.AddBatchAsync([]);
 

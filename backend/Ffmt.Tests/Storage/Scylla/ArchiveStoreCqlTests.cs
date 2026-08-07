@@ -1,5 +1,5 @@
 using Ffmt.Core.Storage.Scylla;
-using NSubstitute;
+using Ffmt.Tests.Fakes;
 
 namespace Ffmt.Tests.Storage.Scylla;
 
@@ -30,10 +30,7 @@ public sealed class ArchiveStoreCqlTests
 
     private static (ScyllaArchiveStore Store, List<string> Captured) NewStore()
     {
-        var session = Substitute.For<IScyllaSession>();
-        var captured = new List<string>();
-        session.PrepareAsync(Arg.Do<string>(c => captured.Add(c)), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<Cassandra.PreparedStatement>(null!));
+        var (session, captured) = CapturingScyllaSession.New();
         return (new ScyllaArchiveStore(session), captured);
     }
 }

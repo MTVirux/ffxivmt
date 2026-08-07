@@ -1,15 +1,12 @@
-using System.Diagnostics.CodeAnalysis;
 using Ffmt.Cli.Commands;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.Models;
 using Ffmt.Core.Quarantine;
 using Ffmt.Core.Storage.Scylla;
-using Ffmt.Core.Worlds;
-using Microsoft.Extensions.Caching.Memory;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 
 namespace Ffmt.Tests.Quarantine;
 
@@ -24,14 +21,14 @@ public sealed class QuarantineScrubTests
 
     /// <summary>Serves the seeded batch once and nothing afterwards, so the assertions count a
     /// single pass rather than one per day of the window the scrub walks.</summary>
-    private sealed class RecordingSaleStore(IReadOnlyList<Sale> onlyPage) : ISaleStore
+    private sealed class RecordingSaleStore(IReadOnlyList<Sale> onlyPage) : FakeSaleStore
     {
         private bool _served;
 
         public List<IReadOnlyList<Sale>> Deleted { get; } = [];
         public List<IReadOnlyList<Sale>> Backfilled { get; } = [];
 
-        public Task<IReadOnlyList<Sale>> GetByItemAndWorldInRangeAsync(int itemId, int worldId, DateOnly date, CancellationToken ct = default)
+        public override Task<IReadOnlyList<Sale>> GetByItemAndWorldInRangeAsync(int itemId, int worldId, DateOnly date, CancellationToken ct = default)
         {
             if (_served)
             {
@@ -42,28 +39,17 @@ public sealed class QuarantineScrubTests
             return Task.FromResult(onlyPage);
         }
 
-        public Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
+        public override Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
         {
             Deleted.Add(sales);
             return Task.CompletedTask;
         }
 
-        public Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
+        public override Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
         {
             Backfilled.Add(sales);
             return Task.CompletedTask;
         }
-
-        public Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
-            Task.FromResult(new SaleBatchResult(sales.Count, 0d));
-        public Task<IReadOnlyList<Sale>> SearchBuyerAsync(string b, int? w, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Sale>>([]);
-        public Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int i, int w, int l, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Sale>>([]);
-        public Task DeleteByItemAndWorldInRangeAsync(int i, int w, DateOnly d, IReadOnlyList<Sale> s, CancellationToken ct = default) =>
-            Task.CompletedTask;
-        public Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(int i, int w, DateTimeOffset s, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PricePoint>>([]);
     }
 
     private sealed class RecordingQuarantineStore : IQuarantineStore
@@ -93,48 +79,16 @@ public sealed class QuarantineScrubTests
             Task.CompletedTask;
     }
 
-    private sealed class StubFilter : ISaleAnomalyFilter
-    {
-        public Task<AnomalyPartition> PartitionAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
-            Task.FromResult(new AnomalyPartition(
-                sales.Where(s => s.UnitPrice < 1_000_000).ToList(),
-                sales.Where(s => s.UnitPrice >= 1_000_000)
-                     .Select(s => new QuarantinedSale(s, QuarantineReasons.UnitPriceDeviation, 500, DateTimeOffset.UnixEpoch))
-                     .ToList(),
-                []));
-    }
-
-    private sealed class StubBaselines : IPriceBaselineProvider
-    {
-        private readonly Dictionary<(int, string, bool), PriceBaseline> _rows = [];
-
-        public Task EnsureLoadedAsync(CancellationToken ct = default) => Task.CompletedTask;
-        public Task ReloadAsync(CancellationToken ct = default) => Task.CompletedTask;
-        public bool TryGet(int itemId, string region, bool hq, [MaybeNullWhen(false)] out PriceBaseline baseline) =>
-            _rows.TryGetValue((itemId, region, hq), out baseline);
-    }
-
     private static QuarantineScrubCommand NewCommand(
         ISaleStore saleStore, IQuarantineStore quarantineStore, IDirtyPairQueue dirtyPairs)
     {
-        var worldStore = Substitute.For<IWorldStore>();
-        worldStore.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<World>>([new World(WorldId, "Ravana", "Chaos", "Europe")]));
-
-        var itemStore = Substitute.For<IItemStore>();
-        itemStore.GetMarketableIdsAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<int>>([ItemId]));
-
-        var worldStructure = new WorldStructureService(
-            worldStore,
-            itemStore,
-            new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new GilfluxOptions()));
+        var worldStore = TestWorlds.Store(new World(WorldId, "Ravana", "Chaos", "Europe"));
+        var worldStructure = TestWorlds.Structure(worldStore, TestWorlds.MarketableItems(ItemId));
 
         return new QuarantineScrubCommand(
             saleStore,
             quarantineStore,
-            new StubFilter(),
+            new StubAnomalyFilter(),
             new StubBaselines(),
             worldStore,
             worldStructure,

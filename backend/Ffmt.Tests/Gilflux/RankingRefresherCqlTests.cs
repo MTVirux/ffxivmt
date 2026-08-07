@@ -1,10 +1,9 @@
-using Cassandra;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.Storage.Scylla;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 
 namespace Ffmt.Tests.Gilflux;
 
@@ -12,10 +11,7 @@ public sealed class RankingRefresherCqlTests
 {
     private static (ScyllaRankingRefresher Refresher, List<string> Captured) NewRefresher()
     {
-        var session = Substitute.For<IScyllaSession>();
-        var captured = new List<string>();
-        session.PrepareAsync(Arg.Do<string>(c => captured.Add(c)), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<PreparedStatement>(null!));
+        var (session, captured) = CapturingScyllaSession.New();
         var options = Options.Create(new GilfluxOptions());
         return (new ScyllaRankingRefresher(session, options, NullLogger<ScyllaRankingRefresher>.Instance), captured);
     }

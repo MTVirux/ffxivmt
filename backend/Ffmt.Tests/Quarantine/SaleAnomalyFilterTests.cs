@@ -1,12 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Models;
 using Ffmt.Core.Quarantine;
-using Ffmt.Core.Storage.Scylla;
-using Ffmt.Core.Worlds;
-using Microsoft.Extensions.Caching.Memory;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 
 namespace Ffmt.Tests.Quarantine;
 
@@ -15,31 +11,10 @@ public sealed class SaleAnomalyFilterTests
     private const int ItemId = 12345;
     private const int WorldId = 21;
 
-    private sealed class StubBaselines : IPriceBaselineProvider
-    {
-        public Dictionary<(int, string, bool), PriceBaseline> Rows { get; } = new();
-        public Task EnsureLoadedAsync(CancellationToken ct = default) => Task.CompletedTask;
-        public Task ReloadAsync(CancellationToken ct = default) => Task.CompletedTask;
-        public bool TryGet(int itemId, string region, bool hq, [MaybeNullWhen(false)] out PriceBaseline baseline) =>
-            Rows.TryGetValue((itemId, region, hq), out baseline);
-    }
-
-    private static WorldStructureService NewWorlds()
-    {
-        var worldStore = Substitute.For<IWorldStore>();
-        worldStore.GetAllAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<World>>(
-                [new World(WorldId, "Ravana", "Chaos", "Europe")]));
-
-        return new WorldStructureService(
-            worldStore,
-            Substitute.For<IItemStore>(),
-            new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new GilfluxOptions()));
-    }
-
     private static SaleAnomalyFilter NewFilter(StubBaselines baselines, QuarantineOptions? opts = null) =>
-        new(baselines, NewWorlds(), Options.Create(opts ?? new QuarantineOptions()));
+        new(baselines,
+            TestWorlds.Structure(new World(WorldId, "Ravana", "Chaos", "Europe")),
+            Options.Create(opts ?? new QuarantineOptions()));
 
     private static Sale NewSale(int unitPrice, bool hq = false) =>
         new(ItemId, WorldId, "Alisaie", hq, false, 1, unitPrice, DateTimeOffset.UnixEpoch);

@@ -1,10 +1,8 @@
-using Cassandra;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Quarantine;
-using Ffmt.Core.Storage.Scylla;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 
 namespace Ffmt.Tests.Quarantine;
 
@@ -12,10 +10,7 @@ public sealed class PriceBaselineProviderTests
 {
     private static (PriceBaselineProvider Provider, List<string> Captured) NewProvider()
     {
-        var session = Substitute.For<IScyllaSession>();
-        var captured = new List<string>();
-        session.PrepareAsync(Arg.Do<string>(c => captured.Add(c)), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<PreparedStatement>(null!));
+        var (session, captured) = CapturingScyllaSession.New();
 
         var provider = new PriceBaselineProvider(
             session,
