@@ -106,17 +106,22 @@ public static class MetricsCatalog
     public static readonly Counter BackfillPagesTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_backfill_pages_total",
         "Universalis history pages fetched by the backfill service.",
-        new CounterConfiguration { LabelNames = ["world", "result"] });
+        new CounterConfiguration { LabelNames = ["region", "result"] });
 
     public static readonly Counter BackfillRowsTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_backfill_rows_total",
         "Sale rows inserted by the backfill service.",
-        new CounterConfiguration { LabelNames = ["world"] });
+        new CounterConfiguration { LabelNames = ["region"] });
+
+    public static readonly Counter BackfillPointerStalledTotal = Prometheus.Metrics.CreateCounter(
+        "ffmt_backfill_pointer_stalled_total",
+        "Backfill passes that finished with failed chunks and so left their pointer unmoved.",
+        new CounterConfiguration { LabelNames = ["region", "loop"] });
 
     public static readonly Gauge BackfillState = Prometheus.Metrics.CreateGauge(
         "ffmt_backfill_state",
-        "Backfill loop state per world: 0=idle, 1=running, 2=paused, 3=error.",
-        new GaugeConfiguration { LabelNames = ["world"] });
+        "Backfill loop state per region and loop: 0=idle, 1=running, 2=paused, 3=error.",
+        new GaugeConfiguration { LabelNames = ["region", "loop"] });
 
     // Sale anomaly quarantine
     public static readonly Counter SalesQuarantinedTotal = Prometheus.Metrics.CreateCounter(
@@ -164,6 +169,7 @@ public static class MetricsCatalog
         DecaySweepRowsEnqueuedTotal,
         BackfillPagesTotal,
         BackfillRowsTotal,
+        BackfillPointerStalledTotal,
         BackfillState,
         SalesQuarantinedTotal,
         SalesNoBaselineTotal,

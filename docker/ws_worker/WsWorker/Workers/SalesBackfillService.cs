@@ -38,6 +38,16 @@ public sealed class SalesBackfillService : BackgroundService
 
     private readonly HashSet<string> _crawlComplete = new(StringComparer.OrdinalIgnoreCase);
 
+    private const string LiveLoop = "live";
+    private const string HistoricalLoop = "historical";
+
+    private const int StateIdle = 0;
+    private const int StateRunning = 1;
+    private const int StateError = 3;
+
+    private static void SetLoopState(string region, string loop, int state) =>
+        MetricsCatalog.BackfillState.WithLabels(region, loop).Set(state);
+
     public SalesBackfillService(
         IScyllaSession scylla,
         ISaleStore saleStore,
@@ -105,7 +115,8 @@ public sealed class SalesBackfillService : BackgroundService
 
     private async Task RunLiveGapPass(string region, CancellationToken ct)
     {
-        MetricsCatalog.BackfillState.WithLabels(region).Set(1); // running
+        SetLoopState(region, LiveLoop, StateRunning);
+        var faulted = false;
         try
         {
             var now = DateTimeOffset.UtcNow;
@@ -136,8 +147,9 @@ public sealed class SalesBackfillService : BackgroundService
             // that nothing ever revisits.
             if (failedChunks > 0)
             {
+                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, LiveLoop).Inc();
                 _logger.LogWarning(
-                    "LiveGapFillLoop [{Region}]: {Failed} chunk request(s) failed — not advancing the pointer, the gap will be refetched",
+                    "LiveGapFillLoop [{Region}]: {Failed} chunk request(s) failed after retries - not advancing the pointer, the gap will be refetched",
                     region, failedChunks);
                 return;
             }
@@ -159,15 +171,12 @@ public sealed class SalesBackfillService : BackgroundService
         }
         catch
         {
-            MetricsCatalog.BackfillState.WithLabels(region).Set(3); // error
+            faulted = true;
             throw;
         }
         finally
         {
-            if (MetricsCatalog.BackfillState.WithLabels(region).Value != 3)
-            {
-                MetricsCatalog.BackfillState.WithLabels(region).Set(0); // idle
-            }
+            SetLoopState(region, LiveLoop, faulted ? StateError : StateIdle);
         }
     }
 
@@ -205,7 +214,8 @@ public sealed class SalesBackfillService : BackgroundService
 
     private async Task RunHistoricalCrawlPass(string region, CancellationToken ct)
     {
-        MetricsCatalog.BackfillState.WithLabels(region).Set(1); // running
+        SetLoopState(region, HistoricalLoop, StateRunning);
+        var faulted = false;
         try
         {
             var now = DateTimeOffset.UtcNow;
@@ -255,8 +265,9 @@ public sealed class SalesBackfillService : BackgroundService
             // 5xx retires the crawl for good.
             if (failedChunks > 0)
             {
+                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, HistoricalLoop).Inc();
                 _logger.LogWarning(
-                    "HistoricalCrawlLoop [{Region}]: {Failed} chunk request(s) failed — wrote {Written} sales, leaving the pointer put to refetch",
+                    "HistoricalCrawlLoop [{Region}]: {Failed} chunk request(s) failed after retries - wrote {Written} sales, leaving the pointer put to refetch",
                     region, failedChunks, toWrite.Count);
                 return;
             }
@@ -272,15 +283,12 @@ public sealed class SalesBackfillService : BackgroundService
         }
         catch
         {
-            MetricsCatalog.BackfillState.WithLabels(region).Set(3); // error
+            faulted = true;
             throw;
         }
         finally
         {
-            if (MetricsCatalog.BackfillState.WithLabels(region).Value != 3)
-            {
-                MetricsCatalog.BackfillState.WithLabels(region).Set(0); // idle
-            }
+            SetLoopState(region, HistoricalLoop, faulted ? StateError : StateIdle);
         }
     }
 
@@ -322,56 +330,51 @@ public sealed class SalesBackfillService : BackgroundService
     }
 
     /// <summary>
-    /// Returns the fetched sales plus the number of chunk requests that failed. Callers must not
-    /// treat an empty result as "no history left" unless Failed is zero - a transient 5xx would
-    /// otherwise retire the crawl permanently.
+    /// Returns the fetched sales plus the number of chunk requests still failing after their
+    /// retries. Callers must not treat an empty result as "no history left" unless that count is
+    /// zero - a transient failure would otherwise retire the crawl permanently.
     /// </summary>
-    private async Task<(List<Sale> Sales, int Failed)> FetchHistory(string region, long entriesWithinSeconds, CancellationToken ct)
+    private async Task<ChunkRunResult> FetchHistory(string region, long entriesWithinSeconds, CancellationToken ct)
     {
         var itemIds = await _catalog.GetMarketableItemIdsAsync(ct);
-        var chunks = Chunk(itemIds, _uniOptions.ItemsPerRequest);
+        var tuning = _backfillOptions.Tuning;
 
-        var results = new System.Collections.Concurrent.ConcurrentBag<Sale>();
-        var failed = 0;
-        using var semaphore = new SemaphoreSlim(4, 4);
+        var chunks = BackfillChunkRunner.Chunk(itemIds, tuning.ItemsPerRequestFor(entriesWithinSeconds));
+        var requestTimeout = tuning.RequestTimeoutFor(entriesWithinSeconds);
 
-        var tasks = chunks.Select(async chunk =>
-        {
-            await semaphore.WaitAsync(ct);
-            try
-            {
-                await _rateLimiter.ConsumeAsync(ct);
-                var chunkSales = await FetchChunk(region, chunk, entriesWithinSeconds, ct);
-                if (chunkSales is null)
-                {
-                    Interlocked.Increment(ref failed);
-                    return;
-                }
-
-                foreach (var s in chunkSales)
-                    results.Add(s);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-
-        await Task.WhenAll(tasks);
-        return (results.ToList(), failed);
+        return await BackfillChunkRunner.RunAsync(
+            chunks,
+            (chunk, token) => FetchChunk(region, chunk, entriesWithinSeconds, requestTimeout, token),
+            tuning.RetryRounds,
+            concurrency: 4,
+            TimeSpan.FromSeconds(tuning.RetryRoundDelaySeconds),
+            _rateLimiter.ConsumeAsync,
+            ct);
     }
 
     /// <summary>Null means the request failed; an empty list means the window genuinely held no sales.</summary>
-    private async Task<List<Sale>?> FetchChunk(string region, IReadOnlyList<int> itemIds, long entriesWithinSeconds, CancellationToken ct)
+    private async Task<List<Sale>?> FetchChunk(
+        string region,
+        IReadOnlyList<int> itemIds,
+        long entriesWithinSeconds,
+        TimeSpan requestTimeout,
+        CancellationToken ct)
     {
         var itemIdStr = string.Join(",", itemIds);
         var url = $"{_uniOptions.BaseUrl.TrimEnd('/')}/history/{region}/{itemIdStr}?entriesWithin={entriesWithinSeconds}&entriesToReturn=99999";
 
         var client = _httpClientFactory.CreateClient("backfill_universalis");
+
+        // The crawl asks for a wider window with every chunk it walks back, so the response grows
+        // and a fixed timeout eventually fails every request. Budget from the window instead.
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(requestTimeout);
+        var token = timeoutCts.Token;
+
         HttpResponseMessage response;
         try
         {
-            response = await client.GetAsync(url, ct);
+            response = await client.GetAsync(url, token);
         }
         catch (HttpRequestException ex)
         {
@@ -382,7 +385,9 @@ public sealed class SalesBackfillService : BackgroundService
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
-            _logger.LogWarning("FetchChunk [{Region}] timed out for items {Items}", region, itemIdStr);
+            _logger.LogWarning(
+                "FetchChunk [{Region}] timed out after {Timeout:F0}s for {Count} items",
+                region, requestTimeout.TotalSeconds, itemIds.Count);
             return null;
         }
 
@@ -398,7 +403,7 @@ public sealed class SalesBackfillService : BackgroundService
             string json;
             try
             {
-                json = await response.Content.ReadAsStringAsync(ct);
+                json = await response.Content.ReadAsStringAsync(token);
             }
             catch (Exception ex)
             {
@@ -421,12 +426,6 @@ public sealed class SalesBackfillService : BackgroundService
                 return null;
             }
         }
-    }
-
-    private static IEnumerable<IReadOnlyList<T>> Chunk<T>(IReadOnlyList<T> source, int size)
-    {
-        for (var i = 0; i < source.Count; i += size)
-            yield return source.Skip(i).Take(size).ToList();
     }
 
     private sealed class TokenBucket : IDisposable

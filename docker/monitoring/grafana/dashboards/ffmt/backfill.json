@@ -12,27 +12,37 @@
       "title": "Backfill state per region (0=idle 1=running 2=paused 3=error)",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "ffmt_backfill_state", "legendFormat": "{{world}}", "refId": "A" }
+        { "expr": "ffmt_backfill_state", "legendFormat": "{{region}} {{loop}}", "refId": "A" }
       ],
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 6 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Passes that left their pointer unmoved (per second)",
+      "description": "Sustained non-zero means the backfill is re-crawling the same window and importing nothing new.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum by (region, loop) (rate(ffmt_backfill_pointer_stalled_total[15m]))", "legendFormat": "{{region}} {{loop}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 6 }
     },
     {
       "type": "timeseries",
       "title": "Pages fetched per second",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum by (world, result) (rate(ffmt_backfill_pages_total[5m]))", "legendFormat": "{{world}} {{result}}", "refId": "A" }
+        { "expr": "sum by (region, result) (rate(ffmt_backfill_pages_total[5m]))", "legendFormat": "{{region}} {{result}}", "refId": "A" }
       ],
-      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 }
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 }
     },
     {
       "type": "timeseries",
       "title": "Rows imported per second",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum by (world) (rate(ffmt_backfill_rows_total[5m]))", "legendFormat": "{{world}}", "refId": "A" }
+        { "expr": "sum by (region) (rate(ffmt_backfill_rows_total[5m]))", "legendFormat": "{{region}}", "refId": "A" }
       ],
-      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 }
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 }
     }
   ],
   "refresh": "30s",

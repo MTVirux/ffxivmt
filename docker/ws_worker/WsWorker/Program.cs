@@ -33,7 +33,10 @@ builder.Services.Configure<BackfillOptions>(builder.Configuration.GetSection("Ba
 // missing chunk, which is indistinguishable from "this window held no sales".
 builder.Services.AddHttpClient("backfill_universalis", (_, client) =>
 {
-    client.Timeout = TimeSpan.FromSeconds(60);
+    // SalesBackfillService budgets each request from the window it asks for (BackfillTuning), so
+    // this is only a backstop and must stay above BackfillTuning.MaxRequestTimeoutSeconds. A fixed
+    // budget here also has to cover every Polly retry below, which is why it is not the real limit.
+    client.Timeout = TimeSpan.FromSeconds(360);
 })
 .AddPolicyHandler((sp, _) =>
 {

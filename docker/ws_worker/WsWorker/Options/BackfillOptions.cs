@@ -1,3 +1,5 @@
+using Ffmt.Core.External;
+
 namespace WsWorker.Options;
 
 public sealed class BackfillOptions
@@ -6,4 +8,5 @@ public sealed class BackfillOptions
     public int LiveGapIntervalMinutes { get; set; } = 15;
     public int HistoricalCrawlIntervalMinutes { get; set; } = 60;
     public int SkipIfGapUnderMinutes { get; set; } = 5;
+    public BackfillTuning Tuning { get; set; } = new();
 }

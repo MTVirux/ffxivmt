@@ -8,7 +8,7 @@ public sealed class MetricsCatalogTests
     [Fact]
     public void All_instruments_are_registered_and_non_null()
     {
-        MetricsCatalog.All.Should().HaveCount(25, "spec calls out 25 named instruments");
+        MetricsCatalog.All.Should().HaveCount(26, "spec calls out 26 named instruments");
         MetricsCatalog.All.Should().AllSatisfy(c => c.Should().NotBeNull());
     }
 
@@ -23,6 +23,41 @@ public sealed class MetricsCatalogTests
                 .Any(s => collector.Name.EndsWith(s))
                 .Should().BeTrue($"{collector.Name} must use a Prometheus-convention suffix");
         }
+    }
+
+    [Fact]
+    public void Backfill_instruments_are_labelled_by_region_not_world()
+    {
+        var backfill = new Collector[]
+        {
+            MetricsCatalog.BackfillPagesTotal,
+            MetricsCatalog.BackfillRowsTotal,
+            MetricsCatalog.BackfillState,
+        };
+
+        foreach (var collector in backfill)
+        {
+            collector.LabelNames.Should().Contain("region",
+                $"{collector.Name} is emitted per import region, not per world");
+            collector.LabelNames.Should().NotContain("world",
+                $"{collector.Name} labels a region value, so calling it world misreads the dashboard");
+        }
+    }
+
+    [Fact]
+    public void Backfill_counts_passes_that_refused_to_advance_their_pointer()
+    {
+        // A pass that leaves its pointer put re-crawls the same window forever. Nothing else
+        // distinguishes that from healthy work, so it needs its own signal.
+        MetricsCatalog.BackfillPointerStalledTotal.LabelNames.Should().Contain("region");
+        MetricsCatalog.BackfillPointerStalledTotal.LabelNames.Should().Contain("loop");
+    }
+
+    [Fact]
+    public void Backfill_state_is_tracked_per_loop()
+    {
+        MetricsCatalog.BackfillState.LabelNames.Should().Contain("loop",
+            "the live-gap and historical-crawl loops run concurrently and would otherwise overwrite each other");
     }
 
     [Fact]
