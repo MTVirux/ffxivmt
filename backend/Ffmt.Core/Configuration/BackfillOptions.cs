@@ -1,9 +1,11 @@
 using Ffmt.Core.External;
 
-namespace WsWorker.Options;
+namespace Ffmt.Core.Configuration;
 
 public sealed class BackfillOptions
 {
+    public const string SectionName = "Backfill";
+
     public int ChunkDays { get; set; } = 7;
     public int LiveGapIntervalMinutes { get; set; } = 15;
     public int HistoricalCrawlIntervalMinutes { get; set; } = 60;

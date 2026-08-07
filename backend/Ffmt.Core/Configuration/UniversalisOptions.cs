@@ -16,7 +16,6 @@ public sealed class UniversalisOptions
     // array already holds, so any default here is silently added to the configured regions.
     public string[] RegionsToUse { get; init; } = [];
     public string[] RegionsToImport { get; init; } = [];
-    public int ItemsPerRequest { get; init; } = 100;
     public int MaxRequestsPerSecond { get; init; } = 25;
     public int MaxRequestsPerSecondBurst { get; init; } = 50;
 }

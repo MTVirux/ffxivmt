@@ -8,7 +8,6 @@ using Ffmt.Core.Metrics;
 using Microsoft.Extensions.Options;
 using Serilog;
 using WsWorker.Health;
-using WsWorker.Options;
 using WsWorker.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,8 +18,6 @@ builder.Host.UseSerilog((context, _, logger) =>
 builder.Services.AddFfmtCore(builder.Configuration);
 
 builder.Services.AddFfmtMetrics();
-
-builder.Services.Configure<BackfillOptions>(builder.Configuration.GetSection("Backfill"));
 
 // Without a retry policy every transient 429/504 from Universalis becomes a permanently
 // missing chunk, which is indistinguishable from "this window held no sales".
