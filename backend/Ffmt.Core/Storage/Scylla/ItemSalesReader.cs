@@ -1,11 +1,12 @@
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.Models;
+using Ffmt.Core.Worlds;
 
 namespace Ffmt.Core.Storage.Scylla;
 
 public sealed class ItemSalesReader(
     ISaleStore sales,
-    IWorldStore worldStore,
+    WorldStructureService worldStructure,
     LocationResolver resolver)
 {
     public async Task<IReadOnlyList<Sale>?> GetByItemAndLocationAsync(
@@ -22,13 +23,9 @@ public sealed class ItemSalesReader(
             return await sales.GetByItemAndWorldAsync(itemId, resolution.WorldId!.Value, limit, ct).ConfigureAwait(false);
         }
 
-        var worlds = await worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var scopeWorlds = worlds.Where(w => resolution.Kind == LocationKind.Datacenter
-                ? string.Equals(w.Datacenter, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)
-                : string.Equals(w.Region, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var perWorldTasks = scopeWorlds
+        var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
+        var perWorldTasks = worlds
+            .Where(resolution.Matches)
             .Select(w => sales.GetByItemAndWorldAsync(itemId, w.Id, limit, ct))
             .ToArray();
         var perWorld = await Task.WhenAll(perWorldTasks).ConfigureAwait(false);

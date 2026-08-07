@@ -1,7 +1,11 @@
+using Ffmt.Core.Configuration;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -21,19 +25,24 @@ public sealed class ItemSalesReaderTests
         new(ItemId: 100, WorldId: worldId, BuyerName: "B", Hq: false, OnMannequin: false,
             Quantity: 1, UnitPrice: 10, SaleTime: t);
 
-    private static (ItemSalesReader reader, ISaleStore sales) NewReader()
+    private static (ItemSalesReader reader, ISaleStore sales, IWorldStore worldStore) NewReader()
     {
         var worldStore = Substitute.For<IWorldStore>();
         worldStore.GetAllAsync(Arg.Any<CancellationToken>()).Returns(Worlds);
+        var worldStructure = new WorldStructureService(
+            worldStore,
+            Substitute.For<IItemStore>(),
+            new MemoryCache(new MemoryCacheOptions()),
+            Options.Create(new GilfluxOptions()));
         var sales = Substitute.For<ISaleStore>();
-        var resolver = new LocationResolver(worldStore);
-        return (new ItemSalesReader(sales, worldStore, resolver), sales);
+        var resolver = new LocationResolver(worldStructure);
+        return (new ItemSalesReader(sales, worldStructure, resolver), sales, worldStore);
     }
 
     [Fact]
     public async Task UnknownLocation_ReturnsNull()
     {
-        var (reader, _) = NewReader();
+        var (reader, _, _) = NewReader();
         var result = await reader.GetByItemAndLocationAsync(100, "Nowhere", 50);
         result.Should().BeNull();
     }
@@ -41,7 +50,7 @@ public sealed class ItemSalesReaderTests
     [Fact]
     public async Task World_DelegatesToSingleWorldRead()
     {
-        var (reader, sales) = NewReader();
+        var (reader, sales, _) = NewReader();
         var rows = new List<Sale> { SaleAt(1, DateTimeOffset.UnixEpoch) };
         sales.GetByItemAndWorldAsync(100, 1, 50, Arg.Any<CancellationToken>()).Returns(rows);
 
@@ -54,7 +63,7 @@ public sealed class ItemSalesReaderTests
     [Fact]
     public async Task Datacenter_MergesMemberWorldsSortedDescAndLimited()
     {
-        var (reader, sales) = NewReader();
+        var (reader, sales, _) = NewReader();
         var t0 = DateTimeOffset.UnixEpoch;
         sales.GetByItemAndWorldAsync(100, 1, 2, Arg.Any<CancellationToken>())
             .Returns(new List<Sale> { SaleAt(1, t0.AddMinutes(10)), SaleAt(1, t0.AddMinutes(1)) });
@@ -71,7 +80,7 @@ public sealed class ItemSalesReaderTests
     [Fact]
     public async Task Region_QueriesEveryWorldInRegionOnly()
     {
-        var (reader, sales) = NewReader();
+        var (reader, sales, _) = NewReader();
         var t0 = DateTimeOffset.UnixEpoch;
         sales.GetByItemAndWorldAsync(100, Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(ci => new List<Sale> { SaleAt((int)ci[1], t0.AddMinutes((int)ci[1])) });
@@ -80,5 +89,17 @@ public sealed class ItemSalesReaderTests
 
         result!.Select(s => s.WorldId).Should().BeEquivalentTo(new[] { 1, 2, 3 });
         await sales.DidNotReceive().GetByItemAndWorldAsync(100, 4, Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ResolvingAndScopingReadTheWorldTableOnce()
+    {
+        var (reader, sales, worldStore) = NewReader();
+        sales.GetByItemAndWorldAsync(100, Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<Sale>());
+
+        await reader.GetByItemAndLocationAsync(100, "Aether", 50);
+
+        await worldStore.Received(1).GetAllAsync(Arg.Any<CancellationToken>());
     }
 }

@@ -1,6 +1,7 @@
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,7 +22,7 @@ public sealed record EnrichedGilfluxRanking(
 public sealed class GilfluxRankingReader
 {
     private readonly IGilfluxRankingStore _store;
-    private readonly IWorldStore _worldStore;
+    private readonly WorldStructureService _worldStructure;
     private readonly IItemStore _itemStore;
     private readonly LocationResolver _resolver;
     private readonly IMemoryCache _cache;
@@ -31,7 +32,7 @@ public sealed class GilfluxRankingReader
 
     public GilfluxRankingReader(
         IGilfluxRankingStore store,
-        IWorldStore worldStore,
+        WorldStructureService worldStructure,
         IItemStore itemStore,
         LocationResolver resolver,
         IMemoryCache cache,
@@ -39,7 +40,7 @@ public sealed class GilfluxRankingReader
         ILogger<GilfluxRankingReader> log)
     {
         _store = store;
-        _worldStore = worldStore;
+        _worldStructure = worldStructure;
         _itemStore = itemStore;
         _resolver = resolver;
         _cache = cache;
@@ -62,18 +63,14 @@ public sealed class GilfluxRankingReader
             return new RankingByLocationResult(resolution, cached, FromCache: true);
         }
 
-        var allWorlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var worldsById = allWorlds.ToDictionary(w => w.Id);
-        var itemNames = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
+        var worldsById = await _worldStructure.GetWorldsByIdAsync(ct).ConfigureAwait(false);
+        var itemNames = await _worldStructure.GetItemNamesAsync(ct).ConfigureAwait(false);
         var now = DateTimeOffset.UtcNow;
 
-        IReadOnlyList<EnrichedGilfluxRanking> enrichedAll = resolution.Kind switch
-        {
-            LocationKind.World      => Enrich(await _store.GetByWorldAsync(resolution.WorldId!.Value, ct).ConfigureAwait(false), worldsById, itemNames, _timeframesMs, now),
-            LocationKind.Datacenter => Enrich(await MergeRawByDatacenterAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames, _timeframesMs, now),
-            LocationKind.Region     => Enrich(await MergeRawByRegionAsync(resolution.CanonicalName, ct).ConfigureAwait(false), worldsById, itemNames, _timeframesMs, now),
-            _ => Array.Empty<EnrichedGilfluxRanking>(),
-        };
+        var raw = resolution.Kind == LocationKind.World
+            ? await _store.GetByWorldAsync(resolution.WorldId!.Value, ct).ConfigureAwait(false)
+            : await MergeRawAsync(resolution, ct).ConfigureAwait(false);
+        var enrichedAll = Enrich(raw, worldsById, itemNames, _timeframesMs, now);
 
         // Always populate the unfiltered cache so siblings that include this location can reuse it.
         _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: false), enrichedAll, _ttl);
@@ -95,31 +92,50 @@ public sealed class GilfluxRankingReader
         return new RankingByLocationResult(resolution, crafted, FromCache: false);
     }
 
+    /// <summary>Resolves the location, reads the item's rows and enriches only the ones in scope.</summary>
+    public async Task<IReadOnlyList<EnrichedGilfluxRanking>?> GetByItemAndLocationAsync(
+        int itemId, string targetLocation, CancellationToken ct = default)
+    {
+        var resolution = await _resolver.ResolveAsync(targetLocation, ct).ConfigureAwait(false);
+        if (resolution is null)
+        {
+            return null;
+        }
+
+        var worldsById = await _worldStructure.GetWorldsByIdAsync(ct).ConfigureAwait(false);
+        var itemNames = await _worldStructure.GetItemNamesAsync(ct).ConfigureAwait(false);
+
+        IEnumerable<GilfluxRanking> raw;
+        if (resolution.Kind == LocationKind.World)
+        {
+            raw = await _store.GetByItemAndWorldAsync(itemId, resolution.WorldId!.Value, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            raw = (await _store.GetByItemAsync(itemId, ct).ConfigureAwait(false))
+                .Where(r => r.WorldId is not null
+                    && worldsById.TryGetValue(r.WorldId.Value, out var w)
+                    && resolution.Matches(w));
+        }
+
+        return Enrich(raw, worldsById, itemNames, _timeframesMs, DateTimeOffset.UtcNow);
+    }
+
     /// <summary>Public helper exposed for endpoints that want to enrich a list returned
     /// directly by the store (e.g. the per-item endpoint).</summary>
     public async Task<IReadOnlyList<EnrichedGilfluxRanking>> EnrichAsync(
         IEnumerable<GilfluxRanking> rows, CancellationToken ct = default)
     {
-        var allWorlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var worldsById = allWorlds.ToDictionary(w => w.Id);
-        var itemNames = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
+        var worldsById = await _worldStructure.GetWorldsByIdAsync(ct).ConfigureAwait(false);
+        var itemNames = await _worldStructure.GetItemNamesAsync(ct).ConfigureAwait(false);
         return Enrich(rows, worldsById, itemNames, _timeframesMs, DateTimeOffset.UtcNow);
     }
 
-    private async Task<IReadOnlyList<GilfluxRanking>> MergeRawByDatacenterAsync(string datacenter, CancellationToken ct)
+    private async Task<IReadOnlyList<GilfluxRanking>> MergeRawAsync(
+        LocationResolution resolution, CancellationToken ct)
     {
-        var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var dcWorlds = worlds.Where(w => string.Equals(w.Datacenter, datacenter, StringComparison.OrdinalIgnoreCase)).ToList();
-        var perWorldTasks = dcWorlds.Select(w => _store.GetByWorldAsync(w.Id, ct)).ToArray();
-        await Task.WhenAll(perWorldTasks).ConfigureAwait(false);
-        return perWorldTasks.SelectMany(t => t.Result).ToList();
-    }
-
-    private async Task<IReadOnlyList<GilfluxRanking>> MergeRawByRegionAsync(string region, CancellationToken ct)
-    {
-        var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var regionWorlds = worlds.Where(w => string.Equals(w.Region, region, StringComparison.OrdinalIgnoreCase)).ToList();
-        var perWorldTasks = regionWorlds.Select(w => _store.GetByWorldAsync(w.Id, ct)).ToArray();
+        var worlds = await _worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
+        var perWorldTasks = worlds.Where(resolution.Matches).Select(w => _store.GetByWorldAsync(w.Id, ct)).ToArray();
         await Task.WhenAll(perWorldTasks).ConfigureAwait(false);
         return perWorldTasks.SelectMany(t => t.Result).ToList();
     }

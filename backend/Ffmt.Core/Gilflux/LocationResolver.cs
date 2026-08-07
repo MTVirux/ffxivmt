@@ -1,8 +1,8 @@
-using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
 
 namespace Ffmt.Core.Gilflux;
 
-public sealed class LocationResolver(IWorldStore worldStore)
+public sealed class LocationResolver(WorldStructureService worldStructure)
 {
     public async Task<LocationResolution?> ResolveAsync(string target, CancellationToken ct = default)
     {
@@ -11,7 +11,7 @@ public sealed class LocationResolver(IWorldStore worldStore)
             return null;
         }
 
-        var worlds = await worldStore.GetAllAsync(ct).ConfigureAwait(false);
+        var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
         if (worlds.Count == 0)
         {
             return null;

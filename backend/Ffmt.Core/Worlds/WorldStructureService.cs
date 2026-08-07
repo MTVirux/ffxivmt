@@ -10,6 +10,7 @@ namespace Ffmt.Core.Worlds;
 public sealed class WorldStructureService
 {
     private const string TreeCacheKey = "ffmt:worlds:structure";
+    private const string WorldsCacheKey = "ffmt:worlds:all";
     private const string WorldsByIdCacheKey = "ffmt:worlds:byId";
     private const string ItemNamesCacheKey = "ffmt:items:namesById";
     private const string MarketableIdsCacheKey = "ffmt:items:marketableIds";
@@ -31,33 +32,16 @@ public sealed class WorldStructureService
         _ttl = TimeSpan.FromSeconds(Math.Max(1, gilflux.Value.WorldStructureCacheSeconds));
     }
 
-    public async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>>
-        GetAsync(CancellationToken ct = default)
-    {
-        if (_cache.TryGetValue(TreeCacheKey, out IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>? cached)
-            && cached is not null)
-        {
-            return cached;
-        }
+    public Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>>>
+        GetAsync(CancellationToken ct = default) =>
+        GetOrCreateAsync(TreeCacheKey, async () => Build(await GetWorldsAsync(ct).ConfigureAwait(false)));
 
-        var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var built = Build(worlds);
-        _cache.Set(TreeCacheKey, built, _ttl);
-        return built;
-    }
+    public Task<IReadOnlyList<World>> GetWorldsAsync(CancellationToken ct = default) =>
+        GetOrCreateAsync(WorldsCacheKey, () => _worldStore.GetAllAsync(ct));
 
-    public async Task<IReadOnlyDictionary<int, World>> GetWorldsByIdAsync(CancellationToken ct = default)
-    {
-        if (_cache.TryGetValue(WorldsByIdCacheKey, out IReadOnlyDictionary<int, World>? cached) && cached is not null)
-        {
-            return cached;
-        }
-
-        var worlds = await _worldStore.GetAllAsync(ct).ConfigureAwait(false);
-        var byId = (IReadOnlyDictionary<int, World>)worlds.ToDictionary(w => w.Id);
-        _cache.Set(WorldsByIdCacheKey, byId, _ttl);
-        return byId;
-    }
+    public Task<IReadOnlyDictionary<int, World>> GetWorldsByIdAsync(CancellationToken ct = default) =>
+        GetOrCreateAsync(WorldsByIdCacheKey, async () =>
+            (IReadOnlyDictionary<int, World>)(await GetWorldsAsync(ct).ConfigureAwait(false)).ToDictionary(w => w.Id));
 
     public async Task<World?> GetWorldAsync(int id, CancellationToken ct = default)
     {
@@ -65,28 +49,20 @@ public sealed class WorldStructureService
         return byId.TryGetValue(id, out var w) ? w : null;
     }
 
-    public async Task<IReadOnlyDictionary<int, string>> GetItemNamesAsync(CancellationToken ct = default)
+    public Task<IReadOnlyDictionary<int, string>> GetItemNamesAsync(CancellationToken ct = default) =>
+        GetOrCreateAsync(ItemNamesCacheKey, () => _itemStore.GetAllNamesAsync(ct));
+
+    public Task<IReadOnlyList<int>> GetMarketableItemIdsAsync(CancellationToken ct = default) =>
+        GetOrCreateAsync(MarketableIdsCacheKey, () => _itemStore.GetMarketableIdsAsync(ct));
+
+    private async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> load)
     {
-        if (_cache.TryGetValue(ItemNamesCacheKey, out IReadOnlyDictionary<int, string>? cached) && cached is not null)
+        var value = await _cache.GetOrCreateAsync(key, entry =>
         {
-            return cached;
-        }
-
-        var names = await _itemStore.GetAllNamesAsync(ct).ConfigureAwait(false);
-        _cache.Set(ItemNamesCacheKey, names, _ttl);
-        return names;
-    }
-
-    public async Task<IReadOnlyList<int>> GetMarketableItemIdsAsync(CancellationToken ct = default)
-    {
-        if (_cache.TryGetValue(MarketableIdsCacheKey, out IReadOnlyList<int>? cached) && cached is not null)
-        {
-            return cached;
-        }
-
-        var ids = await _itemStore.GetMarketableIdsAsync(ct).ConfigureAwait(false);
-        _cache.Set(MarketableIdsCacheKey, ids, _ttl);
-        return ids;
+            entry.AbsoluteExpirationRelativeToNow = _ttl;
+            return load();
+        }).ConfigureAwait(false);
+        return value!;
     }
 
     /// <summary>Restricts the tree to the regions we ingest, so the API never advertises a world
