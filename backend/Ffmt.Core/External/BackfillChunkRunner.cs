@@ -14,21 +14,6 @@ public sealed record ChunkRunResult(List<Sale> Sales, int FailedChunks);
 /// </summary>
 public static class BackfillChunkRunner
 {
-    public static IReadOnlyList<IReadOnlyList<T>> Chunk<T>(IReadOnlyList<T> source, int size)
-    {
-        var chunks = new List<IReadOnlyList<T>>();
-        for (var i = 0; i < source.Count; i += size)
-        {
-            var take = Math.Min(size, source.Count - i);
-            var chunk = new List<T>(take);
-            for (var j = 0; j < take; j++)
-                chunk.Add(source[i + j]);
-            chunks.Add(chunk);
-        }
-
-        return chunks;
-    }
-
     public static async Task<ChunkRunResult> RunAsync(
         IReadOnlyList<IReadOnlyList<int>> chunks,
         Func<IReadOnlyList<int>, CancellationToken, Task<List<Sale>?>> fetch,

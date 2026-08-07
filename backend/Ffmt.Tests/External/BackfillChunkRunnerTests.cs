@@ -95,15 +95,4 @@ public sealed class BackfillChunkRunnerTests
 
         gateCalls.Should().Be(4, "three initial requests plus the one retried request");
     }
-
-    [Fact]
-    public void Chunk_splits_the_source_including_a_short_final_chunk()
-    {
-        var chunks = BackfillChunkRunner.Chunk([1, 2, 3, 4, 5], 2);
-
-        chunks.Should().HaveCount(3);
-        chunks[0].Should().Equal(1, 2);
-        chunks[1].Should().Equal(3, 4);
-        chunks[2].Should().Equal(5);
-    }
 }
