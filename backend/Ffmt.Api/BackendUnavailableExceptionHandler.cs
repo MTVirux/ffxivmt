@@ -10,17 +10,16 @@ public sealed class BackendUnavailableExceptionHandler(ILogger<BackendUnavailabl
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        if (exception is not (NoHostAvailableException or DriverException or ElasticsearchUnavailableException))
+        if (exception is not (DriverException or ElasticsearchUnavailableException))
         {
             return false;
         }
 
         logger.LogWarning(exception, "Backend unavailable on {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
 
-        httpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-        await httpContext.Response.WriteAsJsonAsync(
-            new { status = false, message = "Backend unavailable" },
-            cancellationToken);
+        await ApiResults
+            .Fail("Backend unavailable", StatusCodes.Status503ServiceUnavailable)
+            .ExecuteAsync(httpContext);
         return true;
     }
 }

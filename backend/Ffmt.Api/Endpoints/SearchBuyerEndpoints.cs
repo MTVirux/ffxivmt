@@ -19,9 +19,9 @@ public static class SearchBuyerEndpoints
             {
                 if (string.IsNullOrWhiteSpace(buyer_name))
                 {
-                    return Results.Json(
-                        new { status = false, message = "GET request failed, please try again. Missing: buyer_name field" },
-                        statusCode: StatusCodes.Status400BadRequest);
+                    return ApiResults.Fail(
+                        "GET request failed, please try again. Missing: buyer_name field",
+                        StatusCodes.Status400BadRequest);
                 }
 
                 int? worldId = null;
@@ -36,13 +36,7 @@ public static class SearchBuyerEndpoints
                 // sales_by_buyer rows only carry the keys; project explicitly so we
                 // don't ship zeroed Hq/Quantity/UnitPrice fields the frontend would
                 // misread as legitimate zeros.
-                var projection = history.Select(s => new
-                {
-                    item_id = s.ItemId,
-                    world_id = s.WorldId,
-                    buyer_name = s.BuyerName,
-                    sale_time = s.SaleTime,
-                });
+                var projection = history.Select(s => new { s.ItemId, s.WorldId, s.BuyerName, s.SaleTime });
 
                 return Results.Ok(new
                 {

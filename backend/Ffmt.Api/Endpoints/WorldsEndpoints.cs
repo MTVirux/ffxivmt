@@ -23,17 +23,10 @@ public static class WorldsEndpoints
 
             if (structure.Count == 0)
             {
-                return Results.Json(
-                    new { status = false, message = "No worlds found" },
-                    statusCode: StatusCodes.Status404NotFound);
+                return ApiResults.Fail("No worlds found", StatusCodes.Status404NotFound);
             }
 
-            return Results.Ok(new
-            {
-                status = true,
-                message = "Worlds retrieved successfully",
-                data = structure,
-            });
+            return ApiResults.Ok("Worlds retrieved successfully", structure);
         });
 
         return app;

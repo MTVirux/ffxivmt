@@ -20,7 +20,7 @@ public static class UpdatedbEndpoints
             ILogger<GilfluxRankingUpdateLog> logger,
             CancellationToken ct) =>
         {
-            using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaGilflux });
+            using var _ = LogChannelScope.Begin(logger, LogChannels.ScyllaGilflux);
 
             await refresher.RefreshAsync(world_id, item_id, ct);
             logger.LogInformation("gilflux_ranking_update: refreshed (world={WorldId}, item={ItemId}).", world_id, item_id);

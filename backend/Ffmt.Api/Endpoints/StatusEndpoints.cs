@@ -17,13 +17,11 @@ public static class StatusEndpoints
         app.MapGet("/status", async (
             ScyllaHealthCheck scyllaHealth,
             IMemoryCache cache,
-            HttpContext context,
             CancellationToken ct) =>
         {
             if (cache.TryGetValue<StatusResponse>(CacheKey, out var cached) && cached is not null)
             {
-                context.Response.StatusCode = cached.Code;
-                return Results.Json(cached);
+                return Results.Json(cached, statusCode: cached.Code);
             }
 
             var result = await scyllaHealth.CheckHealthAsync(new HealthCheckContext(), ct);
@@ -32,8 +30,7 @@ public static class StatusEndpoints
                 : new StatusResponse("Scylla is down", 500);
 
             cache.Set(CacheKey, response, CacheTtl);
-            context.Response.StatusCode = response.Code;
-            return Results.Json(response);
+            return Results.Json(response, statusCode: response.Code);
         });
 
         return app;

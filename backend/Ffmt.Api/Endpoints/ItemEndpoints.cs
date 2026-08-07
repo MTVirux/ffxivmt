@@ -18,17 +18,10 @@ public static class ItemEndpoints
             var item = await items.GetAsync(id, ct);
             if (item is null)
             {
-                return Results.Json(
-                    new { status = false, message = "Item not found" },
-                    statusCode: StatusCodes.Status404NotFound);
+                return ApiResults.Fail("Item not found", StatusCodes.Status404NotFound);
             }
 
-            return Results.Ok(new
-            {
-                status = true,
-                message = "Item retrieved successfully",
-                data = item,
-            });
+            return ApiResults.Ok("Item retrieved successfully", item);
         });
 
         group.MapGet("/{id:int}/sales", async (
@@ -41,61 +34,43 @@ public static class ItemEndpoints
             CancellationToken ct) =>
         {
             var n = Math.Clamp(limit ?? 100, 1, 500);
+            object data;
 
             if (!string.IsNullOrWhiteSpace(target_location))
             {
                 var located = await salesReader.GetByItemAndLocationAsync(id, target_location, n, ct);
                 if (located is null)
                 {
-                    return Results.Json(
-                        new { status = false, message = $"Unknown location '{target_location}'" },
-                        statusCode: StatusCodes.Status404NotFound);
+                    return ApiResults.Fail($"Unknown location '{target_location}'", StatusCodes.Status404NotFound);
                 }
 
-                return Results.Ok(new
+                data = located;
+            }
+            else
+            {
+                if (world_id is null || world_id <= 0)
                 {
-                    status = true,
-                    message = "Sales retrieved successfully",
-                    data = located,
-                });
+                    return ApiResults.Fail("world_id or target_location is required", StatusCodes.Status400BadRequest);
+                }
+
+                data = await sales.GetByItemAndWorldAsync(id, world_id.Value, n, ct);
             }
 
-            if (world_id is null || world_id <= 0)
-            {
-                return Results.Json(
-                    new { status = false, message = "world_id or target_location is required" },
-                    statusCode: StatusCodes.Status400BadRequest);
-            }
-
-            var data = await sales.GetByItemAndWorldAsync(id, world_id.Value, n, ct);
-
-            return Results.Ok(new
-            {
-                status = true,
-                message = "Sales retrieved successfully",
-                data,
-            });
+            return ApiResults.Ok("Sales retrieved successfully", data);
         });
 
         group.MapGet("/get_by_name", async (string? name, IElasticItemSearch search, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return Results.Json(
-                    new { status = false, message = "No name provided" },
-                    statusCode: StatusCodes.Status400BadRequest);
+                return ApiResults.Fail("No name provided", StatusCodes.Status400BadRequest);
             }
 
             var normalised = ToTitleCase(name.Trim());
 
             var hits = await search.SearchByNameAsync(normalised, size: 25, ct);
 
-            return Results.Ok(new
-            {
-                status = true,
-                message = "Name provided",
-                data = hits,
-            });
+            return ApiResults.Ok("Name provided", hits);
         });
 
         return app;
