@@ -25,29 +25,20 @@ public static class GilfluxEndpoints
             {
                 if (string.IsNullOrWhiteSpace(target_location))
                 {
-                    return Results.Json(
-                        new { status = false, message = "No target location provided" },
-                        statusCode: StatusCodes.Status400BadRequest);
+                    return ApiResults.Fail("No target location provided", StatusCodes.Status400BadRequest);
                 }
 
-                var crafted = ParseTruthy(crafted_only);
-
-                var result = await reader.GetByLocationAsync(target_location, crafted, ct);
+                var result = await reader.GetByLocationAsync(target_location, ParseTruthy(crafted_only), ct);
                 if (result is null)
                 {
-                    return Results.Json(
-                        new { status = false, message = $"Unknown location '{target_location}'" },
-                        statusCode: StatusCodes.Status404NotFound);
+                    return ApiResults.Fail($"Unknown location '{target_location}'", StatusCodes.Status404NotFound);
                 }
 
-                return Results.Ok(new
-                {
-                    status = true,
-                    message = result.FromCache ? "Retrieved from cache" : "Success",
-                    data = result.Rankings,
-                    gilflux_timeframe_in_ms = opts.Value.TimeframesMs,
-                    request_id,
-                });
+                return Envelope(
+                    result.FromCache ? "Retrieved from cache" : "Success",
+                    result.Rankings,
+                    opts,
+                    request_id);
             })
             .WithRequestTimeout(TimeSpan.FromSeconds(120));
 
@@ -56,76 +47,50 @@ public static class GilfluxEndpoints
             string? target_location,
             string? request_id,
             IGilfluxRankingStore store,
-            LocationResolver resolver,
             GilfluxRankingReader reader,
             IOptions<GilfluxOptions> opts,
             CancellationToken ct) =>
         {
             if (item_id <= 0)
             {
-                return Results.Json(
-                    new { status = false, message = "Invalid item_id" },
-                    statusCode: StatusCodes.Status400BadRequest);
+                return ApiResults.Fail("Invalid item_id", StatusCodes.Status400BadRequest);
             }
 
-            IEnumerable<Ffmt.Core.Models.GilfluxRanking> rawRankings;
-
+            IReadOnlyList<EnrichedGilfluxRanking>? rankings;
             if (string.IsNullOrWhiteSpace(target_location))
             {
-                rawRankings = await store.GetByItemAsync(item_id, ct);
+                rankings = await reader.EnrichAsync(await store.GetByItemAsync(item_id, ct), ct);
             }
             else
             {
-                var resolution = await resolver.ResolveAsync(target_location, ct);
-                if (resolution is null)
+                rankings = await reader.GetByItemAndLocationAsync(item_id, target_location, ct);
+                if (rankings is null)
                 {
-                    return Results.Json(
-                        new { status = false, message = $"Unknown location '{target_location}'" },
-                        statusCode: StatusCodes.Status404NotFound);
+                    return ApiResults.Fail($"Unknown location '{target_location}'", StatusCodes.Status404NotFound);
                 }
-
-                rawRankings = resolution.Kind switch
-                {
-                    LocationKind.World      => await store.GetByItemAndWorldAsync(item_id, resolution.WorldId!.Value, ct),
-                    LocationKind.Datacenter => (await store.GetByItemAsync(item_id, ct))
-                        .Where(r => r.WorldId is not null), // narrowing happens in the post-enrich filter below
-                    LocationKind.Region     => (await store.GetByItemAsync(item_id, ct))
-                        .Where(r => r.WorldId is not null),
-                    _ => Array.Empty<Ffmt.Core.Models.GilfluxRanking>(),
-                };
-
-                // Enrich first so DC/region filtering can match against world metadata.
-                var enrichedAll = await reader.EnrichAsync(rawRankings, ct);
-                var filtered = resolution.Kind switch
-                {
-                    LocationKind.Datacenter => enrichedAll.Where(r => string.Equals(r.Datacenter, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)).ToList(),
-                    LocationKind.Region     => enrichedAll.Where(r => string.Equals(r.Region, resolution.CanonicalName, StringComparison.OrdinalIgnoreCase)).ToList(),
-                    _ => (IEnumerable<EnrichedGilfluxRanking>)enrichedAll,
-                };
-
-                return Results.Ok(new
-                {
-                    status = true,
-                    message = "Success",
-                    data = filtered,
-                    gilflux_timeframe_in_ms = opts.Value.TimeframesMs,
-                    request_id,
-                });
             }
 
-            var enriched = await reader.EnrichAsync(rawRankings, ct);
-            return Results.Ok(new
-            {
-                status = true,
-                message = "Success",
-                data = enriched,
-                gilflux_timeframe_in_ms = opts.Value.TimeframesMs,
-                request_id,
-            });
+            return Envelope("Success", rankings, opts, request_id);
         });
 
         return app;
     }
+
+    /// <summary>The gilflux success envelope carries two fields the shared <see cref="ApiResults.Ok"/>
+    /// does not, so it stays hand-written here.</summary>
+    private static IResult Envelope(
+        string message,
+        IReadOnlyList<EnrichedGilfluxRanking> data,
+        IOptions<GilfluxOptions> opts,
+        string? request_id) =>
+        Results.Ok(new
+        {
+            status = true,
+            message,
+            data,
+            gilflux_timeframe_in_ms = opts.Value.TimeframesMs,
+            request_id,
+        });
 
     private static bool ParseTruthy(string? value)
     {
