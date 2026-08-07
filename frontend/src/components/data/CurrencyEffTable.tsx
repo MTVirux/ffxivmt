@@ -12,6 +12,7 @@ import {
 import { useState, useMemo } from 'react';
 import type { CurrencyEfficiencyRow } from '../../api/types';
 import { formatGilCompact, formatNumber } from '../../lib/format';
+import { usePersistedSort } from '../../hooks/usePersistedSort';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
 
@@ -22,11 +23,12 @@ type Props = {
   onUnignore?: (id: number) => void;
 };
 
+const DEFAULT_SORT: SortingState = [{ id: 'ffmt_score', desc: true }];
+
 const nameFilter: FilterFn<CurrencyEfficiencyRow> = (row, _columnId, value) =>
   matchesItemName(row.original.name, value as string);
 
 export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUnignore }: Props) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'ffmt_score', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
 
   const columns = useMemo<ColumnDef<CurrencyEfficiencyRow>[]>(() => {
@@ -151,6 +153,12 @@ export default function CurrencyEffTable({ rows, ignoredItemIds, onIgnore, onUni
     }
     return base;
   }, [ignoredItemIds, onIgnore, onUnignore]);
+
+  const sortableIds = useMemo(
+    () => columns.map((c) => c.id).filter((id): id is string => typeof id === 'string'),
+    [columns],
+  );
+  const [sorting, setSorting] = usePersistedSort('currencyEff', DEFAULT_SORT, sortableIds);
 
   const table = useReactTable({
     data: rows,

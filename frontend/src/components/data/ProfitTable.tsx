@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from 'react';
 import type { ProfitRow } from '../../api/types';
 import { formatGilCompact, formatNumber } from '../../lib/format';
+import { usePersistedSort } from '../../hooks/usePersistedSort';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
 
@@ -21,6 +22,8 @@ type Props = {
   onIgnore?: (id: number) => void;
   onUnignore?: (id: number) => void;
 };
+
+const DEFAULT_SORT: SortingState = [{ id: 'ffmt_score', desc: true }];
 
 const nameFilter: FilterFn<ProfitRow> = (row, _columnId, value) =>
   matchesItemName(row.original.name, value as string);
@@ -112,7 +115,11 @@ export default function ProfitTable({ rows, ignoredItemIds, onIgnore, onUnignore
     return base;
   }, [ignoredItemIds, onIgnore, onUnignore]);
 
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'ffmt_score', desc: true }]);
+  const sortableIds = useMemo(
+    () => columns.map((c) => c.id).filter((id): id is string => typeof id === 'string'),
+    [columns],
+  );
+  const [sorting, setSorting] = usePersistedSort('itemProfit', DEFAULT_SORT, sortableIds);
   const [globalFilter, setGlobalFilter] = useState('');
   const table = useReactTable({
     data: rows,

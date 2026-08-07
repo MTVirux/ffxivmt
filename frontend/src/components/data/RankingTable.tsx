@@ -16,6 +16,7 @@ import type { RankingRow } from '../../lib/rankingAggregate';
 import { TIMEFRAMES } from '../../lib/rankingAggregate';
 import { formatGilCompact } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
+import { usePersistedSort } from '../../hooks/usePersistedSort';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
 
@@ -42,7 +43,6 @@ export default function RankingTable({
   onIgnore,
   onUnignore,
 }: Props) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: '1h', desc: true }]);
   const [globalFilter, setGlobalFilter] = useState('');
   const timeframes = timeframesProp ?? TIMEFRAMES;
 
@@ -143,6 +143,19 @@ export default function RankingTable({
     ];
     return cols;
   }, [showWorldExpand, timeframes, ignoredItemIds, onIgnore, onUnignore]);
+
+  // Timeframe columns are toggleable, so a constant '1h' default would name a
+  // missing column whenever the user hides it.
+  const fallbackSort = useMemo<SortingState>(() => {
+    const preferred = timeframes.some((tf) => tf.key === '1h') ? '1h' : timeframes[0]?.key;
+    return [{ id: preferred ?? 'last_sale', desc: true }];
+  }, [timeframes]);
+
+  const sortableIds = useMemo(
+    () => columns.map((c) => c.id).filter((id): id is string => typeof id === 'string'),
+    [columns],
+  );
+  const [sorting, setSorting] = usePersistedSort('ranking', fallbackSort, sortableIds);
 
   const table = useReactTable({
     data: rows,
