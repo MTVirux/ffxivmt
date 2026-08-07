@@ -1,10 +1,16 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
+
+# Props/manifests first so a source edit doesn't bust the restore layer.
 COPY backend/Directory.Build.props backend/Directory.Packages.props backend/global.json ./backend/
+COPY docker/ws_worker/Directory.Build.props docker/ws_worker/Directory.Packages.props ./docker/ws_worker/
+COPY backend/Ffmt.Core/Ffmt.Core.csproj ./backend/Ffmt.Core/
+COPY docker/ws_worker/WsWorker/WsWorker.csproj ./docker/ws_worker/WsWorker/
+RUN dotnet restore ./docker/ws_worker/WsWorker/WsWorker.csproj
+
 COPY backend/Ffmt.Core/ ./backend/Ffmt.Core/
 COPY docker/ws_worker/WsWorker/ ./docker/ws_worker/WsWorker/
-WORKDIR /src/docker/ws_worker/WsWorker
-RUN dotnet restore && dotnet publish -c Release -o /app
+RUN dotnet publish ./docker/ws_worker/WsWorker/WsWorker.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*

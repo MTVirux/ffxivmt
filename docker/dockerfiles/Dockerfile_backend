@@ -7,11 +7,9 @@ WORKDIR /src
 
 # Copy props/manifests first for better layer caching.
 COPY backend/global.json backend/Directory.Build.props backend/Directory.Packages.props ./backend/
-COPY backend/Ffmt.slnx ./backend/
 COPY backend/Ffmt.Core/Ffmt.Core.csproj ./backend/Ffmt.Core/
 COPY backend/Ffmt.Api/Ffmt.Api.csproj ./backend/Ffmt.Api/
 COPY backend/Ffmt.Cli/Ffmt.Cli.csproj ./backend/Ffmt.Cli/
-COPY backend/Ffmt.Tests/Ffmt.Tests.csproj ./backend/Ffmt.Tests/
 
 # Restore each project explicitly. Solution-level restore over a .slnx sometimes leaves
 # transitive packages un-materialized, which then trips the per-project publish below; per-
