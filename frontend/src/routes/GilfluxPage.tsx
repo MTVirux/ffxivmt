@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import RankingTable from '../components/data/RankingTable';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';
@@ -11,8 +11,9 @@ import type { Location, LocationKind } from '../api/types';
 
 export default function GilfluxPage() {
   const [prefs, patchPrefs] = useUserPrefs();
-  const [showHidden, setShowHidden] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const showHidden = prefs.showHidden;
+  const setShowHidden = (next: boolean) => patchPrefs({ showHidden: next });
 
   const location = useMemo<Location | undefined>(() => {
     const name = searchParams.get('loc');
@@ -22,7 +23,9 @@ export default function GilfluxPage() {
     return { kind, name, ...(kind === 'world' && wid ? { worldId: Number(wid) } : {}) };
   }, [searchParams, prefs.lastLocation]);
 
-  const craftedOnly = searchParams.get('crafted') === '1';
+  // A shared link wins for this visit; absent the param, fall back to what was saved.
+  const craftedParam = searchParams.get('crafted');
+  const craftedOnly = craftedParam === null ? prefs.craftedOnly : craftedParam === '1';
 
   const setLocation = (next: Location) => {
     patchPrefs({ lastLocation: next });
@@ -39,10 +42,10 @@ export default function GilfluxPage() {
   };
 
   const setCraftedOnly = (next: boolean) => {
+    patchPrefs({ craftedOnly: next });
     setSearchParams(
       (prev) => {
-        if (next) prev.set('crafted', '1');
-        else prev.delete('crafted');
+        prev.set('crafted', next ? '1' : '0');
         return prev;
       },
       { replace: true },
@@ -50,9 +53,15 @@ export default function GilfluxPage() {
   };
 
   const config = useAppConfig();
-  const timeframes = config.gilflux_timeframes.map((key) => ({ key, label: key }));
+  const timeframes = useMemo(
+    () => config.gilflux_timeframes.map((key) => ({ key, label: key })),
+    [config.gilflux_timeframes],
+  );
 
-  const visibleTimeframes = timeframes.filter((tf) => !prefs.hiddenTimeframes.includes(tf.key));
+  const visibleTimeframes = useMemo(
+    () => timeframes.filter((tf) => !prefs.hiddenTimeframes.includes(tf.key)),
+    [timeframes, prefs.hiddenTimeframes],
+  );
 
   const toggleTimeframe = (key: string) => {
     const isHidden = prefs.hiddenTimeframes.includes(key);
@@ -64,11 +73,24 @@ export default function GilfluxPage() {
     });
   };
 
+  // Stable identities here keep the virtualized table from rebuilding its
+  // columns - and re-deriving its sort - on every render.
+  const handleIgnore = useCallback(
+    (id: number) => patchPrefs((prev) => ({ ignoredItemIds: [...prev.ignoredItemIds, id] })),
+    [patchPrefs],
+  );
+  const handleUnignore = useCallback(
+    (id: number) =>
+      patchPrefs((prev) => ({ ignoredItemIds: prev.ignoredItemIds.filter((x) => x !== id) })),
+    [patchPrefs],
+  );
+
   const query = useGilfluxRanking(location, craftedOnly);
   const rows = useMemo(() => aggregateRankings(query.data ?? []), [query.data]);
-  const visibleRows = showHidden
-    ? rows
-    : rows.filter((r) => !prefs.ignoredItemIds.includes(r.item_id));
+  const visibleRows = useMemo(
+    () => (showHidden ? rows : rows.filter((r) => !prefs.ignoredItemIds.includes(r.item_id))),
+    [showHidden, rows, prefs.ignoredItemIds],
+  );
   const showWorldExpand = location?.kind !== 'world';
 
   return (
@@ -111,12 +133,8 @@ export default function GilfluxPage() {
             showWorldExpand={showWorldExpand}
             timeframes={visibleTimeframes}
             ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
-            onIgnore={(id) => patchPrefs((prev) => ({ ignoredItemIds: [...prev.ignoredItemIds, id] }))}
-            onUnignore={
-              showHidden
-                ? (id) => patchPrefs((prev) => ({ ignoredItemIds: prev.ignoredItemIds.filter((x) => x !== id) }))
-                : undefined
-            }
+            onIgnore={handleIgnore}
+            onUnignore={showHidden ? handleUnignore : undefined}
           />
         )}
       </section>

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import TextField from '../../components/form/TextField';
 import { useBuyerSearch } from '../../hooks/useBuyerSearch';
 import { useItemNames } from '../../hooks/useItemNames';
+import { useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { relativeTime } from '../../lib/time';
 import type { BuyerSearchRow, WorldStructure } from '../../api/types';
@@ -18,14 +19,22 @@ type FormValues = z.infer<typeof schema>;
 type Submission = { buyerName: string; world: string } | null;
 
 export default function BuyerSearchPage() {
-  const [world, setWorld] = useState('');
+  const [prefs, patchPrefs] = useUserPrefs();
   const [submission, setSubmission] = useState<Submission>(null);
+
+  // Kept separate from lastLocation: this picker has an "All worlds" option the
+  // tiered Location type can't express.
+  const world = prefs.buyerSearchWorld;
+  const setWorld = (next: string) => patchPrefs({ buyerSearchWorld: next });
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { buyerName: prefs.toolInputs.buyerSearch },
+  });
 
   const query = useBuyerSearch({
     buyerName: submission?.buyerName ?? '',
@@ -47,6 +56,9 @@ export default function BuyerSearchPage() {
   const itemNameMap = useItemNames(itemIds);
 
   const onSubmit = handleSubmit((values) => {
+    patchPrefs((prev) => ({
+      toolInputs: { ...prev.toolInputs, buyerSearch: values.buyerName },
+    }));
     setSubmission({ buyerName: values.buyerName, world });
   });
 

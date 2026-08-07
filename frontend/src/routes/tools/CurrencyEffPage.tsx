@@ -19,24 +19,31 @@ type FormValues = z.infer<typeof schema>;
 type Submission = { searchTerm: string; location: string } | null;
 
 export default function CurrencyEffPage() {
-  const [location, setLocation] = useState<Location | undefined>(undefined);
+  const [prefs, patchPrefs] = useUserPrefs();
   const [submission, setSubmission] = useState<Submission>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+
+  const location = prefs.lastLocation;
+  const setLocation = useCallback(
+    (next: Location) => patchPrefs({ lastLocation: next }),
+    [patchPrefs],
+  );
+  const showHidden = prefs.showHidden;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { searchTerm: prefs.toolInputs.currencyEff },
+  });
 
   const query = useCurrencyEfficiency({
     searchTerm: submission?.searchTerm ?? '',
     location: submission?.location ?? '',
     enabled: submission !== null,
   });
-
-  const [prefs, patchPrefs] = useUserPrefs();
-  const [showHidden, setShowHidden] = useState(false);
 
   const allRows = query.data?.status ? query.data.data : [];
   const visibleRows = showHidden
@@ -58,6 +65,9 @@ export default function CurrencyEffPage() {
       return;
     }
     setLocationError(null);
+    patchPrefs((prev) => ({
+      toolInputs: { ...prev.toolInputs, currencyEff: values.searchTerm },
+    }));
     setSubmission({ searchTerm: values.searchTerm, location: location.name });
   });
 
@@ -127,7 +137,7 @@ export default function CurrencyEffPage() {
                   <input
                     type="checkbox"
                     checked={showHidden}
-                    onChange={(e) => setShowHidden(e.target.checked)}
+                    onChange={(e) => patchPrefs({ showHidden: e.target.checked })}
                     className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
                   />
                   Show hidden items
