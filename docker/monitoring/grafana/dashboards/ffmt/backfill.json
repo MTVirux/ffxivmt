@@ -43,6 +43,27 @@
         { "expr": "sum by (region) (rate(ffmt_backfill_rows_total[5m]))", "legendFormat": "{{region}}", "refId": "A" }
       ],
       "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Stalled buckets",
+      "description": "Catalogue buckets whose request failed this pass. A steady non-zero figure means that slice of the catalogue is not progressing while the rest is.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "ffmt_backfill_stalled_buckets", "legendFormat": "{{region}} {{loop}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "History depth guaranteed across the catalogue",
+      "description": "Age of the oldest imported day, taken from the least advanced bucket. Should climb steadily; flat means the crawl has stopped making ground.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "ffmt_backfill_history_oldest_seconds", "legendFormat": "{{region}}", "refId": "A" }
+      ],
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 }
     }
   ],
   "refresh": "30s",

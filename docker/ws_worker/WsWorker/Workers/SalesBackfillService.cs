@@ -1,4 +1,3 @@
-using Cassandra;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.External;
 using Ffmt.Core.Gilflux;
@@ -14,9 +13,15 @@ using WsWorker.Options;
 
 namespace WsWorker.Workers;
 
+/// <summary>
+/// Imports Universalis history into <c>sales</c>. Progress is tracked per catalogue bucket rather
+/// than per region: a pass is well over three hundred requests, and requiring every one of them to
+/// succeed before advancing meant a single upstream failure pinned the whole region on the same
+/// window indefinitely.
+/// </summary>
 public sealed class SalesBackfillService : BackgroundService
 {
-    private readonly IScyllaSession _scylla;
+    private readonly IBackfillStateStore _stateStore;
     private readonly ISaleStore _saleStore;
     private readonly WorldStructureService _catalog;
     private readonly IDirtyPairQueue _dirtyPairs;
@@ -25,31 +30,25 @@ public sealed class SalesBackfillService : BackgroundService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SalesBackfillService> _logger;
 
-    private PreparedStatement _selectState = null!;
-    private PreparedStatement _upsertState = null!;
-
     private readonly TokenBucket _rateLimiter;
-
-    private const string SelectStateCql =
-        "SELECT last_import_at, earliest_import_at FROM ffmt.backfill_state WHERE region = ?";
-
-    private const string UpsertStateCql =
-        "INSERT INTO ffmt.backfill_state (region, last_import_at, earliest_import_at) VALUES (?, ?, ?)";
-
-    private readonly HashSet<string> _crawlComplete = new(StringComparer.OrdinalIgnoreCase);
-
-    private const string LiveLoop = "live";
-    private const string HistoricalLoop = "historical";
 
     private const int StateIdle = 0;
     private const int StateRunning = 1;
     private const int StateError = 3;
 
+    private enum BucketOutcome
+    {
+        Advanced,
+        Stalled,
+        Complete,
+        Skipped,
+    }
+
     private static void SetLoopState(string region, string loop, int state) =>
         MetricsCatalog.BackfillState.WithLabels(region, loop).Set(state);
 
     public SalesBackfillService(
-        IScyllaSession scylla,
+        IBackfillStateStore stateStore,
         ISaleStore saleStore,
         WorldStructureService catalog,
         IDirtyPairQueue dirtyPairs,
@@ -58,7 +57,7 @@ public sealed class SalesBackfillService : BackgroundService
         IHttpClientFactory httpClientFactory,
         ILogger<SalesBackfillService> logger)
     {
-        _scylla = scylla;
+        _stateStore = stateStore;
         _saleStore = saleStore;
         _catalog = catalog;
         _dirtyPairs = dirtyPairs;
@@ -74,21 +73,18 @@ public sealed class SalesBackfillService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        _selectState = await _scylla.PrepareAsync(SelectStateCql, ct);
-        _upsertState = await _scylla.PrepareAsync(UpsertStateCql, ct);
-
-        _logger.LogInformation("SalesBackfillService initialized — starting live-gap and historical crawl loops");
+        _logger.LogInformation("SalesBackfillService initialized - starting live-gap and historical crawl loops");
 
         await Task.WhenAll(
-            LiveGapFillLoop(ct),
-            HistoricalCrawlLoop(ct));
+            RunLoop(BackfillLoops.Live, _backfillOptions.LiveGapIntervalMinutes, ct),
+            RunLoop(BackfillLoops.Historical, _backfillOptions.HistoricalCrawlIntervalMinutes, ct));
     }
 
-    private async Task LiveGapFillLoop(CancellationToken ct)
+    private async Task RunLoop(string loop, int intervalMinutes, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            _logger.LogInformation("LiveGapFillLoop: starting pass");
+            _logger.LogInformation("Backfill [{Loop}]: starting pass", loop);
 
             foreach (var region in _uniOptions.RegionsToImport)
             {
@@ -97,7 +93,7 @@ public sealed class SalesBackfillService : BackgroundService
 
                 try
                 {
-                    await RunLiveGapPass(region, ct);
+                    await RunPass(region, loop, ct);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
@@ -105,181 +101,68 @@ public sealed class SalesBackfillService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "LiveGapFillLoop: unhandled error for region {Region}", region);
+                    _logger.LogWarning(ex, "Backfill [{Region}/{Loop}]: unhandled error", region, loop);
                 }
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(_backfillOptions.LiveGapIntervalMinutes), ct);
+            await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct);
         }
     }
 
-    private async Task RunLiveGapPass(string region, CancellationToken ct)
+    private async Task RunPass(string region, string loop, CancellationToken ct)
     {
-        SetLoopState(region, LiveLoop, StateRunning);
+        SetLoopState(region, loop, StateRunning);
         var faulted = false;
         try
         {
             var now = DateTimeOffset.UtcNow;
+            var tuning = _backfillOptions.Tuning;
 
-            var (lastImportAt, _) = await ReadState(region);
+            var itemIds = await _catalog.GetMarketableItemIdsAsync(ct);
+            var bucketCount = BackfillBuckets.BucketCountFor(itemIds.Count, tuning.ItemsPerRequest);
+            var groups = BackfillBuckets.Group(itemIds, bucketCount);
 
-            if (lastImportAt is null)
+            var states = await LoadOrSeedStates(region, loop, bucketCount, now, ct);
+
+            var stalled = 0;
+            var advanced = 0;
+            var completed = 0;
+
+            using var semaphore = new SemaphoreSlim(tuning.Concurrency, tuning.Concurrency);
+
+            var tasks = groups.Select(async group =>
             {
-                await WriteState(region, lastImportAt: now, earliestImportAt: null);
-                _logger.LogInformation("LiveGapFillLoop [{Region}]: first run — initialised last_import_at pointer, skipping fetch", region);
-                return;
-            }
+                if (!states.TryGetValue(group.Key, out var state) || state.CrawlComplete)
+                    return;
 
-            var gap = now - lastImportAt.Value;
-            if (gap < TimeSpan.FromMinutes(_backfillOptions.SkipIfGapUnderMinutes))
-            {
-                _logger.LogInformation("LiveGapFillLoop [{Region}]: gap {Gap:F1} min < threshold, skipping", region, gap.TotalMinutes);
-                return;
-            }
-
-            var entriesWithinSeconds = (long)gap.TotalSeconds;
-            _logger.LogInformation("LiveGapFillLoop [{Region}]: fetching {Gap:F1} min of history", region, gap.TotalMinutes);
-
-            var (sales, failedChunks) = await FetchHistory(region, entriesWithinSeconds, ct);
-            _logger.LogInformation("LiveGapFillLoop [{Region}]: fetched {Count} sales", region, sales.Count);
-
-            // Advancing last_import_at past a window we only partly fetched would leave a hole
-            // that nothing ever revisits.
-            if (failedChunks > 0)
-            {
-                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, LiveLoop).Inc();
-                _logger.LogWarning(
-                    "LiveGapFillLoop [{Region}]: {Failed} chunk request(s) failed after retries - not advancing the pointer, the gap will be refetched",
-                    region, failedChunks);
-                return;
-            }
-
-            var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-            var dirtyPairs = sales
-                .Where(s => s.SaleTime > sevenDaysAgo)
-                .Select(s => (s.WorldId, s.ItemId))
-                .ToHashSet();
-
-            await _saleStore.AddBatchAsync(sales, ct);
-            await WriteState(region, lastImportAt: now, earliestImportAt: null);
-
-            if (dirtyPairs.Count > 0)
-            {
-                await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
-                _logger.LogInformation("LiveGapFillLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
-            }
-        }
-        catch
-        {
-            faulted = true;
-            throw;
-        }
-        finally
-        {
-            SetLoopState(region, LiveLoop, faulted ? StateError : StateIdle);
-        }
-    }
-
-    private async Task HistoricalCrawlLoop(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            _logger.LogInformation("HistoricalCrawlLoop: starting pass");
-
-            foreach (var region in _uniOptions.RegionsToImport)
-            {
-                if (ct.IsCancellationRequested)
-                    break;
-
-                if (_crawlComplete.Contains(region))
-                    continue;
-
+                await semaphore.WaitAsync(ct);
                 try
                 {
-                    await RunHistoricalCrawlPass(region, ct);
+                    switch (await RunBucket(region, loop, state, group.Value, now, ct))
+                    {
+                        case BucketOutcome.Stalled: Interlocked.Increment(ref stalled); break;
+                        case BucketOutcome.Advanced: Interlocked.Increment(ref advanced); break;
+                        case BucketOutcome.Complete: Interlocked.Increment(ref completed); break;
+                    }
                 }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                finally
                 {
-                    return;
+                    semaphore.Release();
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "HistoricalCrawlLoop: unhandled error for region {Region}", region);
-                }
-            }
+            });
 
-            await Task.Delay(TimeSpan.FromMinutes(_backfillOptions.HistoricalCrawlIntervalMinutes), ct);
-        }
-    }
+            await Task.WhenAll(tasks);
 
-    private async Task RunHistoricalCrawlPass(string region, CancellationToken ct)
-    {
-        SetLoopState(region, HistoricalLoop, StateRunning);
-        var faulted = false;
-        try
-        {
-            var now = DateTimeOffset.UtcNow;
-
-            var (_, earliestImportAt) = await ReadState(region);
-
-            if (earliestImportAt is null)
-            {
-                await WriteState(region, lastImportAt: null, earliestImportAt: now);
-                _logger.LogInformation("HistoricalCrawlLoop [{Region}]: first run — initialised earliest_import_at pointer", region);
-                return;
-            }
-
-            var chunkStart = earliestImportAt.Value - TimeSpan.FromDays(_backfillOptions.ChunkDays);
-            var entriesWithinSeconds = (long)(now - chunkStart).TotalSeconds;
+            MetricsCatalog.BackfillStalledBuckets.WithLabels(region, loop).Set(stalled);
+            if (stalled > 0)
+                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, loop).Inc(stalled);
 
             _logger.LogInformation(
-                "HistoricalCrawlLoop [{Region}]: crawling chunk {ChunkStart:u} → {EarliestImportAt:u}",
-                region, chunkStart, earliestImportAt.Value);
+                "Backfill [{Region}/{Loop}]: {Advanced} advanced, {Stalled} stalled, {Completed} finished their history",
+                region, loop, advanced, stalled, completed);
 
-            var (allSales, failedChunks) = await FetchHistory(region, entriesWithinSeconds, ct);
-            _logger.LogInformation("HistoricalCrawlLoop [{Region}]: fetched {Count} total sales for chunk", region, allSales.Count);
-
-            var toWrite = allSales.Where(s => s.SaleTime < earliestImportAt.Value).ToList();
-
-            // Sales are idempotent upserts on their primary key, so writing a partial window is
-            // safe - a later refetch of the same window simply overwrites with the same rows.
-            if (toWrite.Count > 0)
-            {
-                var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-                var dirtyPairs = toWrite
-                    .Where(s => s.SaleTime > sevenDaysAgo)
-                    .Select(s => (s.WorldId, s.ItemId))
-                    .ToHashSet();
-
-                await _saleStore.AddBatchAsync(toWrite, ct);
-
-                if (dirtyPairs.Count > 0)
-                {
-                    await _dirtyPairs.EnqueueManyAsync(dirtyPairs, ct);
-                    _logger.LogInformation("HistoricalCrawlLoop [{Region}]: enqueued {Count} dirty pairs", region, dirtyPairs.Count);
-                }
-            }
-
-            // A failed fetch is not evidence that the history ran out. Keep what we got, leave the
-            // pointer where it is, and retry the same window next pass - otherwise one transient
-            // 5xx retires the crawl for good.
-            if (failedChunks > 0)
-            {
-                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, HistoricalLoop).Inc();
-                _logger.LogWarning(
-                    "HistoricalCrawlLoop [{Region}]: {Failed} chunk request(s) failed after retries - wrote {Written} sales, leaving the pointer put to refetch",
-                    region, failedChunks, toWrite.Count);
-                return;
-            }
-
-            if (toWrite.Count == 0)
-            {
-                _logger.LogInformation("HistoricalCrawlLoop [{Region}]: 0 new entries written — crawl complete", region);
-                _crawlComplete.Add(region);
-                return;
-            }
-
-            await WriteState(region, lastImportAt: null, earliestImportAt: chunkStart);
+            if (loop == BackfillLoops.Historical)
+                await ReportHistoryDepth(region, now, ct);
         }
         catch
         {
@@ -288,68 +171,147 @@ public sealed class SalesBackfillService : BackgroundService
         }
         finally
         {
-            SetLoopState(region, HistoricalLoop, faulted ? StateError : StateIdle);
+            SetLoopState(region, loop, faulted ? StateError : StateIdle);
         }
     }
 
-    private async Task<(DateTimeOffset? LastImportAt, DateTimeOffset? EarliestImportAt)> ReadState(string region)
+    private async Task<BucketOutcome> RunBucket(
+        string region,
+        string loop,
+        BackfillBucketState state,
+        IReadOnlyList<int> items,
+        DateTimeOffset now,
+        CancellationToken ct)
     {
-        var rows = await _scylla.Session.ExecuteAsync(_selectState.Bind(region));
-        var row = rows.FirstOrDefault();
-        if (row is null)
-            return (null, null);
+        DateTimeOffset windowStart;
+        DateTimeOffset? olderThan = null;
 
-        DateTimeOffset? lastImportAt = null;
-        DateTimeOffset? earliestImportAt = null;
-
-        try
+        if (loop == BackfillLoops.Historical)
         {
-            var raw = row.GetValue<DateTimeOffset?>("last_import_at");
-            if (raw.HasValue)
-                lastImportAt = raw;
+            var earliest = state.EarliestImportAt ?? now;
+            windowStart = BackfillWindow.HistoricalStart(earliest, _backfillOptions.ChunkDays);
+            olderThan = earliest;
         }
-        catch { /* column null */ }
-
-        try
+        else
         {
-            var raw = row.GetValue<DateTimeOffset?>("earliest_import_at");
-            if (raw.HasValue)
-                earliestImportAt = raw;
+            var last = state.LastImportAt ?? now;
+            if (now - last < TimeSpan.FromMinutes(_backfillOptions.SkipIfGapUnderMinutes))
+                return BucketOutcome.Skipped;
+
+            windowStart = last;
         }
-        catch { /* column null */ }
 
-        return (lastImportAt, earliestImportAt);
-    }
-
-    private async Task WriteState(string region, DateTimeOffset? lastImportAt, DateTimeOffset? earliestImportAt)
-    {
-        var (currentLast, currentEarliest) = await ReadState(region);
-        var newLast = lastImportAt ?? currentLast;
-        var newEarliest = earliestImportAt ?? currentEarliest;
-        await _scylla.Session.ExecuteAsync(_upsertState.Bind(region, newLast, newEarliest));
-    }
-
-    /// <summary>
-    /// Returns the fetched sales plus the number of chunk requests still failing after their
-    /// retries. Callers must not treat an empty result as "no history left" unless that count is
-    /// zero - a transient failure would otherwise retire the crawl permanently.
-    /// </summary>
-    private async Task<ChunkRunResult> FetchHistory(string region, long entriesWithinSeconds, CancellationToken ct)
-    {
-        var itemIds = await _catalog.GetMarketableItemIdsAsync(ct);
+        var entriesWithinSeconds = BackfillWindow.EntriesWithinSeconds(windowStart, now);
         var tuning = _backfillOptions.Tuning;
-
-        var chunks = BackfillChunkRunner.Chunk(itemIds, tuning.ItemsPerRequest);
         var requestTimeout = tuning.RequestTimeoutFor(entriesWithinSeconds);
 
-        return await BackfillChunkRunner.RunAsync(
-            chunks,
+        var run = await BackfillChunkRunner.RunAsync(
+            [items],
             (chunk, token) => FetchChunk(region, chunk, entriesWithinSeconds, requestTimeout, token),
             tuning.RetryRounds,
-            tuning.Concurrency,
+            concurrency: 1,
             TimeSpan.FromSeconds(tuning.RetryRoundDelaySeconds),
             _rateLimiter.ConsumeAsync,
             ct);
+
+        // Leaving the pointer put is what makes this bucket retry next pass. It must never be
+        // confused with "this bucket has no more history".
+        if (run.FailedChunks > 0)
+            return BucketOutcome.Stalled;
+
+        var toWrite = olderThan is null
+            ? run.Sales
+            : run.Sales.Where(s => s.SaleTime < olderThan.Value).ToList();
+
+        if (toWrite.Count > 0)
+        {
+            await _saleStore.AddBatchAsync(toWrite, ct);
+            await EnqueueDirtyPairs(toWrite, ct);
+        }
+
+        if (loop == BackfillLoops.Historical)
+        {
+            if (toWrite.Count == 0)
+            {
+                await _stateStore.UpsertBucketAsync(state with { CrawlComplete = true }, ct);
+                return BucketOutcome.Complete;
+            }
+
+            await _stateStore.UpsertBucketAsync(state with { EarliestImportAt = windowStart }, ct);
+        }
+        else
+        {
+            await _stateStore.UpsertBucketAsync(state with { LastImportAt = now }, ct);
+        }
+
+        return BucketOutcome.Advanced;
+    }
+
+    /// <summary>
+    /// Buckets advance independently, so the depth guaranteed across the whole catalogue is the
+    /// one furthest behind.
+    /// </summary>
+    private async Task ReportHistoryDepth(string region, DateTimeOffset now, CancellationToken ct)
+    {
+        var states = await _stateStore.GetBucketsAsync(region, BackfillLoops.Historical, ct);
+
+        var pending = states
+            .Where(s => !s.CrawlComplete && s.EarliestImportAt.HasValue)
+            .Select(s => s.EarliestImportAt!.Value)
+            .ToList();
+
+        if (pending.Count == 0)
+            return;
+
+        MetricsCatalog.BackfillHistoryOldestSeconds.WithLabels(region)
+            .Set((now - pending.Max()).TotalSeconds);
+    }
+
+    private async Task<Dictionary<int, BackfillBucketState>> LoadOrSeedStates(
+        string region, string loop, int bucketCount, DateTimeOffset now, CancellationToken ct)
+    {
+        var existing = await _stateStore.GetBucketsAsync(region, loop, ct);
+        var byBucket = existing.ToDictionary(s => s.Bucket);
+
+        if (byBucket.Count > 0)
+        {
+            // The catalogue grows, so later passes can see buckets that were never seeded.
+            for (var bucket = 0; bucket < bucketCount; bucket++)
+            {
+                byBucket.TryAdd(bucket, new BackfillBucketState(region, loop, bucket, now, now, false));
+            }
+
+            return byBucket;
+        }
+
+        var (legacyLast, legacyEarliest) = await _stateStore.GetLegacyPointersAsync(region, ct);
+        var seedLast = legacyLast ?? now;
+        var seedEarliest = legacyEarliest ?? now;
+
+        _logger.LogInformation(
+            "Backfill [{Region}/{Loop}]: seeding {Count} buckets from the pre-bucket pointers (last={Last:u}, earliest={Earliest:u})",
+            region, loop, bucketCount, seedLast, seedEarliest);
+
+        for (var bucket = 0; bucket < bucketCount; bucket++)
+        {
+            var seeded = new BackfillBucketState(region, loop, bucket, seedLast, seedEarliest, false);
+            byBucket[bucket] = seeded;
+            await _stateStore.UpsertBucketAsync(seeded, ct);
+        }
+
+        return byBucket;
+    }
+
+    private async Task EnqueueDirtyPairs(IReadOnlyList<Sale> sales, CancellationToken ct)
+    {
+        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        var pairs = sales
+            .Where(s => s.SaleTime > sevenDaysAgo)
+            .Select(s => (s.WorldId, s.ItemId))
+            .ToHashSet();
+
+        if (pairs.Count > 0)
+            await _dirtyPairs.EnqueueManyAsync(pairs, ct);
     }
 
     /// <summary>Null means the request failed; an empty list means the window genuinely held no sales.</summary>
@@ -365,8 +327,6 @@ public sealed class SalesBackfillService : BackgroundService
 
         var client = _httpClientFactory.CreateClient("backfill_universalis");
 
-        // The crawl asks for a wider window with every chunk it walks back, so the response grows
-        // and a fixed timeout eventually fails every request. Budget from the window instead.
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(requestTimeout);
         var token = timeoutCts.Token;
@@ -399,7 +359,8 @@ public sealed class SalesBackfillService : BackgroundService
             if (!response.IsSuccessStatusCode)
             {
                 MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
-                _logger.LogWarning("FetchChunk [{Region}] returned {StatusCode} for {Url}", region, (int)response.StatusCode, url);
+                _logger.LogWarning("FetchChunk [{Region}] returned {StatusCode} for {Count} items",
+                    region, (int)response.StatusCode, itemIds.Count);
                 return null;
             }
 
