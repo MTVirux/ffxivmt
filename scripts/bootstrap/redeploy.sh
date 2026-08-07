@@ -42,6 +42,10 @@ if [ -f .env ]; then
     set +a
 fi
 
+# A .env predating the HOST_PRIVATE_IP template entry has no value to carry over,
+# so derive it here - this is the app VM, so it is APP_PRIVATE_IP.
+export HOST_PRIVATE_IP="${APP_PRIVATE_IP:?APP_PRIVATE_IP missing from .env}"
+
 # Re-render env in case template changed.
 render_env_file env .env
 

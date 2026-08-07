@@ -14,6 +14,7 @@ services:
     build:
       # runtime stage has no pnpm
       target: build
+    image: ffmt_frontend_dev
     command: pnpm dev --host 0.0.0.0
     ports:
       - "5173:5173"

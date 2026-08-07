@@ -21,9 +21,7 @@ COMPOSE_PROJECT_NAME=ffmt
 # ######################## HOST BIND PORTS ######################## #
 
 # ffmt_proxy (Caddy) binds 80/443; backend services are network-internal only.
-
-# Re-exposed by docker-compose.dev.yml for direct probing of the backend.
-BACKEND_HOST_PORT=8080
+# docker-compose.dev.yml re-exposes the backend on ${BACKEND_HOST_PORT:-8080}.
 
 
 # ######################## SSL CERT CONFIG ######################## #
@@ -38,6 +36,10 @@ ZERO_SSL_MONITORING_DOMAIN=${ZERO_SSL_MONITORING_DOMAIN}
 # Cloud-init substitutes this with the Scylla VM's private IP. Empty in single-host dev.
 SCYLLA_PRIVATE_IP=${SCYLLA_PRIVATE_IP}
 APP_PRIVATE_IP=${APP_PRIVATE_IP}
+
+# Whichever of the two above belongs to *this* VM. The role scripts set it before
+# rendering; node_exporter binds it so only the private NIC is exposed.
+HOST_PRIVATE_IP=${HOST_PRIVATE_IP}
 
 
 # ######################## Archive (Hetzner Object Storage) ######################## #

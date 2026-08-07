@@ -24,6 +24,7 @@ mkdir -p /mnt/scylla-data/{data,commitlog,saved_caches,log}
 mount -a
 
 # 2. Render env (only fields Scylla compose interpolates)
+export HOST_PRIVATE_IP="$SCYLLA_PRIVATE_IP"
 render_env_file env .env
 
 # 3. Bring up Scylla

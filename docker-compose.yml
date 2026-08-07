@@ -1,3 +1,14 @@
+# Shared by the two .NET services. SCYLLA_PRIVATE_IP is empty in single-host dev,
+# so the default keeps them on the compose-network service name.
+x-dotnet-env: &dotnet-env
+  ASPNETCORE_ENVIRONMENT: Production
+  Scylla__ContactPoints__0: ${SCYLLA_PRIVATE_IP:-ffmt_scylla_node}
+  Redis__Host: ffmt_redis
+  Redis__Port: "6379"
+  FfmtLogging__LogDirectory: /app/logs
+  Quarantine__ShadowMode: ${Quarantine__ShadowMode}
+  Quarantine__MedianMultiplier: ${Quarantine__MedianMultiplier}
+
 services:
 
   ffmt_backend:
@@ -11,22 +22,14 @@ services:
       - ffmt_elastic
       - ffmt_redis
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - Scylla__ContactPoints__0=ffmt_scylla_node
-      - Elastic__Url=http://ffmt_elastic:9200
-      - Redis__Host=ffmt_redis
-      - Redis__Port=6379
-      - FfmtLogging__LogDirectory=/app/logs
-      - Archive__Endpoint=${Archive__Endpoint}
-      - Archive__Bucket=${Archive__Bucket}
-      - Archive__AccessKey=${Archive__AccessKey}
-      - Archive__SecretKey=${Archive__SecretKey}
-      - Quarantine__ShadowMode=${Quarantine__ShadowMode}
-      - Quarantine__MedianMultiplier=${Quarantine__MedianMultiplier}
+      <<: *dotnet-env
+      Elastic__Url: http://ffmt_elastic:9200
+      Archive__Endpoint: ${Archive__Endpoint}
+      Archive__Bucket: ${Archive__Bucket}
+      Archive__AccessKey: ${Archive__AccessKey}
+      Archive__SecretKey: ${Archive__SecretKey}
     volumes:
       - ./logs/backend:/app/logs
-    networks:
-      - ffmt_network
 
   ffmt_frontend:
     build:
@@ -36,8 +39,6 @@ services:
         VITE_API_BASE_URL: /api/v1
     image: ffmt_frontend
     restart: unless-stopped
-    networks:
-      - ffmt_network
 
   ffmt_proxy:
     container_name: ffmt_proxy
@@ -57,8 +58,6 @@ services:
     depends_on:
       - ffmt_frontend
       - ffmt_backend
-    networks:
-      - ffmt_network
 
   ffmt_redis:
     image: redis:7-alpine
@@ -77,8 +76,6 @@ services:
       resources:
         limits:
           memory: 384m
-    networks:
-      - ffmt_network
 
   ffmt_scylla_node:
     build:
@@ -103,8 +100,6 @@ services:
       resources:
         limits:
           memory: 6g
-    networks:
-      - ffmt_network
 
   ffmt_elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.0
@@ -117,8 +112,6 @@ services:
       resources:
         limits:
           memory: 1g
-    networks:
-      - ffmt_network
 
   ffmt_ws_worker:
     build:
@@ -129,17 +122,9 @@ services:
     depends_on:
       - ffmt_redis
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - Scylla__ContactPoints__0=ffmt_scylla_node
-      - Redis__Host=ffmt_redis
-      - Redis__Port=6379
-      - FfmtLogging__LogDirectory=/app/logs
-      - Quarantine__ShadowMode=${Quarantine__ShadowMode}
-      - Quarantine__MedianMultiplier=${Quarantine__MedianMultiplier}
+      <<: *dotnet-env
     volumes:
       - ./logs/ws_worker:/app/logs
-    networks:
-      - ffmt_network
 
   ffmt_node_exporter:
     image: prom/node-exporter:v1.8.2
@@ -156,7 +141,8 @@ services:
       - "/:/host:ro,rslave"
 
 networks:
-  ffmt_network:
+  # Keeps the external name ffmt_network - the monitoring stack joins it.
+  default:
     name: ffmt_network
     driver: bridge
 
