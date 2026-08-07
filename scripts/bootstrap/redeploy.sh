@@ -58,6 +58,8 @@ wait_for_http http://127.0.0.1:8080/health 300
 SELF_IPV4="$(curl -fsS https://ipv4.icanhazip.com)"
 bring_up_monitoring
 
+ensure_app_crons
+
 if [ "$ARG_UPDATEDB" -eq 1 ]; then
     log_info "Running ffmt updatedb..."
     bash scripts/sh/update_db_data.sh
