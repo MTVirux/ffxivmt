@@ -36,6 +36,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IGilfluxRankingStore, ScyllaGilfluxRankingStore>();
         services.AddSingleton<IRankingRefresher, ScyllaRankingRefresher>();
         services.AddSingleton<IDirtyPairQueue, ScyllaDirtyPairQueue>();
+        services.AddSingleton<IBackfillStateStore, ScyllaBackfillStateStore>();
         services.AddSingleton<ScyllaSaleStore>();
         services.AddSingleton<ISaleStore>(sp => new FilteringSaleStore(
             sp.GetRequiredService<ScyllaSaleStore>(),

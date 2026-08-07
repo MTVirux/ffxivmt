@@ -118,6 +118,16 @@ public static class MetricsCatalog
         "Backfill passes that finished with failed chunks and so left their pointer unmoved.",
         new CounterConfiguration { LabelNames = ["region", "loop"] });
 
+    public static readonly Gauge BackfillStalledBuckets = Prometheus.Metrics.CreateGauge(
+        "ffmt_backfill_stalled_buckets",
+        "Catalogue buckets whose request failed this pass, so their pointer did not advance.",
+        new GaugeConfiguration { LabelNames = ["region", "loop"] });
+
+    public static readonly Gauge BackfillHistoryOldestSeconds = Prometheus.Metrics.CreateGauge(
+        "ffmt_backfill_history_oldest_seconds",
+        "Age of the oldest imported sale day, measured from the least advanced bucket.",
+        new GaugeConfiguration { LabelNames = ["region"] });
+
     public static readonly Gauge BackfillState = Prometheus.Metrics.CreateGauge(
         "ffmt_backfill_state",
         "Backfill loop state per region and loop: 0=idle, 1=running, 2=paused, 3=error.",
@@ -170,6 +180,8 @@ public static class MetricsCatalog
         BackfillPagesTotal,
         BackfillRowsTotal,
         BackfillPointerStalledTotal,
+        BackfillStalledBuckets,
+        BackfillHistoryOldestSeconds,
         BackfillState,
         SalesQuarantinedTotal,
         SalesNoBaselineTotal,
