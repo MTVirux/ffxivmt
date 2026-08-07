@@ -1,49 +1,73 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { LocationKind } from '../api/types';
+import { z } from 'zod';
 
-export type UserPrefs = {
-  lastLocation?: { kind: LocationKind; name: string; worldId?: number };
-  lastWorldId?: number;
-  hiddenTimeframes: string[];
-  ignoredItemIds: number[];
-};
+const locationSchema = z.object({
+  kind: z.enum(['world', 'datacenter', 'region']),
+  name: z.string(),
+  worldId: z.number().finite().positive().optional(),
+});
+
+const sortEntrySchema = z.object({ id: z.string(), desc: z.boolean() });
+
+// Drops junk elements but keeps the good ones; plain z.array rejects the whole array.
+function lenientArray<T>(element: z.ZodType<T>) {
+  return z
+    .array(z.unknown())
+    .catch([])
+    .transform((items) =>
+      items.flatMap((item) => {
+        const parsed = element.safeParse(item);
+        return parsed.success ? [parsed.data] : [];
+      }),
+    );
+}
+
+const prefsSchema = z.object({
+  lastLocation: locationSchema.optional().catch(undefined),
+  hiddenTimeframes: lenientArray(z.string()),
+  ignoredItemIds: lenientArray(z.number().finite()),
+  showHidden: z.boolean().catch(false),
+  craftedOnly: z.boolean().catch(false),
+  tableSort: z
+    .object({
+      ranking: lenientArray(sortEntrySchema).optional().catch(undefined),
+      currencyEff: lenientArray(sortEntrySchema).optional().catch(undefined),
+      itemProfit: lenientArray(sortEntrySchema).optional().catch(undefined),
+    })
+    .catch({}),
+  toolInputs: z
+    .object({
+      currencyEff: z.string().catch(''),
+      itemProfit: z.string().catch(''),
+      buyerSearch: z.string().catch(''),
+    })
+    .catch({ currencyEff: '', itemProfit: '', buyerSearch: '' }),
+  buyerSearchWorld: z.string().catch(''),
+});
+
+export type UserPrefs = z.infer<typeof prefsSchema>;
+export type TableSortKey = keyof UserPrefs['tableSort'];
 
 const KEY = 'ffmt:prefs';
-const DEFAULTS: UserPrefs = { hiddenTimeframes: [], ignoredItemIds: [] };
+
+function defaults(): UserPrefs {
+  return {
+    hiddenTimeframes: [],
+    ignoredItemIds: [],
+    showHidden: false,
+    craftedOnly: false,
+    tableSort: {},
+    toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
+    buyerSearchWorld: '',
+  };
+}
 
 export function parsePrefs(raw: string | null): UserPrefs {
-  if (!raw) return { ...DEFAULTS };
+  if (!raw) return defaults();
   try {
-    const parsed = JSON.parse(raw) as Partial<UserPrefs>;
-
-    const loc = parsed.lastLocation as unknown;
-    const validKinds = ['world', 'datacenter', 'region'];
-    let lastLocation: UserPrefs['lastLocation'] | undefined;
-    if (
-      loc !== null &&
-      typeof loc === 'object' &&
-      'name' in (loc as object) &&
-      'kind' in (loc as object) &&
-      typeof (loc as { name: unknown }).name === 'string' &&
-      validKinds.includes((loc as { kind: unknown }).kind as string)
-    ) {
-      lastLocation = loc as UserPrefs['lastLocation'];
-    }
-
-    return {
-      hiddenTimeframes: Array.isArray(parsed.hiddenTimeframes)
-        ? parsed.hiddenTimeframes.filter((x): x is string => typeof x === 'string')
-        : [],
-      ignoredItemIds: Array.isArray(parsed.ignoredItemIds)
-        ? parsed.ignoredItemIds.filter((x): x is number => typeof x === 'number')
-        : [],
-      ...(lastLocation ? { lastLocation } : {}),
-      ...(typeof parsed.lastWorldId === 'number' && Number.isFinite(parsed.lastWorldId) && parsed.lastWorldId > 0
-        ? { lastWorldId: parsed.lastWorldId }
-        : {}),
-    };
+    return prefsSchema.parse(JSON.parse(raw));
   } catch {
-    return { ...DEFAULTS };
+    return defaults();
   }
 }
 
@@ -51,7 +75,7 @@ type PatchArg = Partial<UserPrefs> | ((prev: UserPrefs) => Partial<UserPrefs>);
 
 export function useUserPrefs(): [UserPrefs, (patch: PatchArg) => void] {
   const [prefs, setPrefs] = useState<UserPrefs>(() =>
-    typeof window === 'undefined' ? DEFAULTS : parsePrefs(window.localStorage.getItem(KEY)),
+    typeof window === 'undefined' ? defaults() : parsePrefs(window.localStorage.getItem(KEY)),
   );
 
   useEffect(() => {
@@ -62,6 +86,7 @@ export function useUserPrefs(): [UserPrefs, (patch: PatchArg) => void] {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  // Shallow merge — patches touching tableSort or toolInputs must spread the previous nested object.
   const patchPrefs = useCallback((patch: PatchArg) => {
     setPrefs((prev) => {
       const partial = typeof patch === 'function' ? patch(prev) : patch;
