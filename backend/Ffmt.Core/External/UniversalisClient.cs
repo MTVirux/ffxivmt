@@ -14,7 +14,7 @@ public sealed class UniversalisClient(HttpClient http, ILogger<UniversalisClient
 
     public async Task<IReadOnlyList<int>> GetMarketableItemIdsAsync(CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
         var ids = await http.GetFromJsonAsync<int[]>("marketable", ct).ConfigureAwait(false);
         if (ids is null)
         {
@@ -26,7 +26,7 @@ public sealed class UniversalisClient(HttpClient http, ILogger<UniversalisClient
 
     public async Task<IReadOnlyList<World>> GetAllWorldsAsync(CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         var worldsTask = http.GetFromJsonAsync<UniversalisWorld[]>("worlds", ct);
         var dcsTask = http.GetFromJsonAsync<UniversalisDataCenter[]>("data-centers", ct);
@@ -66,7 +66,7 @@ public sealed class UniversalisClient(HttpClient http, ILogger<UniversalisClient
             return new Dictionary<int, UniversalisMarketBoardListing>();
         }
 
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         // Universalis returns a multi-id shape (with an `items` dictionary) when the path has
         // a comma, and a flat single-item object otherwise.

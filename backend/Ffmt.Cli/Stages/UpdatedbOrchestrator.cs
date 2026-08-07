@@ -15,7 +15,7 @@ public sealed class UpdatedbOrchestrator(
 {
     public async Task RunAllAsync(CancellationToken ct)
     {
-        using var _ = log.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.DbUpdateActivations });
+        using var _ = LogChannelScope.Begin(log, LogChannels.DbUpdateActivations);
 
         log.LogInformation("=== updatedb stage 1/6: update-worlds ===");
         await updateWorlds.RunAsync(ct).ConfigureAwait(false);
