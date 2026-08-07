@@ -134,11 +134,11 @@ public sealed class RankingCoalescer : IHostedService
         }
 
         var cutoff = Stopwatch.GetTimestamp() - (long)(_coalesceWindow.TotalSeconds * 10 * Stopwatch.Frequency);
-        foreach (var key in _lastFired.Keys)
+        foreach (var entry in _lastFired)
         {
-            if (_lastFired.TryGetValue(key, out var ts) && ts < cutoff)
+            if (entry.Value < cutoff)
             {
-                _lastFired.TryRemove(key, out _);
+                _lastFired.TryRemove(entry);
             }
         }
     }

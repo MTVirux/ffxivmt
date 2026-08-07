@@ -8,10 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
 
-public sealed class ScyllaRankingRefresher(
-    IScyllaSession scylla,
-    IOptions<GilfluxOptions> options,
-    ILogger<ScyllaRankingRefresher> logger) : IRankingRefresher
+public sealed class ScyllaRankingRefresher : IRankingRefresher
 {
     private const string CqlSumTotalSinceTimeframe = """
         SELECT CAST(SUM(total_price_gil) AS BIGINT) AS gilflux
@@ -34,46 +31,66 @@ public sealed class ScyllaRankingRefresher(
         USING TTL ?
         """;
 
+    private readonly IScyllaSession _scylla;
+    private readonly ILogger<ScyllaRankingRefresher> _logger;
+
+    // Derived once - RefreshAsync runs per (world, item) sale.
+    private readonly (string Key, TimeSpan Duration)[] _timeframes;
+    private readonly TimeSpan _maxDuration;
+
+    // Nothing refreshes a pair that stops selling, so the row has to expire on its own.
+    private readonly int _ttlSeconds;
+
+    public ScyllaRankingRefresher(
+        IScyllaSession scylla,
+        IOptions<GilfluxOptions> options,
+        ILogger<ScyllaRankingRefresher> logger)
+    {
+        _scylla = scylla;
+        _logger = logger;
+
+        var timeframesMs = options.Value.TimeframesMs;
+        _timeframes = timeframesMs
+            .Select(kv => (Key: kv.Key, Duration: TimeSpan.FromMilliseconds(kv.Value)))
+            .ToArray();
+        _maxDuration = _timeframes.Length == 0
+            ? TimeSpan.Zero
+            : TimeSpan.FromMilliseconds(timeframesMs.Values.Max());
+        _ttlSeconds = (int)Math.Ceiling(_maxDuration.TotalSeconds)
+            + Math.Max(0, options.Value.RankingTtlGraceSeconds);
+    }
+
     public async Task RefreshAsync(int worldId, int itemId, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
         try
         {
-            if (options.Value.TimeframesMs.Count == 0)
+            if (_timeframes.Length == 0)
                 return;
 
-            var timeframes = options.Value.TimeframesMs
-                .Select(kv => (Key: kv.Key, Duration: TimeSpan.FromMilliseconds(kv.Value)))
-                .ToArray();
-
-            var sumStmt    = await scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
-            var maxStmt    = await scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
-            var upsertStmt = await scylla.PrepareAsync(CqlUpsertGilfluxRankings, ct).ConfigureAwait(false);
+            var sumStmt    = await _scylla.PrepareAsync(CqlSumTotalSinceTimeframe, ct).ConfigureAwait(false);
+            var maxStmt    = await _scylla.PrepareAsync(CqlMaxSaleTime, ct).ConfigureAwait(false);
+            var upsertStmt = await _scylla.PrepareAsync(CqlUpsertGilfluxRankings, ct).ConfigureAwait(false);
 
             var now = DateTimeOffset.UtcNow;
-            var maxDuration = TimeSpan.FromMilliseconds(options.Value.TimeframesMs.Values.Max());
 
-            var sumTasks = timeframes
-                .Select(tf => scylla.MeasuredExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf.Duration), "gilflux_sum"))
+            var sumTasks = _timeframes
+                .Select(tf => _scylla.MeasuredExecuteAsync(sumStmt.Bind(itemId, worldId, now - tf.Duration), "gilflux_sum"))
                 .ToArray();
-            var maxSaleTask = scylla.MeasuredExecuteAsync(maxStmt.Bind(itemId, worldId, now - maxDuration), "gilflux_max");
+            var maxSaleTask = _scylla.MeasuredExecuteAsync(maxStmt.Bind(itemId, worldId, now - _maxDuration), "gilflux_max");
 
             await Task.WhenAll(sumTasks.Concat(new[] { maxSaleTask })).ConfigureAwait(false);
 
             var rankings = new Dictionary<string, long>();
-            for (var i = 0; i < timeframes.Length; i++)
+            for (var i = 0; i < _timeframes.Length; i++)
             {
-                rankings[timeframes[i].Key] = SumGilflux(sumTasks[i].Result);
+                rankings[_timeframes[i].Key] = SumGilflux(sumTasks[i].Result);
             }
 
             var lastSaleTime = MaxLastSaleTime(maxSaleTask.Result);
 
-            // Nothing refreshes a pair that stops selling, so the row has to expire on its own.
-            var ttlSeconds = (int)Math.Ceiling(maxDuration.TotalSeconds)
-                + Math.Max(0, options.Value.RankingTtlGraceSeconds);
-
-            await scylla.MeasuredExecuteAsync(
-                upsertStmt.Bind(worldId, itemId, rankings, lastSaleTime, now, ttlSeconds),
+            await _scylla.MeasuredExecuteAsync(
+                upsertStmt.Bind(worldId, itemId, rankings, lastSaleTime, now, _ttlSeconds),
                 "gilflux_upsert").ConfigureAwait(false);
         }
         catch (Exception)
@@ -107,7 +124,7 @@ public sealed class ScyllaRankingRefresher(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "RankingRefresher: refresh failed for world={WorldId} item={ItemId}", pair.WorldId, pair.ItemId);
+                _logger.LogWarning(ex, "RankingRefresher: refresh failed for world={WorldId} item={ItemId}", pair.WorldId, pair.ItemId);
             }
             finally
             {
