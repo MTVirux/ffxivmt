@@ -3,4 +3,5 @@
   <Project Path="Ffmt.Cli/Ffmt.Cli.csproj" />
   <Project Path="Ffmt.Core/Ffmt.Core.csproj" />
   <Project Path="Ffmt.Tests/Ffmt.Tests.csproj" />
+  <Project Path="../docker/ws_worker/WsWorker/WsWorker.csproj" />
 </Solution>
