@@ -64,19 +64,12 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
 
         var stmt = await scylla.PrepareAsync(CqlDelete, ct).ConfigureAwait(false);
 
-        const int rowsPerBatch = 200;
-        var asList = pairs as IReadOnlyList<(int WorldId, int ItemId)> ?? pairs.ToList();
-        for (var i = 0; i < asList.Count; i += rowsPerBatch)
-        {
-            var batch = (BatchStatement)new BatchStatement()
-                .SetBatchType(BatchType.Unlogged)
-                .SetConsistencyLevel(ConsistencyLevel.LocalOne);
-            for (var j = i; j < Math.Min(i + rowsPerBatch, asList.Count); j++)
-            {
-                batch.Add(stmt.Bind(asList[j].WorldId, asList[j].ItemId));
-            }
-            await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
-        }
+        await ScyllaBatchWriter.ExecuteBatchedAsync(
+            scylla,
+            pairs,
+            (batch, pair) => batch.Add(stmt.Bind(pair.WorldId, pair.ItemId)),
+            op: null,
+            ct).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<GilfluxRanking>> ExecuteAndMapAsync(IStatement stmt)
@@ -94,8 +87,8 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
         ItemId:       row.GetValue<int>("item_id"),
         WorldId:      !row.IsNull("world_id") ? row.GetValue<int>("world_id") : (int?)null,
         Rankings:     GetRankingsMap(row),
-        UpdatedAt:    GetNullableEpochMs(row, "updated_at"),
-        LastSaleTime: GetNullableEpochMs(row, "last_sale_time"));
+        UpdatedAt:    row.SafeEpochMs("updated_at"),
+        LastSaleTime: row.SafeEpochMs("last_sale_time"));
 
     private static IReadOnlyDictionary<string, long> GetRankingsMap(Row row)
     {
@@ -104,7 +97,4 @@ public sealed class ScyllaGilfluxRankingStore(IScyllaSession scylla) : IGilfluxR
         var raw = row.GetValue<IDictionary<string, long>>("rankings");
         return raw as IReadOnlyDictionary<string, long> ?? new Dictionary<string, long>(raw);
     }
-
-    private static long? GetNullableEpochMs(Row row, string name) =>
-        !row.IsNull(name) ? row.GetValue<DateTimeOffset>(name).ToUnixTimeMilliseconds() : null;
 }

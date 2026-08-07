@@ -29,9 +29,9 @@ public sealed class ScyllaBackfillStateStore(IScyllaSession scylla) : IBackfillS
                 region,
                 loop,
                 row.GetValue<int>("bucket"),
-                ReadTimestamp(row, "last_import_at"),
-                ReadTimestamp(row, "earliest_import_at"),
-                row.IsNull("crawl_complete") ? false : row.GetValue<bool>("crawl_complete")));
+                row.SafeTimestamp("last_import_at"),
+                row.SafeTimestamp("earliest_import_at"),
+                row.SafeBool("crawl_complete")));
         }
 
         return states;
@@ -61,9 +61,6 @@ public sealed class ScyllaBackfillStateStore(IScyllaSession scylla) : IBackfillS
             return (null, null);
         }
 
-        return (ReadTimestamp(row, "last_import_at"), ReadTimestamp(row, "earliest_import_at"));
+        return (row.SafeTimestamp("last_import_at"), row.SafeTimestamp("earliest_import_at"));
     }
-
-    private static DateTimeOffset? ReadTimestamp(Cassandra.Row row, string column) =>
-        row.IsNull(column) ? null : row.GetValue<DateTimeOffset>(column);
 }

@@ -79,8 +79,6 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         WHERE item_id = ? AND world_id = ? AND sale_time = ? AND buyer_name = ?
         """;
 
-    private const int BatchRows = 200;
-
     private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
 
     public async Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
@@ -90,50 +88,33 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
             return new SaleBatchResult(0, 0d);
         }
 
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaSales });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.ScyllaSales);
 
         var saleStmt = await scylla.PrepareAsync(CqlInsertSale, ct).ConfigureAwait(false);
         var byBuyerStmt = await scylla.PrepareAsync(CqlInsertSaleByBuyer, ct).ConfigureAwait(false);
         var sw = Stopwatch.StartNew();
         var parsed = 0;
 
+        var bind = (BatchStatement batch, Sale s) =>
+        {
+            var totalPrice = (long)s.Quantity * s.UnitPrice;
+            batch.Add(saleStmt.Bind(
+                s.ItemId, s.WorldId, s.SaleTime, s.BuyerName,
+                s.Hq, s.OnMannequin, s.Quantity, s.UnitPrice,
+                // total_price is the legacy int column, clamped rather than wrapped until it is dropped.
+                (int)Math.Min(totalPrice, int.MaxValue), totalPrice));
+            batch.Add(byBuyerStmt.Bind(
+                s.BuyerName, s.WorldId, s.SaleTime, s.ItemId));
+            parsed++;
+        };
+
         // Group by sales partition key so single-partition unlogged batches stay one-coordinator.
         // sales_by_buyer rows go into the same batch as their parent sale — they may target
         // different partitions, but at this batch size (≤200) the coordinator overhead is
         // acceptable and atomic-per-sale write semantics are preserved.
-        var partitions = sales.GroupBy(s => (s.ItemId, s.WorldId));
-
-        foreach (var partition in partitions)
+        foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
         {
-            var batch = NewBatch();
-            var inBatch = 0;
-
-            foreach (var s in partition)
-            {
-                ct.ThrowIfCancellationRequested();
-                var totalPrice = (long)s.Quantity * s.UnitPrice;
-                batch.Add(saleStmt.Bind(
-                    s.ItemId, s.WorldId, s.SaleTime, s.BuyerName,
-                    s.Hq, s.OnMannequin, s.Quantity, s.UnitPrice,
-                    // total_price is the legacy int column, clamped rather than wrapped until it is dropped.
-                    (int)Math.Min(totalPrice, int.MaxValue), totalPrice));
-                batch.Add(byBuyerStmt.Bind(
-                    s.BuyerName, s.WorldId, s.SaleTime, s.ItemId));
-                inBatch++;
-                parsed++;
-
-                if (inBatch == BatchRows)
-                {
-                    await scylla.MeasuredExecuteAsync(batch, "sale_insert").ConfigureAwait(false);
-                    batch = NewBatch();
-                    inBatch = 0;
-                }
-            }
-
-            if (inBatch > 0)
-            {
-                await scylla.MeasuredExecuteAsync(batch, "sale_insert").ConfigureAwait(false);
-            }
+            await ScyllaBatchWriter.ExecuteBatchedAsync(scylla, partition, bind, "sale_insert", ct).ConfigureAwait(false);
         }
 
         sw.Stop();
@@ -214,11 +195,11 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         if (sales.Count == 0) return;
 
-        var byBuyer = sales.GroupBy(s => s.BuyerName);
-        foreach (var group in byBuyer)
+        // One batch per buyer partition; these groups are far below the batch-row flush point.
+        foreach (var group in sales.GroupBy(s => s.BuyerName))
         {
             ct.ThrowIfCancellationRequested();
-            var batch = NewBatch();
+            var batch = ScyllaBatchWriter.NewBatch();
             foreach (var s in group)
                 batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
             await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
@@ -236,7 +217,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         foreach (var row in rows)
         {
             result.Add(new PricePoint(
-                !row.IsNull("hq") && row.GetValue<bool>("hq"),
+                row.SafeBool("hq"),
                 row.GetValue<int>("unit_price")));
         }
         return result;
@@ -249,30 +230,16 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         var saleStmt = await scylla.PrepareAsync(CqlDeleteSaleExact, ct).ConfigureAwait(false);
         var buyerStmt = await scylla.PrepareAsync(CqlDeleteSaleByBuyer, ct).ConfigureAwait(false);
 
+        var bind = (BatchStatement batch, Sale s) =>
+        {
+            batch.Add(saleStmt.Bind(s.ItemId, s.WorldId, s.SaleTime, s.BuyerName));
+            batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
+        };
+
         foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
         {
             ct.ThrowIfCancellationRequested();
-            var batch = NewBatch();
-            var inBatch = 0;
-
-            foreach (var s in partition)
-            {
-                batch.Add(saleStmt.Bind(s.ItemId, s.WorldId, s.SaleTime, s.BuyerName));
-                batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
-                inBatch++;
-
-                if (inBatch == BatchRows)
-                {
-                    await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
-                    batch = NewBatch();
-                    inBatch = 0;
-                }
-            }
-
-            if (inBatch > 0)
-            {
-                await scylla.MeasuredExecuteAsync(batch, "sale_delete").ConfigureAwait(false);
-            }
+            await ScyllaBatchWriter.ExecuteBatchedAsync(scylla, partition, bind, "sale_delete", ct).ConfigureAwait(false);
         }
     }
 
@@ -285,26 +252,12 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
         {
             ct.ThrowIfCancellationRequested();
-            var batch = NewBatch();
-            var inBatch = 0;
-
-            foreach (var s in partition)
-            {
-                batch.Add(stmt.Bind((long)s.Quantity * s.UnitPrice, s.ItemId, s.WorldId, s.SaleTime, s.BuyerName));
-                inBatch++;
-
-                if (inBatch == BatchRows)
-                {
-                    await scylla.MeasuredExecuteAsync(batch, "sale_backfill").ConfigureAwait(false);
-                    batch = NewBatch();
-                    inBatch = 0;
-                }
-            }
-
-            if (inBatch > 0)
-            {
-                await scylla.MeasuredExecuteAsync(batch, "sale_backfill").ConfigureAwait(false);
-            }
+            await ScyllaBatchWriter.ExecuteBatchedAsync(
+                scylla,
+                partition,
+                (batch, s) => batch.Add(stmt.Bind((long)s.Quantity * s.UnitPrice, s.ItemId, s.WorldId, s.SaleTime, s.BuyerName)),
+                "sale_backfill",
+                ct).ConfigureAwait(false);
         }
     }
 
@@ -312,14 +265,9 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         ItemId:      row.GetValue<int>("item_id"),
         WorldId:     row.GetValue<int>("world_id"),
         BuyerName:   row.GetValue<string>("buyer_name") ?? string.Empty,
-        Hq:          !row.IsNull("hq") && row.GetValue<bool>("hq"),
-        OnMannequin: !row.IsNull("on_mannequin") && row.GetValue<bool>("on_mannequin"),
+        Hq:          row.SafeBool("hq"),
+        OnMannequin: row.SafeBool("on_mannequin"),
         Quantity:    row.GetValue<int>("quantity"),
         UnitPrice:   row.GetValue<int>("unit_price"),
         SaleTime:    row.GetValue<DateTimeOffset>("sale_time"));
-
-    private static BatchStatement NewBatch() =>
-        (BatchStatement)new BatchStatement()
-            .SetBatchType(BatchType.Unlogged)
-            .SetConsistencyLevel(ConsistencyLevel.LocalOne);
 }

@@ -1,4 +1,3 @@
-using Cassandra;
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Storage.Scylla;
 using Microsoft.Extensions.Options;
@@ -36,19 +35,12 @@ public sealed class ScyllaDirtyPairQueue(IScyllaSession scylla, IOptions<Gilflux
 
         var stmt = await scylla.PrepareAsync(CqlInsert, ct).ConfigureAwait(false);
 
-        const int rowsPerBatch = 200;
-        for (var i = 0; i < pairs.Count; i += rowsPerBatch)
-        {
-            var slice = pairs.Skip(i).Take(rowsPerBatch).ToList();
-            var batch = (BatchStatement)new BatchStatement()
-                .SetBatchType(BatchType.Unlogged)
-                .SetConsistencyLevel(ConsistencyLevel.LocalOne);
-            foreach (var (worldId, itemId) in slice)
-            {
-                batch.Add(stmt.Bind(_bucket, itemId, worldId));
-            }
-            await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
-        }
+        await ScyllaBatchWriter.ExecuteBatchedAsync(
+            scylla,
+            pairs,
+            (batch, pair) => batch.Add(stmt.Bind(_bucket, pair.ItemId, pair.WorldId)),
+            op: null,
+            ct).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<DirtyPairClaim>> ClaimBatchAsync(int batchSize, CancellationToken ct = default)
@@ -81,19 +73,11 @@ public sealed class ScyllaDirtyPairQueue(IScyllaSession scylla, IOptions<Gilflux
 
         var stmt = await scylla.PrepareAsync(CqlDelete, ct).ConfigureAwait(false);
 
-        const int rowsPerBatch = 200;
-        var asList = claims as IReadOnlyList<DirtyPairClaim> ?? claims.ToList();
-        for (var i = 0; i < asList.Count; i += rowsPerBatch)
-        {
-            var slice = asList.Skip(i).Take(rowsPerBatch).ToList();
-            var batch = (BatchStatement)new BatchStatement()
-                .SetBatchType(BatchType.Unlogged)
-                .SetConsistencyLevel(ConsistencyLevel.LocalOne);
-            foreach (var c in slice)
-            {
-                batch.Add(stmt.Bind(_bucket, c.EnqueuedAt, c.ItemId, c.WorldId));
-            }
-            await scylla.Session.ExecuteAsync(batch).ConfigureAwait(false);
-        }
+        await ScyllaBatchWriter.ExecuteBatchedAsync(
+            scylla,
+            claims,
+            (batch, c) => batch.Add(stmt.Bind(_bucket, c.EnqueuedAt, c.ItemId, c.WorldId)),
+            op: null,
+            ct).ConfigureAwait(false);
     }
 }

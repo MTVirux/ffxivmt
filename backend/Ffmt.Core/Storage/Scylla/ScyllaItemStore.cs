@@ -74,33 +74,29 @@ public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
             false, false, false))
             .ConfigureAwait(false);
 
-        await Task.WhenAll(
-            scylla.Session.ExecuteAsync(dropSetStmt.Bind(MarketableSet, item.Id)),
-            scylla.Session.ExecuteAsync(dropSetStmt.Bind(CraftableSet,  item.Id)),
-            scylla.Session.ExecuteAsync(dropSetStmt.Bind(ScripSet,      item.Id))
-        ).ConfigureAwait(false);
+        await ScyllaBatchWriter.ExecuteBatchedAsync(
+            scylla,
+            new[] { MarketableSet, CraftableSet, ScripSet },
+            (batch, setName) => batch.Add(dropSetStmt.Bind(setName, item.Id)),
+            op: null,
+            ct).ConfigureAwait(false);
     }
 
-    public async Task UpdateMarketableAsync(int id, bool marketable, CancellationToken ct = default)
+    public Task UpdateMarketableAsync(int id, bool marketable, CancellationToken ct = default) =>
+        UpdateFlagAsync(CqlUpdateMarketable, MarketableSet, id, marketable, ct);
+
+    public Task UpdateCraftableAsync(int id, bool craftable, CancellationToken ct = default) =>
+        UpdateFlagAsync(CqlUpdateCraftable, CraftableSet, id, craftable, ct);
+
+    private async Task UpdateFlagAsync(string flagCql, string setName, int id, bool value, CancellationToken ct)
     {
-        var memberCql = marketable ? CqlInsertSetMember : CqlDeleteSetMember;
-        var stmtTask = scylla.PrepareAsync(CqlUpdateMarketable, ct);
+        var memberCql = value ? CqlInsertSetMember : CqlDeleteSetMember;
+        var flagStmtTask = scylla.PrepareAsync(flagCql, ct);
         var memberStmtTask = scylla.PrepareAsync(memberCql, ct);
-        await Task.WhenAll(stmtTask, memberStmtTask).ConfigureAwait(false);
+        await Task.WhenAll(flagStmtTask, memberStmtTask).ConfigureAwait(false);
 
-        await scylla.Session.ExecuteAsync(stmtTask.Result.Bind(marketable, id)).ConfigureAwait(false);
-        await scylla.Session.ExecuteAsync(memberStmtTask.Result.Bind(MarketableSet, id)).ConfigureAwait(false);
-    }
-
-    public async Task UpdateCraftableAsync(int id, bool craftable, CancellationToken ct = default)
-    {
-        var memberCql = craftable ? CqlInsertSetMember : CqlDeleteSetMember;
-        var stmtTask = scylla.PrepareAsync(CqlUpdateCraftable, ct);
-        var memberStmtTask = scylla.PrepareAsync(memberCql, ct);
-        await Task.WhenAll(stmtTask, memberStmtTask).ConfigureAwait(false);
-
-        await scylla.Session.ExecuteAsync(stmtTask.Result.Bind(craftable, id)).ConfigureAwait(false);
-        await scylla.Session.ExecuteAsync(memberStmtTask.Result.Bind(CraftableSet, id)).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(flagStmtTask.Result.Bind(value, id)).ConfigureAwait(false);
+        await scylla.Session.ExecuteAsync(memberStmtTask.Result.Bind(setName, id)).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<int>> FetchSetMembersAsync(string setName, CancellationToken ct)
@@ -130,13 +126,7 @@ public sealed class ScyllaItemStore(IScyllaSession scylla) : IItemStore
     private static Item MapRow(Row row) => new(
         row.GetValue<int>("id"),
         row.GetValue<string>("name") ?? string.Empty,
-        SafeBool(row, "marketable"),
-        SafeBool(row, "craftable"),
-        SafeInt(row, "icon_image"));
-
-    private static int SafeInt(Row row, string column) =>
-        row.IsNull(column) ? 0 : row.GetValue<int>(column);
-
-    private static bool SafeBool(Row row, string column) =>
-        !row.IsNull(column) && row.GetValue<bool>(column);
+        row.SafeBool("marketable"),
+        row.SafeBool("craftable"),
+        row.SafeInt("icon_image"));
 }
