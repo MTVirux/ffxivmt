@@ -4,7 +4,7 @@ import type { AppConfig } from '../api/types';
 import { TIMEFRAMES } from '../lib/rankingAggregate';
 
 const FALLBACK: AppConfig = {
-  gilflux_timeframes: TIMEFRAMES.map((tf) => tf.key),
+  gilflux_timeframes: [...TIMEFRAMES],
 };
 
 export function useAppConfig(): AppConfig {

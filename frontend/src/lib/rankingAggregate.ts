@@ -1,14 +1,7 @@
 import type { GilfluxRanking } from '../api/types';
 
-export const TIMEFRAMES: readonly { key: string; label: string }[] = [
-  { key: '1h',  label: '1h' },
-  { key: '3h',  label: '3h' },
-  { key: '6h',  label: '6h' },
-  { key: '12h', label: '12h' },
-  { key: '1d',  label: '1d' },
-  { key: '3d',  label: '3d' },
-  { key: '7d',  label: '7d' },
-] as const;
+/** Fallback timeframe keys for useAppConfig until /config answers. */
+export const TIMEFRAMES: readonly string[] = ['1h', '3h', '6h', '12h', '1d', '3d', '7d'] as const;
 
 export type RankingRow = {
   kind: 'aggregate' | 'world';

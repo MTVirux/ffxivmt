@@ -1,16 +1,20 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import RankingTable from '../components/data/RankingTable';
+import CheckboxToggle from '../components/form/CheckboxToggle';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';
+import QueryBoundary from '../components/layout/QueryBoundary';
 import { useGilfluxRanking } from '../hooks/useGilfluxRanking';
 import { aggregateRankings } from '../lib/rankingAggregate';
 import { formatNumber } from '../lib/format';
 import { useAppConfig } from '../hooks/useAppConfig';
+import { useIgnoredItems } from '../hooks/useIgnoredItems';
 import { useUserPrefs } from '../hooks/useUserPrefs';
 import type { Location, LocationKind } from '../api/types';
 
 export default function GilfluxPage() {
   const [prefs, patchPrefs] = useUserPrefs();
+  const { ids: ignoredItemIds, ignore, unignore } = useIgnoredItems();
   const [searchParams, setSearchParams] = useSearchParams();
   const showHidden = prefs.showHidden;
   const setShowHidden = (next: boolean) => patchPrefs({ showHidden: next });
@@ -73,23 +77,11 @@ export default function GilfluxPage() {
     });
   };
 
-  // Stable identities here keep the virtualized table from rebuilding its
-  // columns - and re-deriving its sort - on every render.
-  const handleIgnore = useCallback(
-    (id: number) => patchPrefs((prev) => ({ ignoredItemIds: [...prev.ignoredItemIds, id] })),
-    [patchPrefs],
-  );
-  const handleUnignore = useCallback(
-    (id: number) =>
-      patchPrefs((prev) => ({ ignoredItemIds: prev.ignoredItemIds.filter((x) => x !== id) })),
-    [patchPrefs],
-  );
-
   const query = useGilfluxRanking(location, craftedOnly);
   const rows = useMemo(() => aggregateRankings(query.data ?? []), [query.data]);
   const visibleRows = useMemo(
-    () => (showHidden ? rows : rows.filter((r) => !prefs.ignoredItemIds.includes(r.item_id))),
-    [showHidden, rows, prefs.ignoredItemIds],
+    () => (showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.item_id))),
+    [showHidden, rows, ignoredItemIds],
   );
   const showWorldExpand = location?.kind !== 'world';
 
@@ -105,8 +97,12 @@ export default function GilfluxPage() {
 
       <div className="flex flex-wrap items-end justify-between gap-6 rounded-xl border border-border/60 bg-card/40 p-4">
         <TieredLocationSelect value={location} onChange={setLocation} />
-        <CraftedToggle checked={craftedOnly} onChange={setCraftedOnly} />
-        <ShowHiddenToggle checked={showHidden} onChange={setShowHidden} />
+        <CheckboxToggle
+          label="Crafted items only"
+          checked={craftedOnly}
+          onChange={setCraftedOnly}
+        />
+        <CheckboxToggle label="Show hidden items" checked={showHidden} onChange={setShowHidden} />
       </div>
 
       <TimeframeToggles
@@ -121,75 +117,26 @@ export default function GilfluxPage() {
           <RowCount loading={query.isLoading} count={visibleRows.length} />
         </div>
 
-        {query.isLoading ? (
-          <div className="h-64 animate-pulse rounded-xl bg-card/40" />
-        ) : query.isError ? (
-          <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
-            Failed to load rankings.
-          </div>
-        ) : (
-          <RankingTable
-            rows={visibleRows}
-            showWorldExpand={showWorldExpand}
-            timeframes={visibleTimeframes}
-            ignoredItemIds={showHidden ? prefs.ignoredItemIds : undefined}
-            onIgnore={handleIgnore}
-            onUnignore={showHidden ? handleUnignore : undefined}
-          />
-        )}
+        <QueryBoundary query={query} errorText="Failed to load rankings.">
+          {() => (
+            <RankingTable
+              rows={visibleRows}
+              showWorldExpand={showWorldExpand}
+              timeframes={visibleTimeframes}
+              ignoredItemIds={showHidden ? ignoredItemIds : undefined}
+              onIgnore={ignore}
+              onUnignore={showHidden ? unignore : undefined}
+            />
+          )}
+        </QueryBoundary>
       </section>
     </div>
   );
 }
 
-function CraftedToggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
-      />
-      Crafted items only
-    </label>
-  );
-}
-
-function ShowHiddenToggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="size-4 rounded border-border/60 bg-card accent-[var(--color-accent)]"
-      />
-      Show hidden items
-    </label>
-  );
-}
-
 function Subtitle({ location }: { location: Location | undefined }) {
   if (!location) return <span>—</span>;
-  const tag =
-    location.kind === 'region'
-      ? 'region'
-      : location.kind === 'datacenter'
-        ? 'datacenter'
-        : 'world';
+  const tag = location.kind;
   return (
     <span>
       <span className="uppercase tracking-widest">{tag}</span>{' '}

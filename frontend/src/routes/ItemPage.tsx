@@ -2,9 +2,13 @@ import { useMemo, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import ItemIcon from '../components/data/ItemIcon';
 import PriceChart from '../components/data/PriceChart';
+import { Td, Th } from '../components/data/TableCells';
 import TieredLocationSelect from '../components/form/TieredLocationSelect';
+import EmptyState from '../components/layout/EmptyState';
+import QueryBoundary from '../components/layout/QueryBoundary';
 import { useWorlds } from '../hooks/useWorlds';
 import { buildWorldNameMap } from '../lib/worlds';
+import { useIgnoredItems } from '../hooks/useIgnoredItems';
 import { useItem } from '../hooks/useItem';
 import { useItemSales } from '../hooks/useItemSales';
 import { useUserPrefs } from '../hooks/useUserPrefs';
@@ -21,14 +25,10 @@ export default function ItemPage() {
   const [prefs, patchPrefs] = useUserPrefs();
   const location = prefs.lastLocation;
   const setLocation = (next: Location) => patchPrefs({ lastLocation: next });
-  const isIgnored = itemId !== undefined && prefs.ignoredItemIds.includes(itemId);
+  const ignored = useIgnoredItems();
+  const isIgnored = itemId !== undefined && ignored.isIgnored(itemId);
   const toggleIgnore = () => {
-    if (itemId === undefined) return;
-    patchPrefs((prev) => ({
-      ignoredItemIds: prev.ignoredItemIds.includes(itemId)
-        ? prev.ignoredItemIds.filter((x) => x !== itemId)
-        : [...prev.ignoredItemIds, itemId],
-    }));
+    if (itemId !== undefined) ignored.toggle(itemId);
   };
   const sales = useItemSales(validId ? itemId : undefined, location, 100);
   const showWorld = location !== undefined && location.kind !== 'world';
@@ -87,18 +87,20 @@ export default function ItemPage() {
         </header>
 
         {location === undefined ? (
-          <EmptyHint>Pick a location to load sales.</EmptyHint>
-        ) : sales.isLoading ? (
-          <div className="h-[220px] animate-pulse rounded-lg bg-card/40" />
-        ) : sales.isError ? (
-          <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
-            Failed to load sales.
-          </div>
+          <EmptyState>Pick a location to load sales.</EmptyState>
         ) : (
-          <>
-            <PriceChart sales={sales.data ?? []} height={240} />
-            <RecentSalesTable sales={sales.data ?? []} showWorld={showWorld} />
-          </>
+          <QueryBoundary
+            query={sales}
+            skeletonClassName="h-[220px] animate-pulse rounded-lg bg-card/40"
+            errorText="Failed to load sales."
+          >
+            {(data) => (
+              <>
+                <PriceChart sales={data} height={240} />
+                <RecentSalesTable sales={data} showWorld={showWorld} />
+              </>
+            )}
+          </QueryBoundary>
         )}
       </section>
     </div>
@@ -229,49 +231,6 @@ function RecentSalesTable({ sales, showWorld }: { sales: Sale[]; showWorld: bool
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function Th({ children, align }: { children: ReactNode; align?: 'right' }) {
-  return (
-    <th
-      scope="col"
-      className={`px-3 py-2 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  align,
-  mono,
-}: {
-  children: ReactNode;
-  align?: 'right';
-  mono?: boolean;
-}) {
-  return (
-    <td
-      className={[
-        'px-3 py-2',
-        align === 'right' ? 'text-right' : 'text-left',
-        mono ? 'font-mono tabular-nums' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
-      {children}
-    </td>
-  );
-}
-
-function EmptyHint({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
-      {children}
     </div>
   );
 }

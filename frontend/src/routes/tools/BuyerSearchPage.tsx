@@ -1,14 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Td, Th } from '../../components/data/TableCells';
 import TextField from '../../components/form/TextField';
+import EmptyState from '../../components/layout/EmptyState';
+import QueryBoundary from '../../components/layout/QueryBoundary';
 import { useBuyerSearch } from '../../hooks/useBuyerSearch';
 import { useItemNames } from '../../hooks/useItemNames';
 import { useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { relativeTime } from '../../lib/time';
+import { buildWorldNameMap } from '../../lib/worlds';
 import type { BuyerSearchRow, WorldStructure } from '../../api/types';
 
 const schema = z.object({
@@ -44,10 +48,7 @@ export default function BuyerSearchPage() {
 
   const worlds = useWorlds();
 
-  const worldNameMap = useMemo(
-    () => (worlds.data ? buildWorldNameMap(worlds.data) : new Map<number, string>()),
-    [worlds.data],
-  );
+  const worldNameMap = useMemo(() => buildWorldNameMap(worlds.data), [worlds.data]);
 
   const itemIds = useMemo(
     () => (query.data ? query.data.map((row) => row.item_id) : []),
@@ -109,21 +110,24 @@ export default function BuyerSearchPage() {
 
       <section className="space-y-3">
         {submission === null ? (
-          <Hint>Enter a buyer name to see their purchase history.</Hint>
-        ) : query.isLoading ? (
-          <div className="h-64 animate-pulse rounded-xl bg-card/40" />
-        ) : query.isError ? (
-          <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
-            {(query.error as Error)?.message ?? 'Failed to load purchase history.'}
-          </div>
-        ) : !query.data || query.data.length === 0 ? (
-          <Hint>No purchases found.</Hint>
+          <EmptyState>Enter a buyer name to see their purchase history.</EmptyState>
         ) : (
-          <ResultsTable
-            rows={query.data}
-            worldNameMap={worldNameMap}
-            itemNameMap={itemNameMap}
-          />
+          <QueryBoundary
+            query={query}
+            errorText={(query.error as Error)?.message ?? 'Failed to load purchase history.'}
+          >
+            {(rows) =>
+              rows.length === 0 ? (
+                <EmptyState>No purchases found.</EmptyState>
+              ) : (
+                <ResultsTable
+                  rows={rows}
+                  worldNameMap={worldNameMap}
+                  itemNameMap={itemNameMap}
+                />
+              )
+            }
+          </QueryBoundary>
         )}
       </section>
     </div>
@@ -221,36 +225,3 @@ function ResultsTable({
   );
 }
 
-function Th({ children }: { children: ReactNode }) {
-  return (
-    <th scope="col" className="px-3 py-2 text-left font-medium">
-      {children}
-    </th>
-  );
-}
-
-function Td({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return (
-    <td className={`px-3 py-2 ${muted ? 'text-muted-foreground' : ''}`}>{children}</td>
-  );
-}
-
-function Hint({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
-      {children}
-    </div>
-  );
-}
-
-function buildWorldNameMap(worlds: WorldStructure): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const dcs of Object.values(worlds)) {
-    for (const ws of Object.values(dcs)) {
-      for (const [wid, name] of Object.entries(ws)) {
-        map.set(Number(wid), name);
-      }
-    }
-  }
-  return map;
-}

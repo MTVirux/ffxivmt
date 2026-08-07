@@ -13,10 +13,10 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useMemo, useRef, useState } from 'react';
 import type { RankingRow } from '../../lib/rankingAggregate';
-import { TIMEFRAMES } from '../../lib/rankingAggregate';
 import { formatGilCompact } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 import { usePersistedSort } from '../../hooks/usePersistedSort';
+import EmptyState from '../layout/EmptyState';
 import TableSearch from '../form/TableSearch';
 import { matchesItemName } from '../../lib/itemFilter';
 
@@ -26,7 +26,7 @@ type Props = {
   rows: RankingRow[];
   /** True when the response covers more than one world. Toggles the expand column. */
   showWorldExpand: boolean;
-  timeframes?: readonly { key: string; label: string }[];
+  timeframes: readonly { key: string; label: string }[];
   ignoredItemIds?: number[];
   onIgnore?: (id: number) => void;
   onUnignore?: (id: number) => void;
@@ -38,13 +38,12 @@ const nameFilter: FilterFn<RankingRow> = (row, _columnId, value) =>
 export default function RankingTable({
   rows,
   showWorldExpand,
-  timeframes: timeframesProp,
+  timeframes,
   ignoredItemIds,
   onIgnore,
   onUnignore,
 }: Props) {
   const [globalFilter, setGlobalFilter] = useState('');
-  const timeframes = timeframesProp ?? TIMEFRAMES;
 
   const columns = useMemo<ColumnDef<RankingRow>[]>(() => {
     const cols: ColumnDef<RankingRow>[] = [
@@ -186,11 +185,7 @@ export default function RankingTable({
   }, [timeframes]);
 
   if (rows.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
-        No rankings yet for this location.
-      </div>
-    );
+    return <EmptyState>No rankings yet for this location.</EmptyState>;
   }
 
   const topLevelMatches = table.getFilteredRowModel().rows.length;
@@ -204,9 +199,7 @@ export default function RankingTable({
         totalCount={rows.length}
       />
       {topLevelMatches === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-4 py-8 text-center text-sm text-muted-foreground">
-          No items match “{globalFilter}”.
-        </div>
+        <EmptyState>No items match “{globalFilter}”.</EmptyState>
       ) : (
         <div
           ref={scrollerRef}
