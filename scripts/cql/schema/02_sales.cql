@@ -1,6 +1,4 @@
-#!/bin/bash
-
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales (
+CREATE TABLE IF NOT EXISTS ffmt.sales (
     item_id      int,
     world_id     int,
     sale_time    timestamp,
@@ -18,12 +16,12 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales (
     'compaction_window_unit': 'DAYS',
     'compaction_window_size': 7
   }
-  AND compression = {'sstable_compression': 'ZstdCompressor'};"
+  AND compression = {'sstable_compression': 'ZstdCompressor'};
 
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales_by_buyer (
+CREATE TABLE IF NOT EXISTS ffmt.sales_by_buyer (
     buyer_name text,
     world_id   int,
     sale_time  timestamp,
     item_id    int,
     PRIMARY KEY ((buyer_name), world_id, sale_time, item_id)
-) WITH CLUSTERING ORDER BY (world_id ASC, sale_time DESC, item_id ASC);"
+) WITH CLUSTERING ORDER BY (world_id ASC, sale_time DESC, item_id ASC);

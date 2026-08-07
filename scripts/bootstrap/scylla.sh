@@ -37,7 +37,7 @@ docker compose \
 # 4. Wait for CQL
 wait_for_tcp "${SCYLLA_PRIVATE_IP}" 9042 600
 # Schema/keyspace creation runs from the container's run_entrypoints.sh
-# (docker/scylla/startup_scripts/*) — no extra step needed here.
+# over the bind-mounted scripts/cql/schema/*.cql — no extra step needed here.
 
 # 5. Install backup cron
 ensure_cron "0 3 * * * FFMT_REPO=/opt/ffmt /opt/ffmt/scripts/cron/backup_scylla.sh >> /var/log/ffmt-cron.log 2>&1"

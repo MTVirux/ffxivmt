@@ -1,6 +1,4 @@
-#!/bin/bash
-
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales_sweep_jobs (
+CREATE TABLE IF NOT EXISTS ffmt.sales_sweep_jobs (
     bucket        int,
     enqueued_at   timeuuid,
     from_ts       timestamp,
@@ -13,4 +11,4 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.sales_sweep_jobs (
     sales_written int,
     error         text,
     PRIMARY KEY ((bucket), enqueued_at)
-) WITH CLUSTERING ORDER BY (enqueued_at ASC);"
+) WITH CLUSTERING ORDER BY (enqueued_at ASC);

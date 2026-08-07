@@ -1,6 +1,4 @@
-#!/bin/bash
-
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.items (
+CREATE TABLE IF NOT EXISTS ffmt.items (
     id int,
     name text,
     description text,
@@ -17,7 +15,7 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.items (
     filter_group int,
     item_ui_category int,
     equip_slot_category int,
-    \"unique\" boolean,
+    "unique" boolean,
     untradable boolean,
     dyable boolean,
     aetherial_reductible boolean,
@@ -25,9 +23,9 @@ cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.items (
     item_search_category int,
     disposable boolean,
     advanced_melding boolean,
-    PRIMARY KEY (id));"
+    PRIMARY KEY (id));
 
-cqlsh -e "CREATE TABLE IF NOT EXISTS ffmt.item_sets (
+CREATE TABLE IF NOT EXISTS ffmt.item_sets (
     set_name text,
     item_id  int,
-    PRIMARY KEY ((set_name), item_id));"
+    PRIMARY KEY ((set_name), item_id));

@@ -98,7 +98,7 @@ services:
       - ./docker/scylla/persistent/log:/var/log/scylla
       - ./docker/scylla/etc/scylla/scylla.yaml:/etc/scylla/scylla.yaml
       - ./docker/scylla/usr/local/bin:/usr/local/bin
-      - ./docker/scylla/startup_scripts:/startup_scripts
+      - ./scripts/cql/schema:/startup_scripts
     deploy:
       resources:
         limits:
