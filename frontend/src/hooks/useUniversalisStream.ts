@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { deserialize, serialize } from 'bson';
 import { useWorlds } from './useWorlds';
 import { apiGet } from '../api/client';
-import type { Item, WorldStructure } from '../api/types';
+import { buildWorldNameMap } from '../lib/worlds';
+import type { Item } from '../api/types';
 
 export type StreamStatus = 'connecting' | 'connected' | 'reconnecting';
 
@@ -26,19 +28,6 @@ const PRUNE_INTERVAL_MS = 10_000;
 
 let salesCache: EnrichedSale[] = [];
 let statusCache: StreamStatus = 'connecting';
-const itemNameCache = new Map<number, string>();
-
-function buildWorldMap(worlds: WorldStructure): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const dcs of Object.values(worlds)) {
-    for (const ws of Object.values(dcs)) {
-      for (const [id, name] of Object.entries(ws)) {
-        map.set(Number(id), name);
-      }
-    }
-  }
-  return map;
-}
 
 function isRecord(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null && !Array.isArray(val);
@@ -46,12 +35,7 @@ function isRecord(val: unknown): val is Record<string, unknown> {
 
 export function useUniversalisStream() {
   const worlds = useWorlds();
-  const worldsKey = worlds.data
-    ? Object.values(worlds.data)
-        .flatMap((dcs) => Object.values(dcs).flatMap((ws) => Object.keys(ws)))
-        .sort()
-        .join(',')
-    : null;
+  const queryClient = useQueryClient();
   const [sales, setSalesState] = useState<EnrichedSale[]>(() => {
     const cutoff = Date.now() / 1000 - EXPIRY_S;
     return salesCache.filter((s) => s.saleTime > cutoff);
@@ -78,23 +62,23 @@ export function useUniversalisStream() {
   useEffect(() => {
     if (!worlds.data) return;
 
-    const worldMap = buildWorldMap(worlds.data);
+    const worldMap = buildWorldNameMap(worlds.data);
     const worldIds = Array.from(worldMap.keys());
     deadRef.current = false;
     backoffRef.current = 1_000;
     const generation = ++generationRef.current;
 
     async function resolveItemName(itemId: number): Promise<string> {
-      const cached = itemNameCache.get(itemId);
-      if (cached !== undefined) return cached;
       try {
-        const item = await apiGet<Item>(`/item/${itemId}`);
-        itemNameCache.set(itemId, item.name);
+        const item = await queryClient.fetchQuery({
+          queryKey: ['item', itemId] as const,
+          queryFn: () => apiGet<Item>(`/item/${itemId}`),
+          staleTime: Infinity,
+          retry: false,
+        });
         return item.name;
       } catch {
-        const fallback = String(itemId);
-        itemNameCache.set(itemId, fallback);
-        return fallback;
+        return String(itemId);
       }
     }
 
@@ -131,7 +115,7 @@ export function useUniversalisStream() {
         if (!Array.isArray(rawSales) || !worldId || !itemId) return;
 
         const worldName = worldMap.get(worldId) ?? String(worldId);
-        const cachedName = itemNameCache.get(itemId);
+        const cachedName = queryClient.getQueryData<Item>(['item', itemId])?.name;
 
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
@@ -192,7 +176,7 @@ export function useUniversalisStream() {
       statusCache = 'reconnecting';
       wsRef.current?.close();
     };
-  }, [worldsKey]);
+  }, [worlds.data, queryClient, setSales, setStatus]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -203,7 +187,7 @@ export function useUniversalisStream() {
       });
     }, PRUNE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [setSales]);
 
   return { sales, status };
 }

@@ -3,6 +3,7 @@ import {
   CURRENCY_GROUPS,
   filterCurrencyGroups,
   isKnownCurrency,
+  type Currency,
 } from '../../lib/currencies';
 
 type Props = {
@@ -23,7 +24,6 @@ export default function CurrencySelect({
   error,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [highlight, setHighlight] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
   const listId = useId();
@@ -37,10 +37,16 @@ export default function CurrencySelect({
   const flat = useMemo(() => groups.flatMap((g) => g.currencies), [groups]);
   const optionId = (id: number) => `${listId}-opt-${id}`;
 
-  useEffect(() => {
-    const selected = flat.findIndex((c) => c.name === value);
-    setHighlight(selected >= 0 ? selected : 0);
-  }, [value, flat]);
+  // The highlight defaults to the committed pick; arrows and hover move it, and any
+  // change to the value or the filtered list drops the move so the default applies again.
+  const [moved, setMoved] = useState<{ value: string; flat: Currency[]; index: number } | null>(
+    null,
+  );
+  const highlight =
+    moved && moved.value === value && moved.flat === flat
+      ? moved.index
+      : Math.max(0, flat.findIndex((c) => c.name === value));
+  const moveHighlight = (index: number) => setMoved({ value, flat, index });
 
   useEffect(() => {
     if (!open) return;
@@ -55,9 +61,9 @@ export default function CurrencySelect({
     if (!open) return;
     const active = flat[highlight];
     if (active) {
-      document.getElementById(optionId(active.id))?.scrollIntoView({ block: 'nearest' });
+      document.getElementById(`${listId}-opt-${active.id}`)?.scrollIntoView({ block: 'nearest' });
     }
-  });
+  }, [open, highlight, flat, listId]);
 
   const commit = (name: string) => {
     onChange(name);
@@ -73,7 +79,7 @@ export default function CurrencySelect({
       }
       if (flat.length === 0) return;
       const step = e.key === 'ArrowDown' ? 1 : -1;
-      setHighlight((h) => (h + step + flat.length) % flat.length);
+      moveHighlight((highlight + step + flat.length) % flat.length);
       return;
     }
     if (e.key === 'Enter') {
@@ -167,7 +173,9 @@ export default function CurrencySelect({
                         e.preventDefault();
                         commit(currency.name);
                       }}
-                      onMouseEnter={() => setHighlight(flat.findIndex((c) => c.id === currency.id))}
+                      onMouseEnter={() =>
+                        moveHighlight(flat.findIndex((c) => c.id === currency.id))
+                      }
                       className={[
                         'cursor-pointer px-3 py-1.5 text-sm',
                         active ? 'bg-accent/20 text-foreground' : 'text-muted-foreground',
