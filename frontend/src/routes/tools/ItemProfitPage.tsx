@@ -66,8 +66,7 @@ export default function ItemProfitPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">profit solver</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Item product profit</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Pick a material; we walk its Garland recipe partials, fetch live market-board data
-          across the chosen location, and rank everything by{' '}
+          What should I craft with this item?
           <span className="font-mono">min_price × velocity</span>.
         </p>
       </header>

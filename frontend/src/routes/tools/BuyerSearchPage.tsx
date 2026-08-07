@@ -56,8 +56,7 @@ export default function BuyerSearchPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">buyer search</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Buyer search</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Look up market-board purchases by character name. Filter by the purchase world to
-          narrow results.
+          Look up marketboard purchases by character name.
         </p>
       </header>
 

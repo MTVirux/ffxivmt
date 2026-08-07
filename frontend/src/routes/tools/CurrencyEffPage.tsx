@@ -69,8 +69,7 @@ export default function CurrencyEffPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">currency</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Currency efficiency</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Pick a currency or token. We pull every item it buys from Garland, fetch live
-          market-board data, and rank by{' '}
+          The best way to spend your currency.
           <span className="font-mono">(min_price × velocity / cost) × market share</span>.
         </p>
       </header>
@@ -90,7 +89,6 @@ export default function CurrencyEffPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Location</span>
           <TieredLocationSelect value={location} onChange={setLocation} />
           {locationError && <span className="text-xs text-destructive">{locationError}</span>}
         </div>

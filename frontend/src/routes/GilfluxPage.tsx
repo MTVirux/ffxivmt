@@ -77,8 +77,7 @@ export default function GilfluxPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">gilflux</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Top movers</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Items ranked by total gil moved over each timeframe. Pick a region, narrow to a
-          datacenter, or zoom into a single world.
+          Items ranked by total gil moved over each timeframe.
         </p>
       </header>
 
