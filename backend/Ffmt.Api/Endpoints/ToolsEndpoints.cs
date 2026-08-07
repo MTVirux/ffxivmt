@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using Ffmt.Core.External;
 using Ffmt.Core.Logging;
 using Ffmt.Core.Storage.Elastic;
-using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -21,70 +21,53 @@ public static class ToolsEndpoints
             string? location,
             string? request_id,
             IElasticItemSearch elastic,
-            IItemStore items,
+            WorldStructureService structure,
             IGarlandClient garland,
             IUniversalisClient universalis,
             ILogger<ItemProductProfitLog> logger,
             CancellationToken ct) =>
         {
-            using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ApiInfo });
+            using var _ = LogChannelScope.Begin(logger, LogChannels.ApiInfo);
 
-            if (string.IsNullOrWhiteSpace(search_term))
+            var invalid = ValidateToolQuery(search_term, location, request_id, out var requestId);
+            if (invalid is not null)
             {
-                return Results.Json(
-                    new { status = false, message = "GET request failed, please try again. Missing: search_term field" },
-                    statusCode: StatusCodes.Status400BadRequest);
-            }
-            if (string.IsNullOrWhiteSpace(location))
-            {
-                return Results.Json(
-                    new { status = false, message = "GET request failed, please try again. Missing: location field" },
-                    statusCode: StatusCodes.Status400BadRequest);
+                return invalid;
             }
 
-            var requestId = string.IsNullOrWhiteSpace(request_id)
-                ? Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()
-                : request_id!;
-
-            var hits = await elastic.SearchByNameAsync(search_term, size: 1, ct);
+            var hits = await elastic.SearchByNameAsync(search_term!, size: 1, ct);
             var top = hits.FirstOrDefault();
             if (top is null)
             {
                 logger.LogWarning("item_product_profit_calculator [{RequestId}] no Elastic hit for {Term}.", requestId, search_term);
-                return Results.Json(
-                    new { status = false, message = "No item matched the search term" },
-                    statusCode: StatusCodes.Status404NotFound);
+                return ApiResults.Fail("No item matched the search term", StatusCodes.Status404NotFound);
             }
 
             var garlandDetail = await garland.GetItemDetailAsync(top.Id, ct);
             if (garlandDetail is null)
             {
-                return Results.Json(
-                    new { status = false, message = "Garland lookup failed" },
-                    statusCode: StatusCodes.Status502BadGateway);
+                return ApiResults.Fail("Garland lookup failed", StatusCodes.Status502BadGateway);
             }
 
             var idsToFetch = new List<int>(garlandDetail.RelatedItemIds.Count + 1);
             idsToFetch.AddRange(garlandDetail.RelatedItemIds);
             idsToFetch.Add(top.Id);
 
-            var mb = await universalis.GetMarketBoardDataAsync(location, idsToFetch, ct);
+            var mb = await universalis.GetMarketBoardDataAsync(location!, idsToFetch, ct);
             if (mb.Count == 0)
             {
                 logger.LogWarning("item_product_profit_calculator [{RequestId}] Universalis returned no rows for {Location}.", requestId, location);
-                return Results.Json(
-                    new { status = false, message = "Could not fetch MB Data from Universalis. Please try again later." },
-                    statusCode: StatusCodes.Status502BadGateway);
+                return ApiResults.Fail("Could not fetch MB Data from Universalis. Please try again later.", StatusCodes.Status502BadGateway);
             }
+
+            var itemNames = await structure.GetItemNamesAsync(ct);
 
             var rows = new List<ProfitRow>(mb.Count);
             foreach (var (id, listing) in mb)
             {
-                var item = await items.GetAsync(id, ct);
-                var name = item?.Name ?? string.Empty;
                 rows.Add(new ProfitRow(
                     Id: id,
-                    Name: name,
+                    Name: itemNames.TryGetValue(id, out var name) ? name : string.Empty,
                     MinPrice: listing.MinPrice,
                     RegularSaleVelocity: listing.RegularSaleVelocity,
                     FfmtScore: listing.MinPrice * listing.RegularSaleVelocity));
@@ -108,23 +91,25 @@ public static class ToolsEndpoints
 
         group.MapGet("/instance_profit_calculator", async (
             string? location,
-            IItemStore items,
+            WorldStructureService structure,
             IGarlandClient garland,
             IUniversalisClient universalis,
             ILogger<InstanceProfitLog> logger,
             CancellationToken ct) =>
         {
-            using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ApiInfo });
+            using var _ = LogChannelScope.Begin(logger, LogChannels.ApiInfo);
 
             if (string.IsNullOrWhiteSpace(location))
             {
-                return Results.Json(
-                    new { status = false, message = "No location provided" },
-                    statusCode: StatusCodes.Status400BadRequest);
+                return ApiResults.Fail("No location provided", StatusCodes.Status400BadRequest);
             }
 
-            var summaries = await garland.GetAllInstancesAsync(ct);
-            var marketableIds = new HashSet<int>(await items.GetMarketableIdsAsync(ct));
+            var summariesTask = garland.GetAllInstancesAsync(ct);
+            var marketableIdsTask = structure.GetMarketableItemIdsAsync(ct);
+            await Task.WhenAll(summariesTask, marketableIdsTask);
+
+            var summaries = await summariesTask;
+            var marketableIds = new HashSet<int>(await marketableIdsTask);
 
             var validInstances = summaries
                 .Where(i => InstanceTypes.Contains(i.Type, StringComparer.OrdinalIgnoreCase))
@@ -156,6 +141,8 @@ public static class ToolsEndpoints
                 foreach (var (id, listing) in partial) listings[id] = listing;
             }
 
+            var itemNames = await structure.GetItemNamesAsync(ct);
+
             var rows = new List<InstanceRow>(validInstances.Count);
             foreach (var instance in validInstances)
             {
@@ -165,10 +152,9 @@ public static class ToolsEndpoints
                 foreach (var lootId in lootIds)
                 {
                     if (!listings.TryGetValue(lootId, out var listing)) continue;
-                    var item = await items.GetAsync(lootId, ct);
                     lootRows.Add(new InstanceLootRow(
                         Id: lootId,
-                        Name: item?.Name ?? string.Empty,
+                        Name: itemNames.TryGetValue(lootId, out var name) ? name : string.Empty,
                         MinPrice: listing.MinPrice,
                         RegularSaleVelocity: listing.RegularSaleVelocity));
                 }
@@ -195,50 +181,35 @@ public static class ToolsEndpoints
             string? location,
             string? request_id,
             IElasticItemSearch elastic,
-            IItemStore items,
+            WorldStructureService structure,
             IGarlandClient garland,
             IUniversalisClient universalis,
             ILogger<CurrencyEfficiencyLog> logger,
             CancellationToken ct) =>
         {
-            using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ApiInfo });
+            using var _ = LogChannelScope.Begin(logger, LogChannels.ApiInfo);
 
-            if (string.IsNullOrWhiteSpace(search_term))
+            var invalid = ValidateToolQuery(search_term, location, request_id, out var requestId);
+            if (invalid is not null)
             {
-                return Results.Json(
-                    new { status = false, message = "GET request failed, please try again. Missing: search_term field" },
-                    statusCode: StatusCodes.Status400BadRequest);
-            }
-            if (string.IsNullOrWhiteSpace(location))
-            {
-                return Results.Json(
-                    new { status = false, message = "GET request failed, please try again. Missing: location field" },
-                    statusCode: StatusCodes.Status400BadRequest);
+                return invalid;
             }
 
-            var requestId = string.IsNullOrWhiteSpace(request_id)
-                ? Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()
-                : request_id!;
-
-            var hits = await elastic.SearchByNameAsync(search_term, size: 1, ct);
+            var hits = await elastic.SearchByNameAsync(search_term!, size: 1, ct);
             var currency = hits.FirstOrDefault();
             if (currency is null)
             {
                 logger.LogWarning("currency_efficiency_calculator [{RequestId}] no Elastic hit for {Term}.", requestId, search_term);
-                return Results.Json(
-                    new { status = false, message = "No currency matched the search term" },
-                    statusCode: StatusCodes.Status404NotFound);
+                return ApiResults.Fail("No currency matched the search term", StatusCodes.Status404NotFound);
             }
 
             var listings = await garland.GetItemTradeCurrencyAsync(currency.Id, ct);
             if (listings.Count == 0)
             {
-                return Results.Json(
-                    new { status = false, message = "Garland reports no tradeCurrency listings for this item" },
-                    statusCode: StatusCodes.Status404NotFound);
+                return ApiResults.Fail("Garland reports no tradeCurrency listings for this item", StatusCodes.Status404NotFound);
             }
 
-            var marketableIds = (await items.GetMarketableIdsAsync(ct)).ToHashSet();
+            var marketableIds = (await structure.GetMarketableItemIdsAsync(ct)).ToHashSet();
             var byItemId = new Dictionary<int, GarlandTradeCurrencyListing>();
             foreach (var l in listings)
             {
@@ -248,28 +219,23 @@ public static class ToolsEndpoints
 
             if (byItemId.Count == 0)
             {
-                return Results.Json(
-                    new { status = false, message = "All trade-currency items are untradable" },
-                    statusCode: StatusCodes.Status404NotFound);
+                return ApiResults.Fail("All trade-currency items are untradable", StatusCodes.Status404NotFound);
             }
 
             // Universalis caps multi-id lookups around 50.
             var mb = new Dictionary<int, UniversalisMarketBoardListing>();
             foreach (var chunk in byItemId.Keys.Chunk(50))
             {
-                var partial = await universalis.GetMarketBoardDataAsync(location, chunk, ct);
+                var partial = await universalis.GetMarketBoardDataAsync(location!, chunk, ct);
                 foreach (var (id, l) in partial) mb[id] = l;
             }
+
+            var itemNames = await structure.GetItemNamesAsync(ct);
 
             var raw = new List<RawCurrencyRow>(byItemId.Count);
             foreach (var (itemId, listing) in byItemId)
             {
                 if (!mb.TryGetValue(itemId, out var market)) continue;
-
-                var item = await items.GetAsync(itemId, ct);
-                var name = item?.Name ?? string.Empty;
-                var currencyItem = await items.GetAsync(listing.CurrencyId, ct);
-                var currencyName = currencyItem?.Name ?? string.Empty;
 
                 var medianStack = MedianStackSize(market.StackSizeHistogram);
                 var dailyMarketCap = (long)Math.Round(market.RegularSaleVelocity * medianStack * market.MinPrice);
@@ -279,10 +245,10 @@ public static class ToolsEndpoints
 
                 raw.Add(new RawCurrencyRow(
                     Id: itemId,
-                    Name: name,
+                    Name: itemNames.TryGetValue(itemId, out var name) ? name : string.Empty,
                     Price: listing.CurrencyAmount,
                     CurrencyId: listing.CurrencyId,
-                    CurrencyName: currencyName,
+                    CurrencyName: itemNames.TryGetValue(listing.CurrencyId, out var currencyName) ? currencyName : string.Empty,
                     MinPrice: market.MinPrice,
                     RegularSaleVelocity: market.RegularSaleVelocity,
                     MedianStackSize: medianStack,
@@ -331,18 +297,44 @@ public static class ToolsEndpoints
 
     private static readonly string[] InstanceTypes = ["Dungeons", "Trials", "Raids"];
 
-    private static int MedianStackSize(IReadOnlyDictionary<int, int> histogram)
+    /// <summary>Returns the 400 envelope when the query is unusable, otherwise null with
+    /// <paramref name="resolvedId"/> set to the caller's id or a fresh one.</summary>
+    private static IResult? ValidateToolQuery(string? term, string? location, string? requestId, out string resolvedId)
     {
-        if (histogram.Count == 0) return 0;
-        // Sort first; without it the "median" would depend on dictionary iteration order.
-        var flat = new List<int>();
-        foreach (var (size, occ) in histogram)
+        resolvedId = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(term))
         {
-            for (var i = 0; i < occ; i++) flat.Add(size);
+            return ApiResults.Fail("GET request failed, please try again. Missing: search_term field", StatusCodes.Status400BadRequest);
         }
-        if (flat.Count == 0) return 0;
-        flat.Sort();
-        return flat[flat.Count / 2];
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            return ApiResults.Fail("GET request failed, please try again. Missing: location field", StatusCodes.Status400BadRequest);
+        }
+
+        resolvedId = string.IsNullOrWhiteSpace(requestId)
+            ? Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()
+            : requestId;
+
+        return null;
+    }
+
+    /// <summary>Upper median: the stack size sitting at index n/2 of the observations sorted ascending.</summary>
+    internal static int MedianStackSize(IReadOnlyDictionary<int, int> histogram)
+    {
+        var buckets = histogram.Where(kv => kv.Value > 0).OrderBy(kv => kv.Key).ToList();
+        var total = buckets.Sum(kv => (long)kv.Value);
+        if (total == 0) return 0;
+
+        var target = total / 2;
+        var seen = 0L;
+        foreach (var (size, occurrences) in buckets)
+        {
+            seen += occurrences;
+            if (seen > target) return size;
+        }
+
+        return buckets[^1].Key;
     }
 
     private sealed record ProfitRow(int Id, string Name, int MinPrice, double RegularSaleVelocity, double FfmtScore);
