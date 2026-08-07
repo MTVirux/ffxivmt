@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 
 const locationSchema = z.object({
@@ -73,34 +73,56 @@ export function parsePrefs(raw: string | null): UserPrefs {
 
 type PatchArg = Partial<UserPrefs> | ((prev: UserPrefs) => Partial<UserPrefs>);
 
-export function useUserPrefs(): [UserPrefs, (patch: PatchArg) => void] {
-  const [prefs, setPrefs] = useState<UserPrefs>(() =>
-    typeof window === 'undefined' ? defaults() : parsePrefs(window.localStorage.getItem(KEY)),
-  );
+// One store for the whole app: independent hook instances would otherwise each hold
+// their own copy and overwrite each other's keys on the next write.
+let snapshot: UserPrefs | null = null;
+const listeners = new Set<() => void>();
+let storageBound = false;
 
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === KEY) setPrefs(parsePrefs(e.newValue));
-    };
+function onStorage(e: StorageEvent) {
+  if (e.key !== KEY) return;
+  snapshot = parsePrefs(e.newValue);
+  for (const listener of listeners) listener();
+}
+
+export function getPrefsSnapshot(): UserPrefs {
+  snapshot ??=
+    typeof window === 'undefined' ? defaults() : parsePrefs(window.localStorage.getItem(KEY));
+  return snapshot;
+}
+
+export function subscribePrefs(listener: () => void): () => void {
+  listeners.add(listener);
+  if (!storageBound && typeof window !== 'undefined') {
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+    storageBound = true;
+  }
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && storageBound && typeof window !== 'undefined') {
+      window.removeEventListener('storage', onStorage);
+      storageBound = false;
+    }
+  };
+}
 
-  // Shallow merge — patches touching tableSort or toolInputs must spread the previous nested object.
-  const patchPrefs = useCallback((patch: PatchArg) => {
-    setPrefs((prev) => {
-      const partial = typeof patch === 'function' ? patch(prev) : patch;
-      const next = { ...prev, ...partial };
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(KEY, JSON.stringify(next));
-        } catch {
-          // quota exceeded or storage blocked - prefs stay in-memory for this session
-        }
-      }
-      return next;
-    });
-  }, []);
+// Shallow merge — patches touching tableSort or toolInputs must spread the previous nested object.
+export function patchPrefs(patch: PatchArg): void {
+  const prev = getPrefsSnapshot();
+  const partial = typeof patch === 'function' ? patch(prev) : patch;
+  const next = { ...prev, ...partial };
+  snapshot = next;
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      // quota exceeded or storage blocked - prefs stay in-memory for this session
+    }
+  }
+  for (const listener of listeners) listener();
+}
 
+export function useUserPrefs(): [UserPrefs, (patch: PatchArg) => void] {
+  const prefs = useSyncExternalStore(subscribePrefs, getPrefsSnapshot, getPrefsSnapshot);
   return [prefs, patchPrefs];
 }
