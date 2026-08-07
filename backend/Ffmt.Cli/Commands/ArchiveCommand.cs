@@ -62,7 +62,7 @@ public sealed class ArchiveCommand(
                 continue;
             }
 
-            var key = ArchiveKey(date, world.Datacenter, world.Name);
+            var key = ArchiveKeys.For(ArchiveKeys.ArchivePrefix, date, world.Datacenter, world.Name);
             logger.LogInformation("{Mode} {World} {Date:d}: {Count} sales → {Key}",
                 dryRun ? "DRY-RUN" : "Exporting", world.Name, date, sales.Count, key);
 
@@ -82,17 +82,25 @@ public sealed class ArchiveCommand(
     {
         var byDate = new Dictionary<DateOnly, List<Sale>>();
 
+        // Export state varies per (world, day), never per item - read the window once instead of
+        // once per (item, day), which is ~16.8k redundant Scylla reads per day per world.
+        var exportedDays = new List<DateOnly>(lookbackDays);
+        for (var i = 0; i < lookbackDays; i++)
+        {
+            var date = pruneThreshold.AddDays(-i);
+            if (await archiveStore.IsExportedAsync(world.Id, date, ct).ConfigureAwait(false))
+                exportedDays.Add(date);
+        }
+
+        if (exportedDays.Count == 0) return;
+
         var tasks = itemIds.Select(async itemId =>
         {
             await semaphore.WaitAsync(ct).ConfigureAwait(false);
             try
             {
-                for (var i = 0; i < lookbackDays; i++)
+                foreach (var date in exportedDays)
                 {
-                    var date = pruneThreshold.AddDays(-i);
-                    if (!await archiveStore.IsExportedAsync(world.Id, date, ct).ConfigureAwait(false))
-                        continue;
-
                     var sales = await saleStore.GetByItemAndWorldInRangeAsync(itemId, world.Id, date, ct).ConfigureAwait(false);
                     if (sales.Count == 0) continue;
 
@@ -111,7 +119,7 @@ public sealed class ArchiveCommand(
 
         foreach (var (date, newRows) in byDate)
         {
-            var key = CorrectionsKey(date, world.Datacenter, world.Name);
+            var key = ArchiveKeys.For(ArchiveKeys.CorrectionsPrefix, date, world.Datacenter, world.Name);
             logger.LogInformation("{Mode} corrections for {World} {Date:d}: {Count} late rows → {Key}",
                 dryRun ? "DRY-RUN" : "Writing", world.Name, date, newRows.Count, key);
 
@@ -162,10 +170,4 @@ public sealed class ArchiveCommand(
             await saleStore.DeleteByItemAndWorldInRangeAsync(itemId, worldId, date, itemSales, ct).ConfigureAwait(false);
         }
     }
-
-    private static string ArchiveKey(DateOnly date, string dc, string world) =>
-        $"archive/{date.Year}/{date.Month:D2}/{date.Day:D2}/{dc}/{world}.parquet";
-
-    private static string CorrectionsKey(DateOnly date, string dc, string world) =>
-        $"corrections/{date.Year}/{date.Month:D2}/{date.Day:D2}/{dc}/{world}.parquet";
 }
