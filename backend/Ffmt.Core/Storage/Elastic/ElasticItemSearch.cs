@@ -1,3 +1,4 @@
+using System.Globalization;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
@@ -68,13 +69,34 @@ public sealed class ElasticItemSearch : IElasticItemSearch
         var doc = new ItemDocument { Id = id, Name = name };
         var response = await _client.IndexAsync(doc, idx => idx
             .Index(_options.ItemsIndex)
-            .Id(id.ToString(System.Globalization.CultureInfo.InvariantCulture)), ct).ConfigureAwait(false);
+            .Id(DocumentId(id)), ct).ConfigureAwait(false);
 
         if (!response.IsValidResponse)
         {
             _logger.LogWarning("Elasticsearch upsert failed for item {ItemId}: {Error}", id, response.DebugInformation);
         }
     }
+
+    public async Task UpsertManyAsync(IEnumerable<(int Id, string Name)> items, CancellationToken ct = default)
+    {
+        var docs = items.Select(i => new ItemDocument { Id = i.Id, Name = i.Name }).ToList();
+        if (docs.Count == 0)
+        {
+            return;
+        }
+
+        var response = await _client.BulkAsync(b => b
+            .Index(_options.ItemsIndex)
+            .IndexMany(docs, (op, doc) => op.Id(DocumentId(doc.Id))), ct).ConfigureAwait(false);
+
+        if (!response.IsValidResponse || response.Errors)
+        {
+            _logger.LogWarning("Elasticsearch bulk upsert of {Count} items reported errors: {Error}",
+                docs.Count, response.DebugInformation);
+        }
+    }
+
+    private static string DocumentId(int id) => id.ToString(CultureInfo.InvariantCulture);
 
     private sealed class ItemDocument
     {

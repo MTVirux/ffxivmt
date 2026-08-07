@@ -1,4 +1,3 @@
-using Ffmt.Core.Logging;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Elastic;
 using Microsoft.Extensions.Logging;
@@ -7,17 +6,22 @@ namespace Ffmt.Cli.Stages;
 
 public sealed class UpdateElasticStage(IElasticItemSearch elastic, ILogger<UpdateElasticStage> log)
 {
+    private const int BatchSize = 1000;
+
     public async Task RunAsync(IReadOnlyList<ItemUpsert> rows, CancellationToken ct)
     {
-        for (var i = 0; i < rows.Count; i++)
+        var done = 0;
+        foreach (var batch in rows.Chunk(BatchSize))
         {
             ct.ThrowIfCancellationRequested();
-            await elastic.UpsertAsync(rows[i].Id, rows[i].Name, ct).ConfigureAwait(false);
-            if ((i + 1) % 1000 == 0)
+            await elastic.UpsertManyAsync(batch.Select(r => (r.Id, r.Name)), ct).ConfigureAwait(false);
+
+            done += batch.Length;
+            if (done % BatchSize == 0)
             {
-                log.LogInformation("Indexed {Done}/{Total} items into Elasticsearch.", i + 1, rows.Count);
+                log.LogInformation("Indexed items into Elasticsearch: {Done}/{Total}.", done, rows.Count);
             }
         }
-        log.LogInformation("Indexed {Count} items into Elasticsearch.", rows.Count);
+        log.LogInformation("Indexed items into Elasticsearch: {Total} total.", rows.Count);
     }
 }

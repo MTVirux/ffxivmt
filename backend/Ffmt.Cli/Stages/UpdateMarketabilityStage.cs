@@ -12,20 +12,13 @@ public sealed class UpdateMarketabilityStage(
 {
     public async Task RunAsync(CancellationToken ct)
     {
-        using var _ = log.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaDb });
+        using var _ = LogChannelScope.Begin(log, LogChannels.ScyllaDb);
 
         var ids = await universalis.GetMarketableItemIdsAsync(ct).ConfigureAwait(false);
-        var done = 0;
-        foreach (var id in ids)
-        {
-            ct.ThrowIfCancellationRequested();
-            await items.UpdateMarketableAsync(id, true, ct).ConfigureAwait(false);
-            done++;
-            if (done % 1000 == 0)
-            {
-                log.LogInformation("Marked {Done}/{Total} items as marketable.", done, ids.Count);
-            }
-        }
-        log.LogInformation("Marked {Count} items as marketable.", done);
+
+        await ProgressLoop.RunAsync(
+            ids, log, "Marked items as marketable",
+            (id, token) => items.UpdateMarketableAsync(id, true, token),
+            ProgressLoop.DefaultConcurrency, ct).ConfigureAwait(false);
     }
 }

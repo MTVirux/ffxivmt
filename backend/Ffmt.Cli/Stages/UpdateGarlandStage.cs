@@ -15,17 +15,16 @@ public sealed class UpdateGarlandStage(
 {
     public async Task RunAsync(CancellationToken ct)
     {
-        using var _ = log.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaDb });
+        using var _ = LogChannelScope.Begin(log, LogChannels.ScyllaDb);
 
         var ids = (await items.GetAllIdsAsync(ct).ConfigureAwait(false)).OrderBy(x => x).ToList();
         var batchSize = Math.Max(1, options.Value.GarlandBatchSize);
         var craftableFlipped = 0;
         var processed = 0;
 
-        for (var offset = 0; offset < ids.Count; offset += batchSize)
+        foreach (var slice in ids.Chunk(batchSize))
         {
             ct.ThrowIfCancellationRequested();
-            var slice = ids.Skip(offset).Take(batchSize).ToArray();
             var responses = await garland.GetItemBatchAsync(slice, ct).ConfigureAwait(false);
 
             foreach (var entry in responses)
