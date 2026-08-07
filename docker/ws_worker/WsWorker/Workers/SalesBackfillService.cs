@@ -7,6 +7,7 @@ using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 
 namespace WsWorker.Workers;
 
@@ -33,13 +34,11 @@ public sealed class SalesBackfillService : BackgroundService
     private const int StateRunning = 1;
     private const int StateError = 3;
 
-    private enum BucketOutcome
-    {
-        Advanced,
-        Stalled,
-        Complete,
-        Skipped,
-    }
+    /// <summary>One bucket's slice of a pass: its pointer row, its items, and the window it asks for.</summary>
+    private sealed record BucketWork(
+        BackfillBucketState State,
+        IReadOnlyList<int> Items,
+        BackfillBucketWindow Window);
 
     private static void SetLoopState(string region, string loop, int state) =>
         MetricsCatalog.BackfillState.WithLabels(region, loop).Set(state);
@@ -73,15 +72,15 @@ public sealed class SalesBackfillService : BackgroundService
         _logger.LogInformation("SalesBackfillService initialized - starting live-gap and historical crawl loops");
 
         await Task.WhenAll(
-            RunLoop(BackfillLoops.Live, _backfillOptions.LiveGapIntervalMinutes, ct),
-            RunLoop(BackfillLoops.Historical, _backfillOptions.HistoricalCrawlIntervalMinutes, ct));
+            RunLoop(BackfillLoopSpec.Live, _backfillOptions.LiveGapIntervalMinutes, ct),
+            RunLoop(BackfillLoopSpec.Historical, _backfillOptions.HistoricalCrawlIntervalMinutes, ct));
     }
 
-    private async Task RunLoop(string loop, int intervalMinutes, CancellationToken ct)
+    private async Task RunLoop(BackfillLoopSpec loop, int intervalMinutes, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            _logger.LogInformation("Backfill [{Loop}]: starting pass", loop);
+            _logger.LogInformation("Backfill [{Loop}]: starting pass", loop.Name);
 
             foreach (var region in _uniOptions.RegionsToImport)
             {
@@ -98,7 +97,7 @@ public sealed class SalesBackfillService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Backfill [{Region}/{Loop}]: unhandled error", region, loop);
+                    _logger.LogWarning(ex, "Backfill [{Region}/{Loop}]: unhandled error", region, loop.Name);
                 }
             }
 
@@ -106,9 +105,9 @@ public sealed class SalesBackfillService : BackgroundService
         }
     }
 
-    private async Task RunPass(string region, string loop, CancellationToken ct)
+    private async Task RunPass(string region, BackfillLoopSpec loop, CancellationToken ct)
     {
-        SetLoopState(region, loop, StateRunning);
+        SetLoopState(region, loop.Name, StateRunning);
         var faulted = false;
         try
         {
@@ -119,46 +118,60 @@ public sealed class SalesBackfillService : BackgroundService
             var bucketCount = BackfillBuckets.BucketCountFor(itemIds.Count, tuning.ItemsPerRequest);
             var groups = BackfillBuckets.Group(itemIds, bucketCount);
 
-            var states = await LoadOrSeedStates(region, loop, bucketCount, now, ct);
+            var states = await LoadOrSeedStates(region, loop.Name, bucketCount, now, ct);
 
-            var stalled = 0;
-            var advanced = 0;
-            var completed = 0;
+            var skipped = 0;
+            var work = new List<BucketWork>();
 
-            using var semaphore = new SemaphoreSlim(tuning.Concurrency, tuning.Concurrency);
-
-            var tasks = groups.Select(async group =>
+            foreach (var group in groups)
             {
                 if (!states.TryGetValue(group.Key, out var state) || state.CrawlComplete)
-                    return;
+                    continue;
 
-                await semaphore.WaitAsync(ct);
-                try
+                var window = loop.SelectWindow(_backfillOptions, state, now);
+                if (window is null)
                 {
-                    switch (await RunBucket(region, loop, state, group.Value, now, ct))
-                    {
-                        case BucketOutcome.Stalled: Interlocked.Increment(ref stalled); break;
-                        case BucketOutcome.Advanced: Interlocked.Increment(ref advanced); break;
-                        case BucketOutcome.Complete: Interlocked.Increment(ref completed); break;
-                    }
+                    skipped++;
+                    continue;
                 }
-                finally
+
+                work.Add(new BucketWork(state, group.Value, window.Value));
+            }
+
+            var outcomes = new ConcurrentBag<BackfillBucketOutcome>();
+
+            // Leaving a bucket's pointer put is what makes it retry next pass, so a chunk only
+            // counts as done once its rows are written and its pointer moved.
+            var stalled = await BackfillChunkRunner.RunAsync(
+                work,
+                async (bucket, token) =>
                 {
-                    semaphore.Release();
-                }
-            });
+                    var sales = await FetchBucket(region, bucket, token);
+                    if (sales is null)
+                        return false;
 
-            await Task.WhenAll(tasks);
+                    outcomes.Add(await SettleBucket(loop, bucket, sales, token));
+                    return true;
+                },
+                tuning.RetryRounds,
+                tuning.Concurrency,
+                TimeSpan.FromSeconds(tuning.RetryRoundDelaySeconds),
+                _rateLimiter.ConsumeAsync,
+                ct);
 
-            MetricsCatalog.BackfillStalledBuckets.WithLabels(region, loop).Set(stalled);
+            MetricsCatalog.BackfillStalledBuckets.WithLabels(region, loop.Name).Set(stalled);
             if (stalled > 0)
-                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, loop).Inc(stalled);
+                MetricsCatalog.BackfillPointerStalledTotal.WithLabels(region, loop.Name).Inc(stalled);
 
             _logger.LogInformation(
-                "Backfill [{Region}/{Loop}]: {Advanced} advanced, {Stalled} stalled, {Completed} finished their history",
-                region, loop, advanced, stalled, completed);
+                "Backfill [{Region}/{Loop}]: {Advanced} advanced, {Stalled} stalled, {Skipped} skipped, {Completed} finished their history",
+                region, loop.Name,
+                outcomes.Count(o => o == BackfillBucketOutcome.Advanced),
+                stalled,
+                skipped,
+                outcomes.Count(o => o == BackfillBucketOutcome.Complete));
 
-            if (loop == BackfillLoops.Historical)
+            if (loop.TracksHistoryDepth)
                 await ReportHistoryDepth(region, now, ct);
         }
         catch
@@ -168,57 +181,28 @@ public sealed class SalesBackfillService : BackgroundService
         }
         finally
         {
-            SetLoopState(region, loop, faulted ? StateError : StateIdle);
+            SetLoopState(region, loop.Name, faulted ? StateError : StateIdle);
         }
     }
 
-    private async Task<BucketOutcome> RunBucket(
-        string region,
-        string loop,
-        BackfillBucketState state,
-        IReadOnlyList<int> items,
-        DateTimeOffset now,
+    private Task<List<Sale>?> FetchBucket(string region, BucketWork bucket, CancellationToken ct)
+    {
+        var entriesWithinSeconds = BackfillWindow.EntriesWithinSeconds(bucket.Window.Start, bucket.Window.End);
+        var requestTimeout = _backfillOptions.Tuning.RequestTimeoutFor(entriesWithinSeconds);
+
+        return FetchChunk(region, bucket.Items, entriesWithinSeconds, requestTimeout, ct);
+    }
+
+    private async Task<BackfillBucketOutcome> SettleBucket(
+        BackfillLoopSpec loop,
+        BucketWork bucket,
+        List<Sale> sales,
         CancellationToken ct)
     {
-        DateTimeOffset windowStart;
-        DateTimeOffset? olderThan = null;
-
-        if (loop == BackfillLoops.Historical)
-        {
-            var earliest = state.EarliestImportAt ?? now;
-            windowStart = BackfillWindow.HistoricalStart(earliest, _backfillOptions.ChunkDays);
-            olderThan = earliest;
-        }
-        else
-        {
-            var last = state.LastImportAt ?? now;
-            if (now - last < TimeSpan.FromMinutes(_backfillOptions.SkipIfGapUnderMinutes))
-                return BucketOutcome.Skipped;
-
-            windowStart = last;
-        }
-
-        var entriesWithinSeconds = BackfillWindow.EntriesWithinSeconds(windowStart, now);
-        var tuning = _backfillOptions.Tuning;
-        var requestTimeout = tuning.RequestTimeoutFor(entriesWithinSeconds);
-
-        var run = await BackfillChunkRunner.RunAsync(
-            [items],
-            (chunk, token) => FetchChunk(region, chunk, entriesWithinSeconds, requestTimeout, token),
-            tuning.RetryRounds,
-            concurrency: 1,
-            TimeSpan.FromSeconds(tuning.RetryRoundDelaySeconds),
-            _rateLimiter.ConsumeAsync,
-            ct);
-
-        // Leaving the pointer put is what makes this bucket retry next pass. It must never be
-        // confused with "this bucket has no more history".
-        if (run.FailedChunks > 0)
-            return BucketOutcome.Stalled;
-
+        var olderThan = bucket.Window.OlderThan;
         var toWrite = olderThan is null
-            ? run.Sales
-            : run.Sales.Where(s => s.SaleTime < olderThan.Value).ToList();
+            ? sales
+            : sales.Where(s => s.SaleTime < olderThan.Value).ToList();
 
         if (toWrite.Count > 0)
         {
@@ -226,22 +210,10 @@ public sealed class SalesBackfillService : BackgroundService
             await EnqueueDirtyPairs(toWrite, ct);
         }
 
-        if (loop == BackfillLoops.Historical)
-        {
-            if (toWrite.Count == 0)
-            {
-                await _stateStore.UpsertBucketAsync(state with { CrawlComplete = true }, ct);
-                return BucketOutcome.Complete;
-            }
+        var (next, outcome) = loop.Advance(bucket.State, bucket.Window, toWrite.Count > 0);
+        await _stateStore.UpsertBucketAsync(next, ct);
 
-            await _stateStore.UpsertBucketAsync(state with { EarliestImportAt = windowStart }, ct);
-        }
-        else
-        {
-            await _stateStore.UpsertBucketAsync(state with { LastImportAt = now }, ct);
-        }
-
-        return BucketOutcome.Advanced;
+        return outcome;
     }
 
     /// <summary>

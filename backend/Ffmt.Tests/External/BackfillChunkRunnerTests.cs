@@ -1,21 +1,14 @@
 using System.Collections.Concurrent;
 
 using Ffmt.Core.External;
-using Ffmt.Core.Models;
 
 namespace Ffmt.Tests.External;
 
 public sealed class BackfillChunkRunnerTests
 {
-    private static Sale SaleFor(int itemId) =>
-        new(itemId, 40, "Buyer", false, false, 1, 100, DateTimeOffset.UnixEpoch);
-
-    private static IReadOnlyList<IReadOnlyList<int>> Chunks(params int[][] chunks) =>
-        chunks.Select(c => (IReadOnlyList<int>)c).ToList();
-
-    private static Task<ChunkRunResult> Run(
-        IReadOnlyList<IReadOnlyList<int>> chunks,
-        Func<IReadOnlyList<int>, CancellationToken, Task<List<Sale>?>> fetch,
+    private static Task<int> Run(
+        IReadOnlyList<int> chunks,
+        Func<int, CancellationToken, Task<bool>> fetch,
         int retryRounds = 2,
         Func<CancellationToken, Task>? gate = null) =>
         BackfillChunkRunner.RunAsync(
@@ -26,14 +19,14 @@ public sealed class BackfillChunkRunnerTests
     {
         var attempts = new ConcurrentDictionary<int, int>();
 
-        var result = await Run(Chunks([1], [2], [3]), (items, _) =>
+        var failedChunks = await Run([1, 2, 3], (id, _) =>
         {
-            attempts.AddOrUpdate(items[0], 1, (_, v) => v + 1);
-            return Task.FromResult<List<Sale>?>([SaleFor(items[0])]);
+            attempts.AddOrUpdate(id, 1, (_, v) => v + 1);
+            return Task.FromResult(true);
         });
 
-        result.FailedChunks.Should().Be(0);
-        result.Sales.Select(s => s.ItemId).Should().BeEquivalentTo(new[] { 1, 2, 3 });
+        failedChunks.Should().Be(0);
+        attempts.Keys.Should().BeEquivalentTo(new[] { 1, 2, 3 });
         attempts.Values.Should().AllSatisfy(v => v.Should().Be(1));
     }
 
@@ -42,16 +35,14 @@ public sealed class BackfillChunkRunnerTests
     {
         var attempts = new ConcurrentDictionary<int, int>();
 
-        var result = await Run(Chunks([1], [2], [3]), (items, _) =>
+        var failedChunks = await Run([1, 2, 3], (id, _) =>
         {
-            var id = items[0];
             var attempt = attempts.AddOrUpdate(id, 1, (_, v) => v + 1);
-            return Task.FromResult<List<Sale>?>(id == 2 && attempt == 1 ? null : [SaleFor(id)]);
+            return Task.FromResult(id != 2 || attempt > 1);
         });
 
-        result.FailedChunks.Should().Be(0,
+        failedChunks.Should().Be(0,
             "the retry cleared the only failure, so the pass can advance its pointer");
-        result.Sales.Select(s => s.ItemId).Should().BeEquivalentTo(new[] { 1, 2, 3 });
         attempts[1].Should().Be(1, "chunks that already succeeded must not be refetched");
         attempts[3].Should().Be(1, "chunks that already succeeded must not be refetched");
         attempts[2].Should().Be(2, "the failed chunk is retried and then succeeds");
@@ -61,18 +52,22 @@ public sealed class BackfillChunkRunnerTests
     public async Task Reports_chunks_that_still_fail_after_the_retry_rounds_are_exhausted()
     {
         var attempts = new ConcurrentDictionary<int, int>();
+        var succeeded = new ConcurrentBag<int>();
 
-        var result = await Run(Chunks([1], [2], [3]), (items, _) =>
+        var failedChunks = await Run([1, 2, 3], (id, _) =>
         {
-            var id = items[0];
             attempts.AddOrUpdate(id, 1, (_, v) => v + 1);
-            return Task.FromResult<List<Sale>?>(id == 2 ? null : [SaleFor(id)]);
+            if (id == 2)
+                return Task.FromResult(false);
+
+            succeeded.Add(id);
+            return Task.FromResult(true);
         });
 
-        result.FailedChunks.Should().Be(1);
+        failedChunks.Should().Be(1);
         attempts[2].Should().Be(3, "the initial attempt plus two retry rounds");
-        result.Sales.Select(s => s.ItemId).Should().BeEquivalentTo(new[] { 1, 3 },
-            "sales from the chunks that did succeed are still returned to the caller");
+        succeeded.Should().BeEquivalentTo(new[] { 1, 3 },
+            "the chunks that did succeed are still handled");
     }
 
     [Fact]
@@ -81,11 +76,10 @@ public sealed class BackfillChunkRunnerTests
         var gateCalls = 0;
         var attempts = new ConcurrentDictionary<int, int>();
 
-        await Run(Chunks([1], [2], [3]), (items, _) =>
+        await Run([1, 2, 3], (id, _) =>
         {
-            var id = items[0];
             var attempt = attempts.AddOrUpdate(id, 1, (_, v) => v + 1);
-            return Task.FromResult<List<Sale>?>(id == 2 && attempt == 1 ? null : [SaleFor(id)]);
+            return Task.FromResult(id != 2 || attempt > 1);
         },
         gate: _ =>
         {
@@ -94,5 +88,42 @@ public sealed class BackfillChunkRunnerTests
         });
 
         gateCalls.Should().Be(4, "three initial requests plus the one retried request");
+    }
+
+    [Fact]
+    public async Task Bounds_how_many_chunks_are_in_flight_at_once()
+    {
+        var inFlight = 0;
+        var peak = 0;
+
+        await BackfillChunkRunner.RunAsync(
+            Enumerable.Range(1, 32).ToList(),
+            async (_, token) =>
+            {
+                var current = Interlocked.Increment(ref inFlight);
+                InterlockedMax(ref peak, current);
+                await Task.Delay(5, token);
+                Interlocked.Decrement(ref inFlight);
+                return true;
+            },
+            retryRounds: 0,
+            concurrency: 4,
+            retryRoundDelay: TimeSpan.Zero,
+            gate: null,
+            CancellationToken.None);
+
+        peak.Should().BeLessThanOrEqualTo(4, "the runner is the only concurrency bound on a pass");
+    }
+
+    private static void InterlockedMax(ref int target, int value)
+    {
+        int seen;
+        do
+        {
+            seen = Volatile.Read(ref target);
+            if (value <= seen)
+                return;
+        }
+        while (Interlocked.CompareExchange(ref target, value, seen) != seen);
     }
 }

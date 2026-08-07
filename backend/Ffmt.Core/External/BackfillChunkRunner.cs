@@ -1,37 +1,36 @@
 using System.Collections.Concurrent;
 
-using Ffmt.Core.Models;
-
 namespace Ffmt.Core.External;
 
-/// <summary>Sales gathered across every round, plus the chunks that never succeeded.</summary>
-public sealed record ChunkRunResult(List<Sale> Sales, int FailedChunks);
-
 /// <summary>
-/// Runs the per-item-chunk fetches for one backfill pass and re-runs only the chunks that failed.
+/// Runs the per-chunk fetches for one backfill pass and re-runs only the chunks that failed.
 /// A pass that reports any failure leaves its pointer where it is, so without a retry a single
 /// timed-out chunk out of thousands pins the crawl on the same window forever.
 /// </summary>
 public static class BackfillChunkRunner
 {
-    public static async Task<ChunkRunResult> RunAsync(
-        IReadOnlyList<IReadOnlyList<int>> chunks,
-        Func<IReadOnlyList<int>, CancellationToken, Task<List<Sale>?>> fetch,
+    /// <summary>
+    /// <paramref name="fetch"/> returns false for a chunk that should be retried, and owns whatever
+    /// it does with a successful result - the runner holds nothing but the outstanding chunks, so a
+    /// pass costs the same memory whether it has ten buckets or a thousand. Returns the number of
+    /// chunks that never succeeded.
+    /// </summary>
+    public static async Task<int> RunAsync<TChunk>(
+        IReadOnlyList<TChunk> chunks,
+        Func<TChunk, CancellationToken, Task<bool>> fetch,
         int retryRounds,
         int concurrency,
         TimeSpan retryRoundDelay,
         Func<CancellationToken, Task>? gate,
         CancellationToken ct)
     {
-        var sales = new List<Sale>();
         var pending = chunks;
 
         using var semaphore = new SemaphoreSlim(concurrency, concurrency);
 
         for (var round = 0; ; round++)
         {
-            var fetched = new ConcurrentBag<Sale>();
-            var failed = new ConcurrentBag<IReadOnlyList<int>>();
+            var failed = new ConcurrentBag<TChunk>();
 
             var tasks = pending.Select(async chunk =>
             {
@@ -41,15 +40,8 @@ public static class BackfillChunkRunner
                     if (gate is not null)
                         await gate(ct);
 
-                    var result = await fetch(chunk, ct);
-                    if (result is null)
-                    {
+                    if (!await fetch(chunk, ct))
                         failed.Add(chunk);
-                        return;
-                    }
-
-                    foreach (var sale in result)
-                        fetched.Add(sale);
                 }
                 finally
                 {
@@ -59,16 +51,13 @@ public static class BackfillChunkRunner
 
             await Task.WhenAll(tasks);
 
-            sales.AddRange(fetched);
             pending = failed.ToList();
 
             if (pending.Count == 0 || round >= retryRounds)
-                break;
+                return pending.Count;
 
             if (retryRoundDelay > TimeSpan.Zero)
                 await Task.Delay(retryRoundDelay, ct);
         }
-
-        return new ChunkRunResult(sales, pending.Count);
     }
 }
