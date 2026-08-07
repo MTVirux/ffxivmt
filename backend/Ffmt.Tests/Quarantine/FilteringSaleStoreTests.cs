@@ -24,16 +24,6 @@ public sealed class FilteringSaleStoreTests
         }
     }
 
-    private sealed class CapturingQuarantine : IQuarantineStore
-    {
-        public List<QuarantinedSale> Written { get; } = [];
-        public Task AddBatchAsync(IReadOnlyList<QuarantinedSale> sales, CancellationToken ct = default)
-        {
-            Written.AddRange(sales);
-            return Task.CompletedTask;
-        }
-    }
-
     private sealed class ThrowingQuarantine : IQuarantineStore
     {
         public Task AddBatchAsync(IReadOnlyList<QuarantinedSale> sales, CancellationToken ct = default) =>
@@ -48,7 +38,7 @@ public sealed class FilteringSaleStoreTests
     public async Task Armed_writes_only_accepted_sales_and_records_the_rest()
     {
         var inner = new CapturingInner();
-        var quarantine = new CapturingQuarantine();
+        var quarantine = new CapturingQuarantineStore();
         var store = NewStore(inner, quarantine, new QuarantineOptions { ShadowMode = false });
 
         await store.AddBatchAsync([Good, Bad]);
@@ -61,7 +51,7 @@ public sealed class FilteringSaleStoreTests
     public async Task Shadow_mode_records_the_anomaly_but_still_writes_everything()
     {
         var inner = new CapturingInner();
-        var quarantine = new CapturingQuarantine();
+        var quarantine = new CapturingQuarantineStore();
         var store = NewStore(inner, quarantine, new QuarantineOptions { ShadowMode = true });
 
         await store.AddBatchAsync([Good, Bad]);
@@ -87,7 +77,7 @@ public sealed class FilteringSaleStoreTests
     public async Task Disabled_passes_the_batch_straight_through()
     {
         var inner = new CapturingInner();
-        var quarantine = new CapturingQuarantine();
+        var quarantine = new CapturingQuarantineStore();
         var store = NewStore(inner, quarantine, new QuarantineOptions { Enabled = false });
 
         await store.AddBatchAsync([Good, Bad]);

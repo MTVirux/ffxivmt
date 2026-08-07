@@ -52,17 +52,6 @@ public sealed class QuarantineScrubTests
         }
     }
 
-    private sealed class RecordingQuarantineStore : IQuarantineStore
-    {
-        public List<QuarantinedSale> Written { get; } = [];
-
-        public Task AddBatchAsync(IReadOnlyList<QuarantinedSale> sales, CancellationToken ct = default)
-        {
-            Written.AddRange(sales);
-            return Task.CompletedTask;
-        }
-    }
-
     private sealed class RecordingDirtyPairQueue : IDirtyPairQueue
     {
         public List<(int WorldId, int ItemId)> Enqueued { get; } = [];
@@ -103,7 +92,7 @@ public sealed class QuarantineScrubTests
     public async Task Armed_run_deletes_exactly_the_flagged_sales_and_nothing_else()
     {
         var sales = new RecordingSaleStore([Normal, Anomalous, AlsoNormal]);
-        var command = NewCommand(sales, new RecordingQuarantineStore(), new RecordingDirtyPairQueue());
+        var command = NewCommand(sales, new CapturingQuarantineStore(), new RecordingDirtyPairQueue());
 
         await command.RunAsync(dryRun: false, CancellationToken.None);
 
@@ -120,7 +109,7 @@ public sealed class QuarantineScrubTests
     public async Task Armed_run_quarantines_exactly_what_it_deleted()
     {
         var sales = new RecordingSaleStore([Normal, Anomalous]);
-        var quarantine = new RecordingQuarantineStore();
+        var quarantine = new CapturingQuarantineStore();
         var command = NewCommand(sales, quarantine, new RecordingDirtyPairQueue());
 
         await command.RunAsync(dryRun: false, CancellationToken.None);
@@ -135,7 +124,7 @@ public sealed class QuarantineScrubTests
     public async Task Dry_run_writes_and_deletes_nothing()
     {
         var sales = new RecordingSaleStore([Normal, Anomalous]);
-        var quarantine = new RecordingQuarantineStore();
+        var quarantine = new CapturingQuarantineStore();
         var dirtyPairs = new RecordingDirtyPairQueue();
 
         await NewCommand(sales, quarantine, dirtyPairs).RunAsync(dryRun: true, CancellationToken.None);
@@ -151,7 +140,7 @@ public sealed class QuarantineScrubTests
     {
         var dirtyPairs = new RecordingDirtyPairQueue();
         var command = NewCommand(
-            new RecordingSaleStore([Normal, Anomalous]), new RecordingQuarantineStore(), dirtyPairs);
+            new RecordingSaleStore([Normal, Anomalous]), new CapturingQuarantineStore(), dirtyPairs);
 
         await command.RunAsync(dryRun: false, CancellationToken.None);
 
