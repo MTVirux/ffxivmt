@@ -13,11 +13,11 @@ public sealed class FilteringSaleStoreTests
     private static readonly Sale Good = new(1, 21, "Alisaie", false, false, 1, 500, DateTimeOffset.UnixEpoch);
     private static readonly Sale Bad = new(2, 21, "Alphinaud", false, false, 1, 999_999_999, DateTimeOffset.UnixEpoch);
 
-    private sealed class CapturingInner : FakeSaleStore
+    private sealed class CapturingInner : ISaleWriter
     {
         public List<Sale> Written { get; } = [];
 
-        public override Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
+        public Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
         {
             Written.AddRange(sales);
             return Task.FromResult(new SaleBatchResult(sales.Count, 0d));
@@ -40,7 +40,7 @@ public sealed class FilteringSaleStoreTests
             throw new InvalidOperationException("scylla is down");
     }
 
-    private static FilteringSaleStore NewStore(ISaleStore inner, IQuarantineStore quarantine, QuarantineOptions opts) =>
+    private static FilteringSaleStore NewStore(ISaleWriter inner, IQuarantineStore quarantine, QuarantineOptions opts) =>
         new(inner, new StubAnomalyFilter(), quarantine, Options.Create(opts),
             NullLogger<FilteringSaleStore>.Instance);
 

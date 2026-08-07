@@ -20,7 +20,7 @@ namespace WsWorker.Workers;
 public sealed class SalesBackfillService : BackgroundService
 {
     private readonly IBackfillStateStore _stateStore;
-    private readonly ISaleStore _saleStore;
+    private readonly ISaleWriter _saleWriter;
     private readonly WorldStructureService _catalog;
     private readonly IDirtyPairQueue _dirtyPairs;
     private readonly UniversalisOptions _uniOptions;
@@ -45,7 +45,7 @@ public sealed class SalesBackfillService : BackgroundService
 
     public SalesBackfillService(
         IBackfillStateStore stateStore,
-        ISaleStore saleStore,
+        ISaleWriter saleWriter,
         WorldStructureService catalog,
         IDirtyPairQueue dirtyPairs,
         IOptions<UniversalisOptions> uniOptions,
@@ -54,7 +54,7 @@ public sealed class SalesBackfillService : BackgroundService
         ILogger<SalesBackfillService> logger)
     {
         _stateStore = stateStore;
-        _saleStore = saleStore;
+        _saleWriter = saleWriter;
         _catalog = catalog;
         _dirtyPairs = dirtyPairs;
         _uniOptions = uniOptions.Value;
@@ -206,7 +206,7 @@ public sealed class SalesBackfillService : BackgroundService
 
         if (toWrite.Count > 0)
         {
-            await _saleStore.AddBatchAsync(toWrite, ct);
+            await _saleWriter.AddBatchAsync(toWrite, ct);
             await EnqueueDirtyPairs(toWrite, ct);
         }
 

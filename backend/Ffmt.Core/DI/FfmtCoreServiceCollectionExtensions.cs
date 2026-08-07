@@ -39,7 +39,8 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IDirtyPairQueue, ScyllaDirtyPairQueue>();
         services.AddSingleton<IBackfillStateStore, ScyllaBackfillStateStore>();
         services.AddSingleton<ScyllaSaleStore>();
-        services.AddSingleton<ISaleStore>(sp => new FilteringSaleStore(
+        services.AddSingleton<ISaleStore>(sp => sp.GetRequiredService<ScyllaSaleStore>());
+        services.AddSingleton<ISaleWriter>(sp => new FilteringSaleStore(
             sp.GetRequiredService<ScyllaSaleStore>(),
             sp.GetRequiredService<ISaleAnomalyFilter>(),
             sp.GetRequiredService<IQuarantineStore>(),

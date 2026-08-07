@@ -3,10 +3,8 @@ using Ffmt.Core.Quarantine;
 
 namespace Ffmt.Core.Storage.Scylla;
 
-public interface ISaleStore
+public interface ISaleStore : ISaleWriter
 {
-    Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
-
     Task<IReadOnlyList<Sale>> SearchBuyerAsync(string buyerName, int? worldId, CancellationToken ct = default);
 
     /// <summary>World is required; fan-out across all worlds would need ALLOW FILTERING and scale poorly.</summary>

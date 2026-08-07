@@ -9,15 +9,15 @@ using Microsoft.Extensions.Options;
 namespace Ffmt.Core.Quarantine;
 
 /// <summary>
-/// Single chokepoint for anomaly filtering. Both ingest paths call ISaleStore.AddBatchAsync and are
+/// Single chokepoint for anomaly filtering. Both ingest paths call ISaleWriter.AddBatchAsync and are
 /// protected without knowing this exists; every failure mode here writes the sale rather than losing it.
 /// </summary>
 public sealed class FilteringSaleStore(
-    ISaleStore inner,
+    ISaleWriter inner,
     ISaleAnomalyFilter filter,
     IQuarantineStore quarantine,
     IOptions<QuarantineOptions> options,
-    ILogger<FilteringSaleStore> logger) : ISaleStore
+    ILogger<FilteringSaleStore> logger) : ISaleWriter
 {
     public async Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
     {
@@ -59,25 +59,4 @@ public sealed class FilteringSaleStore(
         var toWrite = opts.ShadowMode ? sales : partition.Accepted;
         return await inner.AddBatchAsync(toWrite, ct).ConfigureAwait(false);
     }
-
-    public Task<IReadOnlyList<Sale>> SearchBuyerAsync(string buyerName, int? worldId, CancellationToken ct = default) =>
-        inner.SearchBuyerAsync(buyerName, worldId, ct);
-
-    public Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int itemId, int worldId, int limit, CancellationToken ct = default) =>
-        inner.GetByItemAndWorldAsync(itemId, worldId, limit, ct);
-
-    public Task<IReadOnlyList<Sale>> GetByItemAndWorldInRangeAsync(int itemId, int worldId, DateOnly date, CancellationToken ct = default) =>
-        inner.GetByItemAndWorldInRangeAsync(itemId, worldId, date, ct);
-
-    public Task DeleteByItemAndWorldInRangeAsync(int itemId, int worldId, DateOnly date, IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
-        inner.DeleteByItemAndWorldInRangeAsync(itemId, worldId, date, sales, ct);
-
-    public Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(int itemId, int worldId, DateTimeOffset since, CancellationToken ct = default) =>
-        inner.GetPricePointsSinceAsync(itemId, worldId, since, ct);
-
-    public Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
-        inner.DeleteExactAsync(sales, ct);
-
-    public Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
-        inner.BackfillTotalPriceAsync(sales, ct);
 }

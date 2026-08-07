@@ -23,7 +23,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
     /// so membership doubles as the validity check the loop used to ask the catalogue for.</summary>
     private sealed record Subscription(IReadOnlyList<int> WorldIds, IReadOnlyDictionary<int, WorldMetrics> Metrics);
 
-    private readonly ISaleStore _saleStore;
+    private readonly ISaleWriter _saleWriter;
     private readonly WorldStructureService _catalog;
     private readonly RankingCoalescer _coalescer;
     private readonly UniversalisOptions _options;
@@ -35,13 +35,13 @@ public sealed class UniversalisWsConsumer : BackgroundService
     public bool IsConnected => _isConnected;
 
     public UniversalisWsConsumer(
-        ISaleStore saleStore,
+        ISaleWriter saleWriter,
         WorldStructureService catalog,
         RankingCoalescer coalescer,
         IOptions<UniversalisOptions> options,
         ILogger<UniversalisWsConsumer> logger)
     {
-        _saleStore = saleStore;
+        _saleWriter = saleWriter;
         _catalog = catalog;
         _coalescer = coalescer;
         _options = options.Value;
@@ -242,7 +242,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
     {
         try
         {
-            await _saleStore.AddBatchAsync(sales, ct);
+            await _saleWriter.AddBatchAsync(sales, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
