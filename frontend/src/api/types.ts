@@ -46,6 +46,18 @@ export type Location = {
   worldId?: number;
 };
 
+/** Fields the /api/v1/tools/* calculators return beside `data`. */
+export type ToolMeta = {
+  item_name: string;
+  item_id: number;
+  location: string;
+  request_id: string;
+};
+
+export type ToolResponse<T> =
+  | ({ status: true; message?: string; data: T[] } & ToolMeta)
+  | { status: false; message: string };
+
 /** Result row for /api/v1/tools/item_product_profit_calculator. */
 export type ProfitRow = {
   id: number;
@@ -55,17 +67,7 @@ export type ProfitRow = {
   ffmt_score: number;
 };
 
-export type ItemProductProfitResponse =
-  | {
-      status: true;
-      message?: string;
-      data: ProfitRow[];
-      item_name: string;
-      item_id: number;
-      location: string;
-      request_id: string;
-    }
-  | { status: false; message: string };
+export type ItemProductProfitResponse = ToolResponse<ProfitRow>;
 
 /** Result row for /api/v1/tools/currency_efficiency_calculator. */
 export type CurrencyEfficiencyRow = {
@@ -83,17 +85,7 @@ export type CurrencyEfficiencyRow = {
   ffmt_score: number;
 };
 
-export type CurrencyEfficiencyResponse =
-  | {
-      status: true;
-      message?: string;
-      data: CurrencyEfficiencyRow[];
-      item_name: string;
-      item_id: number;
-      location: string;
-      request_id: string;
-    }
-  | { status: false; message: string };
+export type CurrencyEfficiencyResponse = ToolResponse<CurrencyEfficiencyRow>;
 
 /** GET /api/v1/item/:id/sales — single Scylla `sales` row. */
 export type Sale = {
