@@ -346,7 +346,7 @@ public sealed class SalesBackfillService : BackgroundService
             chunks,
             (chunk, token) => FetchChunk(region, chunk, entriesWithinSeconds, requestTimeout, token),
             tuning.RetryRounds,
-            concurrency: 4,
+            tuning.Concurrency,
             TimeSpan.FromSeconds(tuning.RetryRoundDelaySeconds),
             _rateLimiter.ConsumeAsync,
             ct);
