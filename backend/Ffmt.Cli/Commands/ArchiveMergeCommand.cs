@@ -11,7 +11,7 @@ public sealed class ArchiveMergeCommand(
 {
     public async Task RunAsync(bool dryRun, CancellationToken ct)
     {
-        var correctionKeys = await uploader.ListKeysAsync("corrections/", ct).ConfigureAwait(false);
+        var correctionKeys = await uploader.ListKeysAsync(ArchiveKeys.CorrectionsPrefix, ct).ConfigureAwait(false);
 
         logger.LogInformation("Merge run: {Count} corrections files to process, dry-run={DryRun}",
             correctionKeys.Count, dryRun);
@@ -20,7 +20,7 @@ public sealed class ArchiveMergeCommand(
         {
             ct.ThrowIfCancellationRequested();
 
-            var archiveKey = "archive/" + corrKey["corrections/".Length..];
+            var archiveKey = ArchiveKeys.ToArchiveKey(corrKey);
 
             logger.LogInformation("{Mode} merging {CorrKey} into {ArchiveKey}",
                 dryRun ? "DRY-RUN" : "Merging", corrKey, archiveKey);
