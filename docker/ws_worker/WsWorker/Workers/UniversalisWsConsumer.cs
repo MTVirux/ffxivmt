@@ -8,19 +8,28 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using Prometheus;
 using System.Net.WebSockets;
 
 namespace WsWorker.Workers;
 
 public sealed class UniversalisWsConsumer : BackgroundService
 {
+    /// <summary>Prometheus takes a lock to resolve a label set, so the receive loop holds the
+    /// children rather than resolving them per message.</summary>
+    private sealed record WorldMetrics(Counter.Child Received, Counter.Child InsertOk, Counter.Child InsertError);
+
+    /// <summary>The worlds this consumer subscribed to. A message for anything else is unexpected,
+    /// so membership doubles as the validity check the loop used to ask the catalogue for.</summary>
+    private sealed record Subscription(IReadOnlyList<int> WorldIds, IReadOnlyDictionary<int, WorldMetrics> Metrics);
+
     private readonly ISaleStore _saleStore;
     private readonly WorldStructureService _catalog;
     private readonly RankingCoalescer _coalescer;
     private readonly UniversalisOptions _options;
     private readonly ILogger<UniversalisWsConsumer> _logger;
 
-    private int _inflightCount;
+    private Gauge.Child[] _connectedGauges = [];
 
     private volatile bool _isConnected;
     public bool IsConnected => _isConnected;
@@ -51,13 +60,24 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
         _logger.LogInformation("UniversalisWsConsumer resolved {Count} worlds to subscribe to", worldIds.Count);
 
+        var subscription = new Subscription(worldIds, worldIds.ToDictionary(id => id, id =>
+        {
+            var label = id.ToString();
+            return new WorldMetrics(
+                MetricsCatalog.WsSalesReceivedTotal.WithLabels(label),
+                MetricsCatalog.WsInsertsTotal.WithLabels(label, "ok"),
+                MetricsCatalog.WsInsertsTotal.WithLabels(label, "error"));
+        }));
+
+        _connectedGauges = worldIds.Select(id => MetricsCatalog.WsConnected.WithLabels(id.ToString())).ToArray();
+
         var backoffSeconds = 1.0;
 
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                await ConsumerLoop(worldIds, ct);
+                await ConsumerLoop(subscription, ct);
                 backoffSeconds = 1.0;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -66,11 +86,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
             }
             catch (Exception ex)
             {
-                _isConnected = false;
-                foreach (var w in worldIds)
-                {
-                    MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(0);
-                }
+                SetConnected(false);
                 var jitter = Random.Shared.NextDouble() * 2;
                 var delay = backoffSeconds + jitter;
                 _logger.LogWarning(ex, "WebSocket consumer loop failed — reconnecting in {Delay:F1}s", delay);
@@ -80,7 +96,15 @@ public sealed class UniversalisWsConsumer : BackgroundService
         }
     }
 
-    private async Task ConsumerLoop(IReadOnlyList<int> worldIds, CancellationToken ct)
+    private void SetConnected(bool value)
+    {
+        _isConnected = value;
+        var level = value ? 1 : 0;
+        foreach (var gauge in _connectedGauges)
+            gauge.Set(level);
+    }
+
+    private async Task ConsumerLoop(Subscription subscription, CancellationToken ct)
     {
         using var ws = new ClientWebSocket();
         ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
@@ -88,7 +112,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
         await ws.ConnectAsync(new Uri(_options.WsUrl), ct);
         _logger.LogInformation("Connected to Universalis WebSocket at {Url}", _options.WsUrl);
 
-        foreach (var worldId in worldIds)
+        foreach (var worldId in subscription.WorldIds)
         {
             var subDoc = new BsonDocument
             {
@@ -103,12 +127,8 @@ public sealed class UniversalisWsConsumer : BackgroundService
                 ct);
         }
 
-        _logger.LogInformation("Subscribed to {Count} world channel(s)", worldIds.Count);
-        _isConnected = true;
-        foreach (var w in worldIds)
-        {
-            MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(1);
-        }
+        _logger.LogInformation("Subscribed to {Count} world channel(s)", subscription.WorldIds.Count);
+        SetConnected(true);
 
         var buffer = new byte[64 * 1024];
         using var messageStream = new MemoryStream();
@@ -117,18 +137,14 @@ public sealed class UniversalisWsConsumer : BackgroundService
         {
             messageStream.SetLength(0);
 
-            WebSocketReceiveResult result;
+            ValueWebSocketReceiveResult result;
             do
             {
-                result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
+                result = await ws.ReceiveAsync(buffer.AsMemory(), ct);
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    foreach (var w in worldIds)
-                    {
-                        MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(0);
-                    }
-                    _isConnected = false;
+                    SetConnected(false);
                     await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
                     _logger.LogInformation("WebSocket closed by server");
                     return;
@@ -168,8 +184,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
                 continue;
             }
 
-            var world = await _catalog.GetWorldAsync(worldId, ct);
-            if (world is null)
+            if (!subscription.Metrics.TryGetValue(worldId, out var worldMetrics))
             {
                 _logger.LogWarning("Received sales/add for unknown worldId {WorldId} — skipping", worldId);
                 continue;
@@ -177,8 +192,9 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
             if (doc.TryGetValue("sales", out var salesVal) && salesVal.IsBsonArray)
             {
-                var sales = new List<Sale>();
-                foreach (BsonValue saleEntry in salesVal.AsBsonArray)
+                var salesArray = salesVal.AsBsonArray;
+                var sales = new List<Sale>(salesArray.Count);
+                foreach (BsonValue saleEntry in salesArray)
                 {
                     if (saleEntry is not BsonDocument saleDoc)
                         continue;
@@ -208,37 +224,37 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
                 if (sales.Count > 0)
                 {
-                    var worldLabel = worldId.ToString();
-                    MetricsCatalog.WsSalesReceivedTotal.WithLabels(worldLabel).Inc(sales.Count);
-
-                    Interlocked.Increment(ref _inflightCount);
-                    _ = _saleStore.AddBatchAsync(sales, ct).ContinueWith(t =>
-                    {
-                        Interlocked.Decrement(ref _inflightCount);
-                        if (t.IsFaulted)
-                        {
-                            MetricsCatalog.WsInsertsTotal.WithLabels(worldLabel, "error").Inc();
-                            _logger.LogError(t.Exception, "Scylla fire-and-forget sale-batch insert failed");
-                        }
-                        else
-                        {
-                            MetricsCatalog.WsInsertsTotal.WithLabels(worldLabel, "ok").Inc();
-                        }
-                    }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
-
-                    if (_inflightCount > 500)
-                        await Task.Yield();
+                    worldMetrics.Received.Inc(sales.Count);
+                    _ = InsertAsync(sales, worldMetrics, ct);
                 }
             }
 
             _coalescer.Submit(worldId, itemId);
         }
 
-        foreach (var w in worldIds)
-        {
-            MetricsCatalog.WsConnected.WithLabels(w.ToString()).Set(0);
-        }
-        _isConnected = false;
+        SetConnected(false);
         _logger.LogInformation("WebSocket consumer loop exited (state={State})", ws.State);
+    }
+
+    /// <summary>Fire-and-forget by design: the receive loop must not block on Scylla acks during a
+    /// sales burst. Failures surface through the metric and the worker's health check.</summary>
+    private async Task InsertAsync(List<Sale> sales, WorldMetrics metrics, CancellationToken ct)
+    {
+        try
+        {
+            await _saleStore.AddBatchAsync(sales, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            metrics.InsertError.Inc();
+            _logger.LogError(ex, "Scylla fire-and-forget sale-batch insert failed");
+            return;
+        }
+
+        metrics.InsertOk.Inc();
     }
 }
