@@ -6,64 +6,47 @@ log_info() { printf '[INFO  %s] %s\n' "$(date -Is)" "$*"; }
 log_warn() { printf '[WARN  %s] %s\n' "$(date -Is)" "$*" >&2; }
 log_err()  { printf '[ERROR %s] %s\n' "$(date -Is)" "$*" >&2; }
 
-# Wait for a TCP host:port to accept connections.
-wait_for_tcp() {
-    local host="$1" port="$2" timeout="${3:-300}" elapsed=0
-    log_info "Waiting on TCP $host:$port (timeout ${timeout}s)..."
-    while ! (echo > "/dev/tcp/$host/$port") 2>/dev/null; do
+# wait_until <desc> <timeout_s> <interval_s> -- cmd...
+# Retries cmd until it succeeds or the timeout elapses. Command stdout is
+# dropped; stderr is kept so a persistent failure is diagnosable from the log.
+wait_until() {
+    local desc="$1" timeout="$2" interval="$3" elapsed=0
+    shift 3
+    if [ "${1:-}" = "--" ]; then shift; fi
+    log_info "Waiting on $desc (timeout ${timeout}s)..."
+    until "$@" >/dev/null; do
         if [ "$elapsed" -ge "$timeout" ]; then
-            log_err "Timed out waiting for $host:$port"
+            log_err "Timed out waiting for $desc"
             return 1
         fi
-        sleep 2
-        elapsed=$((elapsed + 2))
+        sleep "$interval"
+        elapsed=$((elapsed + interval))
     done
-    log_info "TCP $host:$port is open."
+    log_info "$desc is ready."
 }
+
+_tcp_open() { (echo > "/dev/tcp/$1/$2") 2>/dev/null; }
+_dns_resolves_to() { [ "$(dig +short "$1" A | head -1)" = "$2" ]; }
+
+# Wait for a TCP host:port to accept connections.
+wait_for_tcp() { wait_until "TCP $1:$2" "${3:-300}" 2 -- _tcp_open "$1" "$2"; }
 
 # Wait for an HTTP URL to return any 2xx/3xx.
-wait_for_http() {
-    local url="$1" timeout="${2:-300}" elapsed=0
-    log_info "Waiting on HTTP $url (timeout ${timeout}s)..."
-    while ! curl -fsS -o /dev/null --max-time 5 "$url"; do
-        if [ "$elapsed" -ge "$timeout" ]; then
-            log_err "Timed out waiting for $url"
-            return 1
-        fi
-        sleep 5
-        elapsed=$((elapsed + 5))
-    done
-    log_info "HTTP $url returned 2xx/3xx."
-}
+wait_for_http() { wait_until "HTTP $1" "${2:-300}" 5 -- curl -fsS -o /dev/null --max-time 5 "$1"; }
 
-# Wait for $domain's first A record to equal $expected.
-wait_for_dns() {
-    local domain="$1" expected="$2" timeout="${3:-300}" elapsed=0
-    log_info "Waiting on DNS $domain to resolve to $expected (timeout ${timeout}s)..."
-    while [ "$(dig +short "$domain" A | head -1)" != "$expected" ]; do
-        if [ "$elapsed" -ge "$timeout" ]; then
-            log_err "Timed out waiting for DNS $domain → $expected"
-            return 1
-        fi
-        sleep 10
-        elapsed=$((elapsed + 10))
-    done
-    log_info "DNS $domain resolves to $expected."
-}
+# Wait for $1's first A record to equal $2.
+wait_for_dns() { wait_until "DNS $1 -> $2" "${3:-300}" 10 -- _dns_resolves_to "$1" "$2"; }
 
 # Wait for a block device (e.g. attached Hetzner volume) to appear.
-wait_for_volume_device() {
-    local path="$1" timeout="${2:-60}" elapsed=0
-    log_info "Waiting on volume device $path (timeout ${timeout}s)..."
-    while [ ! -b "$path" ]; do
-        if [ "$elapsed" -ge "$timeout" ]; then
-            log_err "Volume device $path did not appear"
-            return 1
-        fi
-        sleep 1
-        elapsed=$((elapsed + 1))
-    done
-    log_info "Volume device $path is available."
+wait_for_volume_device() { wait_until "volume device $1" "${2:-60}" 1 -- test -b "$1"; }
+
+# Memoizes into the global SELF_IPV4 rather than echoing - a $(...) call would
+# run in a subshell and lose the cache.
+self_ipv4() {
+    if [ -z "${SELF_IPV4:-}" ]; then
+        SELF_IPV4="$(curl -fsS https://ipv4.icanhazip.com)"
+        log_info "Self public IPv4: $SELF_IPV4"
+    fi
 }
 
 # Render an envsubst template to an output path atomically.
@@ -129,6 +112,18 @@ idempotent_apt_install() {
     fi
 }
 
+# Print the secret at $1, generating it first if it does not exist yet.
+# Logs to stderr so the value stays alone on stdout for command substitution.
+ensure_secret() {
+    local path="$1"
+    if [ ! -f "$path" ]; then
+        openssl rand -base64 32 | tr -d /=+ | cut -c1-32 > "$path"
+        chmod 0600 "$path"
+        log_info "Generated $path - read it once via SSH and store it." >&2
+    fi
+    cat "$path"
+}
+
 bring_up_monitoring() {
     log_info "=== bring_up_monitoring start ==="
 
@@ -139,20 +134,9 @@ bring_up_monitoring() {
     mkdir -p /var/lib/ffmt
     chmod 0750 /var/lib/ffmt
 
-    if [ ! -f /var/lib/ffmt/grafana-admin-pass ]; then
-        openssl rand -base64 32 | tr -d /=+ | cut -c1-32 > /var/lib/ffmt/grafana-admin-pass
-        chmod 0600 /var/lib/ffmt/grafana-admin-pass
-        log_info "Grafana admin password written to /var/lib/ffmt/grafana-admin-pass — read once via SSH and store it."
-    fi
-    local admin_pass
-    admin_pass="$(cat /var/lib/ffmt/grafana-admin-pass)"
-
-    if [ ! -f /var/lib/ffmt/grafana-secret-key ]; then
-        openssl rand -base64 32 | tr -d /=+ | cut -c1-32 > /var/lib/ffmt/grafana-secret-key
-        chmod 0600 /var/lib/ffmt/grafana-secret-key
-    fi
-    local secret_key
-    secret_key="$(cat /var/lib/ffmt/grafana-secret-key)"
+    local admin_pass secret_key
+    admin_pass="$(ensure_secret /var/lib/ffmt/grafana-admin-pass)"
+    secret_key="$(ensure_secret /var/lib/ffmt/grafana-secret-key)"
 
     # 2. Render Prometheus scrape target files.
     mkdir -p docker/monitoring/prometheus/rendered
@@ -161,41 +145,26 @@ bring_up_monitoring() {
     envsubst < docker/monitoring/prometheus/scylla_servers.yml.tpl > docker/monitoring/prometheus/rendered/scylla_servers.yml
     envsubst < docker/monitoring/prometheus/node_exporter_servers.yml.tpl > docker/monitoring/prometheus/rendered/node_exporter_servers.yml
 
-    # 3. Upsert monitoring env in .env (idempotent — sed-delete then append).
-    sed -i '/^ZERO_SSL_MONITORING_DOMAIN=/d' .env
-    sed -i '/^GF_SECURITY_ADMIN_PASSWORD=/d' .env
-    sed -i '/^GF_SECURITY_SECRET_KEY=/d' .env
-    sed -i '/^GF_SERVER_DOMAIN=/d' .env
+    # 3. Append the Grafana secrets. Both callers render .env from the template
+    # immediately before this, so there is nothing stale to strip first.
     {
-        echo "ZERO_SSL_MONITORING_DOMAIN=${MONITORING_DOMAIN}"
         echo "GF_SECURITY_ADMIN_PASSWORD=${admin_pass}"
         echo "GF_SECURITY_SECRET_KEY=${secret_key}"
-        echo "GF_SERVER_DOMAIN=${MONITORING_DOMAIN}"
     } >> .env
     chmod 0600 .env
 
     # 4. Wait for DNS on the monitoring subdomain so Caddy ACME can succeed.
+    self_ipv4
     wait_for_dns "$MONITORING_DOMAIN" "$SELF_IPV4" 300
 
     # 5. Bring up the monitoring stack.
     docker compose -f docker-compose.monitoring.yml up -d --build
 
     # 6. Readiness via docker exec (no host port bindings).
-    local elapsed=0
-    log_info "Waiting on Grafana /api/health (up to 300s)..."
-    until docker exec ffmt_grafana wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1; do
-        if [ "$elapsed" -ge 300 ]; then log_err "Grafana not ready"; return 1; fi
-        sleep 5; elapsed=$((elapsed + 5))
-    done
-    log_info "Grafana is healthy."
-
-    elapsed=0
-    log_info "Waiting on Prometheus /-/ready (up to 60s)..."
-    until docker exec ffmt_prometheus wget -qO- http://127.0.0.1:9090/-/ready >/dev/null 2>&1; do
-        if [ "$elapsed" -ge 60 ]; then log_err "Prometheus not ready"; return 1; fi
-        sleep 5; elapsed=$((elapsed + 5))
-    done
-    log_info "Prometheus is ready."
+    wait_until "Grafana /api/health" 300 5 -- \
+        docker exec ffmt_grafana wget -qO- http://127.0.0.1:3000/api/health
+    wait_until "Prometheus /-/ready" 60 5 -- \
+        docker exec ffmt_prometheus wget -qO- http://127.0.0.1:9090/-/ready
 
     # 7. Wait for public HTTPS (proves Caddy ACME succeeded).
     wait_for_http "https://$MONITORING_DOMAIN/login" 300

@@ -9,6 +9,11 @@ cd /opt/ffmt
 source scripts/bootstrap/lib/common.sh
 log_info "=== redeploy.sh start ==="
 
+# Every `docker compose` below (and any the operator runs in this shell) picks
+# the app-VM file set up from here. bring_up_monitoring's explicit -f wins over it.
+export COMPOSE_FILE=docker-compose.yml:docker-compose.app-vm.yml
+export COMPOSE_PROFILES=host_metrics
+
 ARG_UPDATEDB=0
 ARG_REF=""
 while [ $# -gt 0 ]; do
@@ -50,16 +55,10 @@ export HOST_PRIVATE_IP="${APP_PRIVATE_IP:?APP_PRIVATE_IP missing from .env}"
 render_env_file env .env
 
 # Rebuild + re-up.
-docker compose \
-    -f docker-compose.yml \
-    -f docker-compose.app-vm.yml \
-    --profile host_metrics \
-    up -d --build
+docker compose up -d --build
 
 wait_for_http http://127.0.0.1:8080/health 300
 
-# Capture SELF_IPV4 for bring_up_monitoring's wait_for_dns step.
-SELF_IPV4="$(curl -fsS https://ipv4.icanhazip.com)"
 bring_up_monitoring
 
 ensure_app_crons
@@ -69,5 +68,5 @@ if [ "$ARG_UPDATEDB" -eq 1 ]; then
     bash scripts/sh/update_db_data.sh
 fi
 
-docker compose -f docker-compose.yml -f docker-compose.app-vm.yml ps
+docker compose ps
 log_info "=== redeploy.sh done ==="

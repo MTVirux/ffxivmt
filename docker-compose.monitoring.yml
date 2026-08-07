@@ -7,7 +7,7 @@
 #   docker compose -f docker-compose.monitoring.yml up -d --build
 #
 # Required env (sourced from the main stack's .env):
-#   GF_SECURITY_ADMIN_PASSWORD, GF_SECURITY_SECRET_KEY, GF_SERVER_DOMAIN
+#   GF_SECURITY_ADMIN_PASSWORD, GF_SECURITY_SECRET_KEY, ZERO_SSL_MONITORING_DOMAIN
 
 services:
 
@@ -38,7 +38,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_SECURITY_SECRET_KEY=${GF_SECURITY_SECRET_KEY}
-      - GF_SERVER_DOMAIN=${GF_SERVER_DOMAIN}
+      - GF_SERVER_DOMAIN=${ZERO_SSL_MONITORING_DOMAIN}
     volumes:
       - ./docker/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
       - ./docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

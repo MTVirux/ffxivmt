@@ -13,6 +13,11 @@ cd /opt/ffmt
 source scripts/bootstrap/lib/common.sh
 log_info "=== app.sh start ==="
 
+# Every `docker compose` below (and any the operator runs in this shell) picks
+# the app-VM file set up from here. bring_up_monitoring's explicit -f wins over it.
+export COMPOSE_FILE=docker-compose.yml:docker-compose.app-vm.yml
+export COMPOSE_PROFILES=host_metrics
+
 # 1. Install gettext-base for envsubst (used by render_env_file).
 idempotent_apt_install gettext-base dnsutils
 
@@ -29,17 +34,12 @@ chmod 0600 .env
 wait_for_tcp "$SCYLLA_PRIVATE_IP" 9042 600
 
 # 4. Wait on DNS — avoid ACME race
-SELF_IPV4="$(curl -fsS https://ipv4.icanhazip.com)"
-log_info "Self public IPv4: $SELF_IPV4"
+self_ipv4
 wait_for_dns "$DOMAIN" "$SELF_IPV4" 300
 
 # 5. Bring up app stack (Scylla excluded by profile)
 log_info "Starting app stack..."
-docker compose \
-    -f docker-compose.yml \
-    -f docker-compose.app-vm.yml \
-    --profile host_metrics \
-    up -d --build
+docker compose up -d --build
 
 # 6. Wait for backend health
 wait_for_http http://127.0.0.1:8080/health 600
