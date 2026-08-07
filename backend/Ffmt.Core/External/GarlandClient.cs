@@ -16,7 +16,7 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
             return Array.Empty<GarlandItemFlags>();
         }
 
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         var path = "item/en/3/" + string.Join(",", ids.Select(i => i.ToString(CultureInfo.InvariantCulture))) + ".json";
 
@@ -40,17 +40,33 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
         return result;
     }
 
+    /// <summary>Garland writes ids and amounts as a JSON number in some documents and a string in
+    /// others, so every read has to accept both.</summary>
+    private static bool TryReadInt(JsonElement el, out int value)
+    {
+        value = 0;
+        return el.ValueKind switch
+        {
+            JsonValueKind.Number => el.TryGetInt32(out value),
+            JsonValueKind.String => int.TryParse(el.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value),
+            _ => false,
+        };
+    }
+
+    private static bool TryFirstInt(JsonElement listing, string arrayKey, string propName, out int value)
+    {
+        value = 0;
+        if (!listing.TryGetProperty(arrayKey, out var arr) || arr.ValueKind != JsonValueKind.Array) return false;
+        var first = arr.EnumerateArray().FirstOrDefault();
+        if (first.ValueKind != JsonValueKind.Object) return false;
+        return first.TryGetProperty(propName, out var el) && TryReadInt(el, out value);
+    }
+
     private static bool TryGetId(JsonElement entry, out int id)
     {
         id = 0;
         if (entry.ValueKind != JsonValueKind.Object) return false;
-        if (!entry.TryGetProperty("id", out var idProp)) return false;
-        return idProp.ValueKind switch
-        {
-            JsonValueKind.Number => idProp.TryGetInt32(out id),
-            JsonValueKind.String => int.TryParse(idProp.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out id),
-            _ => false,
-        };
+        return entry.TryGetProperty("id", out var idProp) && TryReadInt(idProp, out id);
     }
 
     private static bool HasCraftRecipe(JsonElement entry)
@@ -68,7 +84,7 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
 
     public async Task<GarlandItemDetail?> GetItemDetailAsync(int id, CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         var path = $"item/en/3/{id.ToString(CultureInfo.InvariantCulture)}.json";
         await using var stream = await http.GetStreamAsync(path, ct).ConfigureAwait(false);
@@ -90,7 +106,7 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
 
     public async Task<IReadOnlyList<GarlandInstanceSummary>> GetAllInstancesAsync(CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         await using var stream = await http.GetStreamAsync("browse/en/2/instance.json", ct).ConfigureAwait(false);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
@@ -117,7 +133,7 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
 
     public async Task<IReadOnlyList<GarlandTradeCurrencyListing>> GetItemTradeCurrencyAsync(int currencyItemId, CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         var path = $"item/en/3/{currencyItemId.ToString(CultureInfo.InvariantCulture)}.json";
         await using var stream = await http.GetStreamAsync(path, ct).ConfigureAwait(false);
@@ -138,9 +154,9 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
             {
                 if (listing.ValueKind != JsonValueKind.Object) continue;
 
-                if (!TryFirstId(listing, "item", out var itemId)) continue;
-                if (!TryFirstId(listing, "currency", out var curId)) continue;
-                if (!TryFirstAmount(listing, "currency", out var amount)) continue;
+                if (!TryFirstInt(listing, "item", "id", out var itemId)) continue;
+                if (!TryFirstInt(listing, "currency", "id", out var curId)) continue;
+                if (!TryFirstInt(listing, "currency", "amount", out var amount)) continue;
 
                 result.Add(new GarlandTradeCurrencyListing(itemId, curId, amount));
             }
@@ -149,39 +165,9 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
         return result;
     }
 
-    private static bool TryFirstId(JsonElement listing, string key, out int id)
-    {
-        id = 0;
-        if (!listing.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array) return false;
-        var first = arr.EnumerateArray().FirstOrDefault();
-        if (first.ValueKind != JsonValueKind.Object) return false;
-        if (!first.TryGetProperty("id", out var idEl)) return false;
-        return idEl.ValueKind switch
-        {
-            JsonValueKind.Number => idEl.TryGetInt32(out id),
-            JsonValueKind.String => int.TryParse(idEl.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out id),
-            _ => false,
-        };
-    }
-
-    private static bool TryFirstAmount(JsonElement listing, string key, out int amount)
-    {
-        amount = 0;
-        if (!listing.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array) return false;
-        var first = arr.EnumerateArray().FirstOrDefault();
-        if (first.ValueKind != JsonValueKind.Object) return false;
-        if (!first.TryGetProperty("amount", out var amEl)) return false;
-        return amEl.ValueKind switch
-        {
-            JsonValueKind.Number => amEl.TryGetInt32(out amount),
-            JsonValueKind.String => int.TryParse(amEl.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out amount),
-            _ => false,
-        };
-    }
-
     public async Task<GarlandInstanceDetail?> GetInstanceAsync(int id, CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.UniversalisApi });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.UniversalisApi);
 
         var path = $"instance/en/2/{id.ToString(CultureInfo.InvariantCulture)}.json";
         await using var stream = await http.GetStreamAsync(path, ct).ConfigureAwait(false);
@@ -208,16 +194,7 @@ public sealed class GarlandClient(HttpClient http, ILogger<GarlandClient> logger
             if (!partial.TryGetProperty("type", out var typeEl) || typeEl.ValueKind != JsonValueKind.String) continue;
             if (typeEl.GetString() != "item") continue;
             if (!partial.TryGetProperty("id", out var idEl)) continue;
-
-            // Garland's `id` field is sometimes a JSON number, sometimes a string.
-            if (idEl.ValueKind == JsonValueKind.Number && idEl.TryGetInt32(out var nid))
-            {
-                ids.Add(nid);
-            }
-            else if (idEl.ValueKind == JsonValueKind.String && int.TryParse(idEl.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var sid))
-            {
-                ids.Add(sid);
-            }
+            if (TryReadInt(idEl, out var id)) ids.Add(id);
         }
         return ids;
     }
