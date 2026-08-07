@@ -13,6 +13,11 @@ cd /opt/ffmt
 source scripts/bootstrap/lib/common.sh
 log_info "=== scylla.sh start ==="
 
+# Every `docker compose` below (and any the operator runs in this shell) picks
+# the scylla-VM file set up from here.
+export COMPOSE_FILE=docker-compose.yml:docker-compose.scylla-vm.yml
+export COMPOSE_PROFILES=scylla,host_metrics
+
 # 1. Volume prep
 wait_for_volume_device "$SCYLLA_VOLUME_DEVICE" 60
 if ! blkid "$SCYLLA_VOLUME_DEVICE" >/dev/null 2>&1; then
@@ -20,7 +25,7 @@ if ! blkid "$SCYLLA_VOLUME_DEVICE" >/dev/null 2>&1; then
     mkfs.ext4 -L scylla-data "$SCYLLA_VOLUME_DEVICE"
 fi
 ensure_fstab "$SCYLLA_VOLUME_DEVICE  /mnt/scylla-data  ext4  defaults,nofail,discard  0 0"
-mkdir -p /mnt/scylla-data/{data,commitlog,saved_caches,log}
+mkdir -p /mnt/scylla-data/{data,commitlog,saved_caches,log,backup}
 mount -a
 
 # 2. Render env (only fields Scylla compose interpolates)
@@ -29,11 +34,7 @@ render_env_file env .env
 
 # 3. Bring up Scylla
 log_info "Starting Scylla container..."
-docker compose \
-    -f docker-compose.yml \
-    -f docker-compose.scylla-vm.yml \
-    --profile scylla --profile host_metrics \
-    up -d --build ffmt_scylla_node ffmt_node_exporter
+docker compose up -d --build ffmt_scylla_node ffmt_node_exporter
 
 # 4. Wait for CQL
 wait_for_tcp "${SCYLLA_PRIVATE_IP}" 9042 600
