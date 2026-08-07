@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import { Outlet } from 'react-router';
 import Navbar from './Navbar';
+import { QUERY_SKELETON_CLASS } from './QueryBoundary';
 
 function GithubIcon() {
   return (
@@ -20,7 +22,9 @@ export default function Shell() {
     <div className="flex min-h-full flex-col">
       <Navbar />
       <main className="mx-auto w-full lg:w-[70%] flex-1 px-6 py-10">
-        <Outlet />
+        <Suspense fallback={<div className={QUERY_SKELETON_CLASS} />}>
+          <Outlet />
+        </Suspense>
       </main>
       <footer className="border-t border-border/60 py-6">
         <div className="mx-auto flex w-full lg:w-[70%] items-center justify-between gap-6 px-6 text-sm text-muted-foreground">

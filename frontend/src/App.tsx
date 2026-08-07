@@ -1,13 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import Shell from './components/layout/Shell';
 import HomePage from './routes/HomePage';
-import ItemPage from './routes/ItemPage';
-import GilfluxPage from './routes/GilfluxPage';
 import NotFoundPage from './routes/NotFoundPage';
-import ItemProfitPage from './routes/tools/ItemProfitPage';
-import CurrencyEffPage from './routes/tools/CurrencyEffPage';
-import BuyerSearchPage from './routes/tools/BuyerSearchPage';
+
+// Split out so recharts (ItemPage) and react-virtual (GilfluxPage) stay out of the entry chunk.
+const ItemPage = lazy(() => import('./routes/ItemPage'));
+const GilfluxPage = lazy(() => import('./routes/GilfluxPage'));
+const ItemProfitPage = lazy(() => import('./routes/tools/ItemProfitPage'));
+const CurrencyEffPage = lazy(() => import('./routes/tools/CurrencyEffPage'));
+const BuyerSearchPage = lazy(() => import('./routes/tools/BuyerSearchPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
