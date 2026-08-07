@@ -12,8 +12,10 @@ public sealed class UniversalisOptions
     public double MaxBackoffSeconds { get; init; } = 10.0;
     public int RequestTimeoutSeconds { get; init; } = 30;
 
-    public string[] RegionsToUse { get; init; } = ["Europe", "North-America"];
-    public string[] RegionsToImport { get; init; } = ["Europe"];
+    // Empty, not a seeded default: the configuration binder appends bound values to whatever the
+    // array already holds, so any default here is silently added to the configured regions.
+    public string[] RegionsToUse { get; init; } = [];
+    public string[] RegionsToImport { get; init; } = [];
     public int ItemsPerRequest { get; init; } = 100;
     public int MaxRequestsPerSecond { get; init; } = 25;
     public int MaxRequestsPerSecondBurst { get; init; } = 50;
