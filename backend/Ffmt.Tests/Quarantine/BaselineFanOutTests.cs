@@ -5,6 +5,7 @@ using Ffmt.Core.Models;
 using Ffmt.Core.Quarantine;
 using Ffmt.Core.Storage.Scylla;
 using Ffmt.Core.Worlds;
+using Ffmt.Tests.Fakes;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -25,29 +26,16 @@ public sealed class BaselineFanOutTests
 
     private static readonly World OutOfRegion = new(40, "Gilgamesh", "Aether", "North-America");
 
-    private sealed class RecordingSaleStore : ISaleStore
+    private sealed class RecordingSaleStore : FakeSaleStore
     {
         public ConcurrentBag<(int ItemId, int WorldId)> Reads { get; } = [];
 
-        public Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(
+        public override Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(
             int itemId, int worldId, DateTimeOffset since, CancellationToken ct = default)
         {
             Reads.Add((itemId, worldId));
             return Task.FromResult<IReadOnlyList<PricePoint>>([]);
         }
-
-        public Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> s, CancellationToken ct = default) =>
-            Task.FromResult(new SaleBatchResult(s.Count, 0d));
-        public Task<IReadOnlyList<Sale>> SearchBuyerAsync(string b, int? w, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Sale>>([]);
-        public Task<IReadOnlyList<Sale>> GetByItemAndWorldAsync(int i, int w, int l, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Sale>>([]);
-        public Task<IReadOnlyList<Sale>> GetByItemAndWorldInRangeAsync(int i, int w, DateOnly d, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Sale>>([]);
-        public Task DeleteByItemAndWorldInRangeAsync(int i, int w, DateOnly d, IReadOnlyList<Sale> s, CancellationToken ct = default) =>
-            Task.CompletedTask;
-        public Task DeleteExactAsync(IReadOnlyList<Sale> s, CancellationToken ct = default) => Task.CompletedTask;
-        public Task BackfillTotalPriceAsync(IReadOnlyList<Sale> s, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private static UpdateBaselinesCommand NewCommand(ISaleStore saleStore, IReadOnlyList<int> itemIds)
