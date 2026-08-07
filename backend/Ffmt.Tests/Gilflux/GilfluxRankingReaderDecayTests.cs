@@ -3,6 +3,7 @@ using Ffmt.Core.Gilflux;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 
@@ -28,7 +29,8 @@ public sealed class GilfluxRankingReaderDecayTests
             itemStore,
             new LocationResolver(worldStore),
             new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new GilfluxOptions()));
+            Options.Create(new GilfluxOptions()),
+            NullLogger<GilfluxRankingReader>.Instance);
     }
 
     private static GilfluxRanking Row(DateTimeOffset updatedAt) =>

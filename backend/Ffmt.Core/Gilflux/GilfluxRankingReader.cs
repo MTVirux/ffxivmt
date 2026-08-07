@@ -2,6 +2,7 @@ using Ffmt.Core.Configuration;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
@@ -24,6 +25,7 @@ public sealed class GilfluxRankingReader
     private readonly IItemStore _itemStore;
     private readonly LocationResolver _resolver;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<GilfluxRankingReader> _log;
     private readonly TimeSpan _ttl;
     private readonly IReadOnlyDictionary<string, long> _timeframesMs;
 
@@ -33,13 +35,15 @@ public sealed class GilfluxRankingReader
         IItemStore itemStore,
         LocationResolver resolver,
         IMemoryCache cache,
-        IOptions<GilfluxOptions> options)
+        IOptions<GilfluxOptions> options,
+        ILogger<GilfluxRankingReader> log)
     {
         _store = store;
         _worldStore = worldStore;
         _itemStore = itemStore;
         _resolver = resolver;
         _cache = cache;
+        _log = log;
         _ttl = TimeSpan.FromSeconds(Math.Max(1, options.Value.RankingCacheSeconds));
         _timeframesMs = options.Value.TimeframesMs;
     }
@@ -80,6 +84,12 @@ public sealed class GilfluxRankingReader
         }
 
         var craftableIds = (await _itemStore.GetCraftableIdsAsync(ct).ConfigureAwait(false)).ToHashSet();
+        if (craftableIds.Count == 0)
+        {
+            _log.LogWarning(
+                "Crafted-only rankings requested but no item is flagged craftable - the filter will return nothing. Run 'ffmt update-garland'.");
+        }
+
         var crafted = enrichedAll.Where(r => craftableIds.Contains(r.ItemId)).ToList();
         _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: true), (IReadOnlyList<EnrichedGilfluxRanking>)crafted, _ttl);
         return new RankingByLocationResult(resolution, crafted, FromCache: false);
