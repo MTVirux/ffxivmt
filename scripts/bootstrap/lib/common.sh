@@ -127,7 +127,9 @@ ensure_secret() {
 bring_up_monitoring() {
     log_info "=== bring_up_monitoring start ==="
 
-    : "${MONITORING_DOMAIN:=monitoring.${ZERO_SSL_MAIN_DOMAIN}}"
+    # app.sh gets this from cloud-init; redeploy.sh only has the rendered .env,
+    # where Caddy and Grafana read the same value.
+    : "${MONITORING_DOMAIN:=${ZERO_SSL_MONITORING_DOMAIN:-monitoring.${ZERO_SSL_MAIN_DOMAIN}}}"
     log_info "Monitoring domain: $MONITORING_DOMAIN"
 
     # 1. Generate / load Grafana secrets.
