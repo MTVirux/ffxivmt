@@ -3,6 +3,7 @@ using Ffmt.Core.External;
 using Ffmt.Core.DI;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
+using Ffmt.Core.Logging;
 using Ffmt.Core.Metrics;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -13,15 +14,7 @@ using WsWorker.Workers;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, _, logger) =>
-    logger
-        .ReadFrom.Configuration(context.Configuration)
-        .Enrich.FromLogContext()
-        .WriteTo.Console()
-        .WriteTo.File(
-            path: "logs/wsworker-.log",
-            rollingInterval: RollingInterval.Day,
-            retainedFileCountLimit: 14,
-            fileSizeLimitBytes: 100 * 1024 * 1024));
+    SerilogBootstrap.Configure(logger, context.Configuration, context.HostingEnvironment.EnvironmentName));
 
 builder.Services.AddFfmtCore(builder.Configuration);
 
