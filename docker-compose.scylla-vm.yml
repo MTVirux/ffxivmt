@@ -11,6 +11,7 @@ services:
       - /mnt/scylla-data/commitlog:/var/lib/scylla/commitlog
       - /mnt/scylla-data/saved_caches:/var/lib/scylla/saved_caches
       - /mnt/scylla-data/log:/var/log/scylla
+      - /mnt/scylla-data/backup:/backup
       - ./docker/scylla/etc/scylla/scylla.yaml:/etc/scylla/scylla.yaml
       - ./docker/scylla/usr/local/bin:/usr/local/bin
       - ./scripts/cql/schema:/startup_scripts

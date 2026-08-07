@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Set the backup directory
-backup_dir="/backups"
+# Bind-mounted to /mnt/scylla-data/backup on the Scylla VM.
+backup_dir="/backup"
 
 # Get a list of all keyspaces
 keyspaces=`cqlsh -e "DESCRIBE KEYSPACES;" | awk '{if (NR!=1) print $1}'`

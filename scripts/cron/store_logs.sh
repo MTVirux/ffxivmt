@@ -9,16 +9,16 @@ TEMP="$LOG_DIR/temp"
 
 echo "$(date -Is) - store_logs cron started" >> "$LOG_DIR/cron.log"
 
-mkdir -p "$LOG_DIR" \
-         "$TEMP/backend" \
-         "$TEMP/ws_worker/action" \
-         "$TEMP/ws_worker/error" \
-         "$TEMP/ws_worker/debug"
+mkdir -p "$LOG_DIR" "$TEMP"
 
-mv "$FFMT_REPO/backend/application/logs/"*.log                    "$TEMP/backend/"        2>/dev/null || true
-mv "$FFMT_REPO/docker/ws_worker/server/logs/action/"*.log         "$TEMP/ws_worker/action/" 2>/dev/null || true
-mv "$FFMT_REPO/docker/ws_worker/server/logs/error/"*.log          "$TEMP/ws_worker/error/"  2>/dev/null || true
-mv "$FFMT_REPO/docker/ws_worker/server/logs/debug/"*.log          "$TEMP/ws_worker/debug/"  2>/dev/null || true
+# One subdir per service, mounted at /app/logs in each container
+# (docker-compose.yml: ./logs/backend, ./logs/ws_worker).
+for dir in "$FFMT_REPO"/logs/*/; do
+    [ -d "$dir" ] || continue
+    service="$(basename "$dir")"
+    mkdir -p "$TEMP/$service"
+    mv "$dir"*.log "$TEMP/$service/" 2>/dev/null || true
+done
 
 zip -r "$LOG_DIR/$(date +%Y-%m-%d_%H-%M-%S).zip" "$TEMP" >> "$LOG_DIR/cron.log"
 rm -rf "$TEMP"
