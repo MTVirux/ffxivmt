@@ -27,7 +27,7 @@ public sealed class ItemCsvSource(
     /// <summary>Downloads each configured CSV in parallel and parses the largest response.</summary>
     public async Task<IReadOnlyList<ItemUpsert>> LoadAsync(CancellationToken ct = default)
     {
-        using var _ = logger.BeginScope(new Dictionary<string, object> { [LogChannels.ContextPropertyName] = LogChannels.ScyllaDb });
+        using var _ = LogChannelScope.Begin(logger, LogChannels.ScyllaDb);
 
         var sources = options.Value.ItemCsvSources;
         if (sources.Length == 0)
@@ -82,36 +82,58 @@ public sealed class ItemCsvSource(
             }
         }
 
+        // Every required column is present by now, so resolve each index once rather than
+        // re-looking it up per field per row - ~900k dictionary probes across a full parse.
+        var idCol = indexByColumn["#"];
+        var nameCol = indexByColumn["Name"];
+        var descriptionCol = indexByColumn["Description"];
+        var canBeHqCol = indexByColumn["CanBeHq"];
+        var alwaysCollectableCol = indexByColumn["AlwaysCollectable"];
+        var stackSizeCol = indexByColumn["StackSize"];
+        var levelItemCol = indexByColumn["LevelItem"];
+        var iconCol = indexByColumn["Icon"];
+        var rarityCol = indexByColumn["Rarity"];
+        var filterGroupCol = indexByColumn["FilterGroup"];
+        var itemUiCategoryCol = indexByColumn["ItemUICategory"];
+        var itemSearchCategoryCol = indexByColumn["ItemSearchCategory"];
+        var equipSlotCategoryCol = indexByColumn["EquipSlotCategory"];
+        var isUniqueCol = indexByColumn["IsUnique"];
+        var isUntradableCol = indexByColumn["IsUntradable"];
+        var isIndisposableCol = indexByColumn["IsIndisposable"];
+        var dyeCountCol = indexByColumn["DyeCount"];
+        var aetherialReduceCol = indexByColumn["AetherialReduce"];
+        var materiaSlotCountCol = indexByColumn["MateriaSlotCount"];
+        var advancedMeldingCol = indexByColumn["IsAdvancedMeldingPermitted"];
+
         var rows = new List<ItemUpsert>(50_000);
         string[]? line;
         while ((line = csv.ReadRow()) is not null)
         {
-            var nameIdx = indexByColumn["Name"];
-            if (nameIdx >= line.Length) continue;
-            var name = Strip(line[nameIdx]);
+            if (nameCol >= line.Length) continue;
+            var name = Strip(line[nameCol]);
             if (string.IsNullOrEmpty(name)) continue;
 
             rows.Add(new ItemUpsert(
-                Id:                    GetInt(line, indexByColumn, "#"),
+                Id:                    GetInt(line, idCol),
                 Name:                  name,
-                Description:           GetString(line, indexByColumn, "Description"),
-                CanBeHq:               GetBool(line, indexByColumn, "CanBeHq"),
-                AlwaysCollectible:     GetBool(line, indexByColumn, "AlwaysCollectable"),
-                StackSize:             GetInt(line, indexByColumn, "StackSize"),
-                ItemLevel:             GetInt(line, indexByColumn, "LevelItem"),
-                IconImage:             GetInt(line, indexByColumn, "Icon"),
-                Rarity:                GetInt(line, indexByColumn, "Rarity"),
-                FilterGroup:           GetInt(line, indexByColumn, "FilterGroup"),
-                ItemUiCategory:        GetInt(line, indexByColumn, "ItemUICategory"),
-                ItemSearchCategory:    GetInt(line, indexByColumn, "ItemSearchCategory"),
-                EquipSlotCategory:     GetInt(line, indexByColumn, "EquipSlotCategory"),
-                Unique:                GetBool(line, indexByColumn, "IsUnique"),
-                Untradable:            GetBool(line, indexByColumn, "IsUntradable"),
-                Disposable:            GetBool(line, indexByColumn, "IsIndisposable"),
-                Dyable:                GetInt(line, indexByColumn, "DyeCount") > 0,
-                AetherialReductible:   GetInt(line, indexByColumn, "AetherialReduce") > 0,
-                MateriaSlotCount:      GetInt(line, indexByColumn, "MateriaSlotCount"),
-                AdvancedMelding:       GetBool(line, indexByColumn, "IsAdvancedMeldingPermitted")));
+                Description:           GetString(line, descriptionCol),
+                CanBeHq:               GetBool(line, canBeHqCol),
+                AlwaysCollectible:     GetBool(line, alwaysCollectableCol),
+                StackSize:             GetInt(line, stackSizeCol),
+                ItemLevel:             GetInt(line, levelItemCol),
+                IconImage:             GetInt(line, iconCol),
+                Rarity:                GetInt(line, rarityCol),
+                FilterGroup:           GetInt(line, filterGroupCol),
+                ItemUiCategory:        GetInt(line, itemUiCategoryCol),
+                ItemSearchCategory:    GetInt(line, itemSearchCategoryCol),
+                EquipSlotCategory:     GetInt(line, equipSlotCategoryCol),
+                Unique:                GetBool(line, isUniqueCol),
+                Untradable:            GetBool(line, isUntradableCol),
+                Disposable:            GetBool(line, isIndisposableCol),
+                Dyable:                GetInt(line, dyeCountCol) > 0,
+                AetherialReductible:   GetInt(line, aetherialReduceCol) > 0,
+                MateriaSlotCount:      GetInt(line, materiaSlotCountCol),
+                AdvancedMelding:       GetBool(line, advancedMeldingCol)));
         }
 
         logger.LogInformation("Parsed {Count} items from CSV.", rows.Count);
@@ -120,15 +142,12 @@ public sealed class ItemCsvSource(
 
     private static string Strip(string raw) => raw.Trim().Trim('"');
 
-    private static string GetString(string[] row, Dictionary<string, int> idx, string col)
-        => idx.TryGetValue(col, out var i) && i < row.Length ? Strip(row[i]) : string.Empty;
+    private static string GetString(string[] row, int col)
+        => col < row.Length ? Strip(row[col]) : string.Empty;
 
-    private static int GetInt(string[] row, Dictionary<string, int> idx, string col)
-    {
-        var s = GetString(row, idx, col);
-        return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
-    }
+    private static int GetInt(string[] row, int col)
+        => int.TryParse(GetString(row, col), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
 
-    private static bool GetBool(string[] row, Dictionary<string, int> idx, string col)
-        => string.Equals(GetString(row, idx, col), "True", StringComparison.OrdinalIgnoreCase);
+    private static bool GetBool(string[] row, int col)
+        => string.Equals(GetString(row, col), "True", StringComparison.OrdinalIgnoreCase);
 }
