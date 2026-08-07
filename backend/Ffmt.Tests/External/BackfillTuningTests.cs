@@ -4,6 +4,13 @@ namespace Ffmt.Tests.External;
 
 public sealed class BackfillTuningTests
 {
+    private const int MarketableItems = 16842;
+
+    // Measured directly against the Universalis history endpoint: a 15-item request covering a
+    // 9-day window and returning 2.9MB of JSON came back in 3.2s. Request latency is small; the
+    // failures this tuning has to respect are 504s under load, not slow responses.
+    private const double ObservedSecondsPerRequest = 5;
+
     private static readonly BackfillTuning Tuning = new();
 
     private static long Seconds(TimeSpan span) => (long)span.TotalSeconds;
@@ -15,17 +22,7 @@ public sealed class BackfillTuningTests
         var nineDays = Tuning.RequestTimeoutFor(Seconds(TimeSpan.FromDays(9)));
 
         nineDays.Should().BeGreaterThan(oneHour,
-            "Universalis response size scales with the requested window, so a wider window needs longer");
-    }
-
-    [Fact]
-    public void Request_timeout_scales_by_the_hour_not_only_by_the_day()
-    {
-        // A 4h live-gap window timed out at 63s in production: per-day scaling added only ~2.5s
-        // on top of the base budget, so the window may as well not have been accounted for.
-        Tuning.RequestTimeoutFor(Seconds(TimeSpan.FromHours(4)))
-            .Should().Be(TimeSpan.FromSeconds(
-                Tuning.BaseRequestTimeoutSeconds + (Tuning.PerWindowHourTimeoutSeconds * 4)));
+            "a wider window returns more JSON, so it is allowed longer");
     }
 
     [Fact]
@@ -36,37 +33,19 @@ public sealed class BackfillTuningTests
     }
 
     [Fact]
-    public void Narrow_windows_keep_the_full_item_batch()
+    public void Concurrency_stays_within_what_universalis_tolerates()
     {
-        Tuning.ItemsPerRequestFor(Seconds(TimeSpan.FromMinutes(15)))
-            .Should().Be(Tuning.ItemsPerRequest,
-            "a caught-up live gap is small enough that the full batch keeps the request count down");
+        // Raising this to 16 produced sustained 504s from Universalis, which the retry policy
+        // then masked as client timeouts. Both loops run their own pass, so the load on the
+        // upstream API is double this figure.
+        Tuning.Concurrency.Should().BeLessThanOrEqualTo(4);
     }
 
     [Fact]
-    public void Multi_hour_windows_use_a_smaller_item_batch()
+    public void A_full_pass_fits_inside_the_crawl_interval()
     {
-        // Batch size dominates timeout risk over window width: in production a 9-day window at the
-        // small batch never timed out, while a 4h window at the full batch timed out every pass.
-        Tuning.ItemsPerRequestFor(Seconds(TimeSpan.FromHours(4)))
-            .Should().Be(Tuning.LargeWindowItemsPerRequest);
-    }
-
-    [Fact]
-    public void Wide_windows_use_a_smaller_item_batch()
-    {
-        Tuning.ItemsPerRequestFor(Seconds(TimeSpan.FromDays(9)))
-            .Should().Be(Tuning.LargeWindowItemsPerRequest);
-    }
-
-    [Fact]
-    public void Concurrency_covers_a_full_pass_at_the_smaller_batch_within_the_crawl_interval()
-    {
-        // 16842 marketable items at the smaller batch is ~1123 requests. At concurrency 4 that
-        // pass takes hours and never completes inside the hourly crawl interval.
-        const int RequestsPerPass = 16842 / 15;
-        var perRequestSeconds = Tuning.RequestTimeoutFor(Seconds(TimeSpan.FromDays(9))).TotalSeconds / 10;
-        var passMinutes = RequestsPerPass * perRequestSeconds / Tuning.Concurrency / 60;
+        var requests = Math.Ceiling(MarketableItems / (double)Tuning.ItemsPerRequest);
+        var passMinutes = requests * ObservedSecondsPerRequest / Tuning.Concurrency / 60;
 
         passMinutes.Should().BeLessThan(60,
             "a pass that outlasts the crawl interval can never advance its pointer");

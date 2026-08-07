@@ -339,7 +339,7 @@ public sealed class SalesBackfillService : BackgroundService
         var itemIds = await _catalog.GetMarketableItemIdsAsync(ct);
         var tuning = _backfillOptions.Tuning;
 
-        var chunks = BackfillChunkRunner.Chunk(itemIds, tuning.ItemsPerRequestFor(entriesWithinSeconds));
+        var chunks = BackfillChunkRunner.Chunk(itemIds, tuning.ItemsPerRequest);
         var requestTimeout = tuning.RequestTimeoutFor(entriesWithinSeconds);
 
         return await BackfillChunkRunner.RunAsync(
@@ -384,9 +384,12 @@ public sealed class SalesBackfillService : BackgroundService
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            MetricsCatalog.BackfillPagesTotal.WithLabels(region, "error").Inc();
+            // This budget spans the Polly retries, not one response, so exhausting it usually means
+            // repeated transient 5xx rather than a slow server. Logging it as a plain timeout hid a
+            // run of upstream 504s behind what looked like latency.
+            MetricsCatalog.BackfillPagesTotal.WithLabels(region, "timeout").Inc();
             _logger.LogWarning(
-                "FetchChunk [{Region}] timed out after {Timeout:F0}s for {Count} items",
+                "FetchChunk [{Region}] exhausted its {Timeout:F0}s budget for {Count} items - retries of transient 5xx are included in that budget",
                 region, requestTimeout.TotalSeconds, itemIds.Count);
             return null;
         }

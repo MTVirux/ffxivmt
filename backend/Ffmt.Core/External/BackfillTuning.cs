@@ -1,16 +1,14 @@
 namespace Ffmt.Core.External;
 
 /// <summary>
-/// Sizing rules for Universalis history requests. The API only accepts <c>entriesWithin</c>
-/// relative to now, so a crawl walking backwards asks for an ever-wider window and gets an
-/// ever-larger response. Both the request timeout and the item batch size are therefore derived
-/// from the window rather than fixed.
+/// Sizing rules for Universalis history requests. Requests are not slow - a 15-item request over a
+/// 9-day window returning 2.9MB came back in 3.2s - so the constraint here is what the upstream API
+/// tolerates, not response size. Exceeding it returns 504, which the retry policy then surfaces as
+/// a client timeout.
 /// </summary>
 public sealed class BackfillTuning
 {
     public int ItemsPerRequest { get; set; } = 50;
-    public int LargeWindowItemsPerRequest { get; set; } = 15;
-    public int LargeWindowThresholdHours { get; set; } = 1;
     public int BaseRequestTimeoutSeconds { get; set; } = 60;
     public int PerWindowHourTimeoutSeconds { get; set; } = 10;
     public int MaxRequestTimeoutSeconds { get; set; } = 300;
@@ -18,15 +16,10 @@ public sealed class BackfillTuning
     public int RetryRoundDelaySeconds { get; set; } = 20;
 
     /// <summary>
-    /// In-flight requests per pass. The smaller batch triples the request count, so this has to
-    /// cover a full pass inside the crawl interval; the shared token bucket still caps the rate.
+    /// In-flight requests per pass. Both loops run a pass concurrently, so the load reaching
+    /// Universalis is double this. Raising it to 16 produced sustained 504s.
     /// </summary>
-    public int Concurrency { get; set; } = 16;
-
-    public int ItemsPerRequestFor(long windowSeconds) =>
-        windowSeconds > (long)TimeSpan.FromHours(LargeWindowThresholdHours).TotalSeconds
-            ? LargeWindowItemsPerRequest
-            : ItemsPerRequest;
+    public int Concurrency { get; set; } = 4;
 
     public TimeSpan RequestTimeoutFor(long windowSeconds)
     {
