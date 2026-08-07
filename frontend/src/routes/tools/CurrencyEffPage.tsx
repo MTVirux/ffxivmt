@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useCallback, type ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import CurrencyEffTable from '../../components/data/CurrencyEffTable';
-import TextField from '../../components/form/TextField';
+import CurrencySelect from '../../components/form/CurrencySelect';
 import TieredLocationSelect from '../../components/form/TieredLocationSelect';
 import { useCurrencyEfficiency } from '../../hooks/useCurrencyEfficiency';
 import { useUserPrefs } from '../../hooks/useUserPrefs';
@@ -31,7 +31,7 @@ export default function CurrencyEffPage() {
   const showHidden = prefs.showHidden;
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
@@ -89,12 +89,18 @@ export default function CurrencyEffPage() {
         className="flex flex-wrap items-end gap-4 rounded-xl border border-border/60 bg-card/40 p-4"
       >
         <div className="min-w-[16rem] flex-1">
-          <TextField
-            label="Currency"
-            placeholder="e.g. Allagan Tomestone of Causality"
-            autoComplete="off"
-            error={errors.searchTerm?.message}
-            {...register('searchTerm')}
+          <Controller
+            name="searchTerm"
+            control={control}
+            render={({ field }) => (
+              <CurrencySelect
+                label="Currency"
+                placeholder="Pick a currency or type a name"
+                value={field.value}
+                onChange={field.onChange}
+                error={errors.searchTerm?.message}
+              />
+            )}
           />
         </div>
 
