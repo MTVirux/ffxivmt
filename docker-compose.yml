@@ -108,6 +108,8 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
     deploy:
       resources:
         limits:
@@ -150,3 +152,5 @@ volumes:
   # Persists Caddy's ACME state across recreates so certs aren't re-issued every build.
   caddy_data:
   caddy_config:
+  # Without this the items index sits in the container layer and dies on every recreate.
+  elastic_data:
