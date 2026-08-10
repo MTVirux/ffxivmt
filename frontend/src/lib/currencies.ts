@@ -60,6 +60,23 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
     ],
   },
   {
+    category: 'Variant & Criterion',
+    currencies: [
+      { id: 38533, name: "Sil'dihn Potsherd" },
+      { id: 38534, name: "Sil'dihn Silver" },
+      { id: 38535, name: "Sil'dihn Manuscript" },
+      { id: 39884, name: 'Rokkon Potsherd' },
+      { id: 39885, name: 'Shishu Coin' },
+      { id: 39886, name: 'Rokkon Manuscript' },
+      { id: 41078, name: 'Aloalo Potsherd' },
+      { id: 41079, name: 'Aloalo Coin' },
+      { id: 41080, name: 'Aloalo Manuscript' },
+      { id: 50434, name: 'Corvosi Potsherd' },
+      { id: 50847, name: 'Corvosi Brass' },
+      { id: 49125, name: 'Corvosi Manuscript' },
+    ],
+  },
+  {
     category: 'Island Sanctuary',
     currencies: [
       { id: 37550, name: "Islander's Cowrie" },
