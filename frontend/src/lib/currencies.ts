@@ -115,6 +115,8 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
       { id: 45044, name: 'Enlightenment Gold Piece' },
       { id: 51975, name: 'Enlightenment Silver Obol' },
       { id: 51976, name: 'Enlightenment Gold Obol' },
+      { id: 47868, name: 'Sanguinite' },
+      { id: 51977, name: 'Arcane Amulet' },
     ],
   },
   {
