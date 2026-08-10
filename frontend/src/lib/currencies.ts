@@ -11,7 +11,6 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
     currencies: [
       { id: 28, name: 'Allagan Tomestone of Poetics' },
       { id: 48, name: 'Allagan Tomestone of Mathematics' },
-      { id: 47, name: 'Allagan Tomestone of Heliometry' },
     ],
   },
   {
