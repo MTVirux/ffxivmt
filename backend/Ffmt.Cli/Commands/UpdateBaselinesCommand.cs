@@ -45,6 +45,12 @@ public sealed class UpdateBaselinesCommand(
         var opts = quarantine.Value;
         var sw = Stopwatch.StartNew();
 
+        if (universalis.Value.RegionsToUse.Length == 0)
+        {
+            logger.LogError("No regions configured under Universalis:RegionsToUse - no baselines to compute");
+            return;
+        }
+
         var since = DateTimeOffset.UtcNow.AddDays(-Math.Max(1, opts.BaselineWindowDays));
         var ttlSeconds = Math.Max(1, opts.BaselineTtlDays) * 86_400;
 
