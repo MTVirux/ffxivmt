@@ -74,6 +74,15 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
     ],
   },
   {
+    category: 'Occult Crescent',
+    currencies: [
+      { id: 45043, name: 'Enlightenment Silver Piece' },
+      { id: 45044, name: 'Enlightenment Gold Piece' },
+      { id: 51975, name: 'Enlightenment Silver Obol' },
+      { id: 51976, name: 'Enlightenment Gold Obol' },
+    ],
+  },
+  {
     category: 'Ishgardian Restoration',
     currencies: [{ id: 28063, name: "Skybuilders' Scrip" }],
   },
