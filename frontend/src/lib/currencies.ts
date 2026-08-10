@@ -77,6 +77,14 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
     ],
   },
   {
+    category: 'Deep Dungeons',
+    currencies: [
+      { id: 15422, name: 'Gelmorran Potsherd' },
+      { id: 23164, name: 'Empyrean Potsherd' },
+      { id: 46186, name: 'Illumed Aetherpool Glass' },
+    ],
+  },
+  {
     category: 'Island Sanctuary',
     currencies: [
       { id: 37550, name: "Islander's Cowrie" },
