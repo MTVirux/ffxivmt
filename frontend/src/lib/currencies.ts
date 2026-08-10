@@ -105,6 +105,7 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
     currencies: [
       { id: 47594, name: 'Phaenna Exploration Token' },
       { id: 49802, name: 'Oizys Exploration Token' },
+      { id: 52092, name: 'Auxesia Exploration Token' },
     ],
   },
   {
