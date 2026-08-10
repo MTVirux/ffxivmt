@@ -46,7 +46,10 @@ COPY --from=build /app/cli ./cli
 RUN printf '#!/bin/sh\nexec dotnet /app/cli/Ffmt.Cli.dll "$@"\n' > /usr/local/bin/ffmt \
  && chmod +x /usr/local/bin/ffmt
 
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080 \
+# The content root defaults to the working directory, which holds no appsettings.json -
+# without this the API silently runs on code defaults instead of its own settings.
+ENV ASPNETCORE_CONTENTROOT=/app/api \
+    ASPNETCORE_URLS=http://0.0.0.0:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_GCServer=1
