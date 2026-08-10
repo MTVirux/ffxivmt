@@ -85,6 +85,15 @@ export const CURRENCY_GROUPS: CurrencyGroup[] = [
     ],
   },
   {
+    category: 'Bozja & Zadnor',
+    currencies: [
+      { id: 31135, name: 'Bozjan Cluster' },
+      { id: 31351, name: 'Bozjan Coin' },
+      { id: 32180, name: 'Bozjan Gold Coin' },
+      { id: 33796, name: 'Bozjan Platinum Coin' },
+    ],
+  },
+  {
     category: 'Island Sanctuary',
     currencies: [
       { id: 37550, name: "Islander's Cowrie" },
