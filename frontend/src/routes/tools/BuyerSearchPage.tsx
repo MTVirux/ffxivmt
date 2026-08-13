@@ -11,6 +11,7 @@ import { useBuyerSearch } from '../../hooks/useBuyerSearch';
 import { useItemNames } from '../../hooks/useItemNames';
 import { useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
+import { formatGilExact, formatNumber } from '../../lib/format';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
 import type { BuyerSearchRow, WorldStructure } from '../../api/types';
@@ -196,6 +197,8 @@ function ResultsTable({
         <thead className="bg-card/60 text-xs uppercase tracking-widest text-muted-foreground">
           <tr>
             <Th>Item</Th>
+            <Th align="right">Qty</Th>
+            <Th align="right">Total</Th>
             <Th>Purchase World</Th>
             <Th>Buyer</Th>
             <Th>When</Th>
@@ -211,6 +214,12 @@ function ResultsTable({
                 <Link to={`/item/${row.item_id}`} className="text-accent hover:underline">
                   {itemNameMap.get(row.item_id) ?? `#${row.item_id}`}
                 </Link>
+              </Td>
+              <Td align="right" mono>
+                {row.quantity === null ? '—' : formatNumber(row.quantity)}
+              </Td>
+              <Td align="right" mono>
+                {row.total_price === null ? '—' : formatGilExact(row.total_price)}
               </Td>
               <Td>{worldNameMap.get(row.world_id) ?? String(row.world_id)}</Td>
               <Td muted>{row.buyer_name}</Td>

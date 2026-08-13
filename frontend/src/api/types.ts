@@ -118,4 +118,8 @@ export type BuyerSearchRow = {
   buyer_name: string;
   /** ISO 8601 with timezone offset (e.g. "2026-05-08T12:34:56+00:00"). */
   sale_time: string;
+  /** Null for rows written before sales_by_buyer gained the column. */
+  quantity: number | null;
+  /** quantity * unit_price. Null whenever quantity is. */
+  total_price: number | null;
 };
