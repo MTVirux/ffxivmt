@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Ffmt.Tests.Endpoints;
 
-/// <summary>Renders results against the serializer options Ffmt.Api/Program.cs installs, so the
-/// shared envelope stays byte-identical to the hand-written ones it replaced.</summary>
+/// <summary>Renders through the same serializer options Program.cs installs, so the shared envelope
+/// stays byte-identical to the hand-written ones it replaced.</summary>
 public sealed class ApiResultsTests : IDisposable
 {
     private readonly ServiceProvider _services;

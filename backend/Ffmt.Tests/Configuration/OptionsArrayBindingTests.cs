@@ -6,8 +6,7 @@ namespace Ffmt.Tests.Configuration;
 /// <summary>
 /// ConfigurationBinder.BindArray allocates <c>existing.Length + children.Count</c> and copies the
 /// property's current value in first, so a non-empty array default is appended to rather than
-/// replaced. In production this crawled Europe twice on every backfill pass and handed the Scylla
-/// driver a contact point that does not resolve on the app VM.
+/// replaced.
 /// </summary>
 public sealed class OptionsArrayBindingTests
 {

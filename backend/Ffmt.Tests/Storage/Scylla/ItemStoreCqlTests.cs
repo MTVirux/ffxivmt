@@ -3,6 +3,7 @@ using Ffmt.Tests.Fakes;
 
 namespace Ffmt.Tests.Storage.Scylla;
 
+// Freezes the generated CQL: the capturing session records each prepare then fails, hence the empty catches.
 public sealed class ItemStoreCqlTests
 {
     private static (ScyllaItemStore Store, List<string> Captured) NewStore()
@@ -15,7 +16,7 @@ public sealed class ItemStoreCqlTests
     public async Task GetMarketableIdsAsync_QueriesItemSets_NoAllowFiltering()
     {
         var (store, captured) = NewStore();
-        try { await store.GetMarketableIdsAsync(); } catch { /* no real session */ }
+        try { await store.GetMarketableIdsAsync(); } catch { }
 
         captured.Should().Contain(c => c.Contains("FROM item_sets") && c.Contains("WHERE set_name = ?"));
         captured.Should().NotContain(c => c.Contains("FROM item_sets") && c.Contains("ALLOW FILTERING"));
@@ -25,7 +26,7 @@ public sealed class ItemStoreCqlTests
     public async Task GetCraftableIdsAsync_QueriesItemSets_NoAllowFiltering()
     {
         var (store, captured) = NewStore();
-        try { await store.GetCraftableIdsAsync(); } catch { /* no real session */ }
+        try { await store.GetCraftableIdsAsync(); } catch { }
 
         captured.Should().Contain(c => c.Contains("FROM item_sets") && c.Contains("WHERE set_name = ?"));
         captured.Should().NotContain(c => c.Contains("FROM item_sets") && c.Contains("ALLOW FILTERING"));
@@ -35,7 +36,7 @@ public sealed class ItemStoreCqlTests
     public async Task UpdateMarketableAsync_True_PreparesInsertIntoItemSets()
     {
         var (store, captured) = NewStore();
-        try { await store.UpdateMarketableAsync(12345, marketable: true); } catch { /* no real session */ }
+        try { await store.UpdateMarketableAsync(12345, marketable: true); } catch { }
 
         captured.Should().Contain(c => c.Contains("UPDATE items SET marketable = ?"));
         captured.Should().Contain(c => c.Contains("INSERT INTO item_sets"));
@@ -45,7 +46,7 @@ public sealed class ItemStoreCqlTests
     public async Task UpdateMarketableAsync_False_PreparesDeleteFromItemSets()
     {
         var (store, captured) = NewStore();
-        try { await store.UpdateMarketableAsync(12345, marketable: false); } catch { /* no real session */ }
+        try { await store.UpdateMarketableAsync(12345, marketable: false); } catch { }
 
         captured.Should().Contain(c => c.Contains("DELETE FROM item_sets"));
     }

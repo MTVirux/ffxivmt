@@ -76,8 +76,7 @@ public static class GilfluxEndpoints
         return app;
     }
 
-    /// <summary>The gilflux success envelope carries two fields the shared <see cref="ApiResults.Ok"/>
-    /// does not, so it stays hand-written here.</summary>
+    // Carries two fields ApiResults.Ok does not, so it stays hand-written.
     private static IResult Envelope(
         string message,
         IReadOnlyList<EnrichedGilfluxRanking> data,

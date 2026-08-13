@@ -49,9 +49,8 @@ public sealed class DeferredSweepWorker : BackgroundService
                 var pairs = claims.Select(c => (c.WorldId, c.ItemId)).ToList();
                 await _refresher.RefreshManyAsync(pairs, concurrency, ct).ConfigureAwait(false);
 
-                // Remove all claims regardless of individual refresh success — RefreshManyAsync
-                // logs and swallows per-pair failures, and the dirty queue is opportunistic
-                // (the *next* sale on a failed pair re-enqueues it via the live coalescer).
+                // Removed regardless of per-pair refresh success: the queue is opportunistic, and
+                // the next sale on a failed pair re-enqueues it through the coalescer.
                 await _queue.RemoveAsync(claims, ct).ConfigureAwait(false);
 
                 MetricsCatalog.DirtyPairsDrainedTotal.Inc(claims.Count);

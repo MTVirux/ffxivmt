@@ -24,7 +24,7 @@ public sealed class ItemCsvSource(
         "IsAdvancedMeldingPermitted",
     ];
 
-    /// <summary>Downloads each configured CSV in parallel and parses the largest response.</summary>
+    /// <summary>Downloads every configured CSV in parallel; the largest response wins.</summary>
     public async Task<IReadOnlyList<ItemUpsert>> LoadAsync(CancellationToken ct = default)
     {
         using var _ = LogChannelScope.Begin(logger, LogChannels.ScyllaDb);
@@ -82,8 +82,7 @@ public sealed class ItemCsvSource(
             }
         }
 
-        // Every required column is present by now, so resolve each index once rather than
-        // re-looking it up per field per row - ~900k dictionary probes across a full parse.
+        // Resolve each index once - probing the dictionary per field per row is ~900k lookups per parse.
         var idCol = indexByColumn["#"];
         var nameCol = indexByColumn["Name"];
         var descriptionCol = indexByColumn["Description"];

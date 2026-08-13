@@ -3,8 +3,7 @@ using Ffmt.Core.Quarantine;
 
 namespace Ffmt.Tests.Fakes;
 
-/// <summary>Quarantines anything at or above a million gil per unit, so callers can pick an
-/// obviously-anomalous price without configuring baselines.</summary>
+// Quarantines anything at or above a million gil per unit, so callers can pick an anomalous price without baselines.
 internal sealed class StubAnomalyFilter : ISaleAnomalyFilter
 {
     public Task<AnomalyPartition> PartitionAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>

@@ -19,8 +19,8 @@ public sealed class QuarantineScrubTests
     private static readonly Sale AlsoNormal = new(ItemId, WorldId, "Krile", false, false, 2, 900, DateTimeOffset.UnixEpoch);
     private static readonly Sale Anomalous = new(ItemId, WorldId, "Alphinaud", false, false, 1, 999_999_999, DateTimeOffset.UnixEpoch);
 
-    /// <summary>Serves the seeded batch once and nothing afterwards, so the assertions count a
-    /// single pass rather than one per day of the window the scrub walks.</summary>
+    /// <summary>Serves the seeded batch once, so the assertions count a single pass rather than
+    /// one per day of the window the scrub walks.</summary>
     private sealed class RecordingSaleStore(IReadOnlyList<Sale> onlyPage) : FakeSaleStore
     {
         private bool _served;

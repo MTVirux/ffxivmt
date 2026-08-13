@@ -6,9 +6,8 @@ public sealed class BackfillTuningTests
 {
     private const int MarketableItems = 16842;
 
-    // Measured directly against the Universalis history endpoint: a 15-item request covering a
-    // 9-day window and returning 2.9MB of JSON came back in 3.2s. Request latency is small; the
-    // failures this tuning has to respect are 504s under load, not slow responses.
+    // Measured: a 15-item request over a 9-day window returning 2.9MB of JSON came back in 3.2s.
+    // Latency is not the constraint this tuning has to respect - 504s under load are.
     private const double ObservedSecondsPerRequest = 5;
 
     private static readonly BackfillTuning Tuning = new();
@@ -35,9 +34,8 @@ public sealed class BackfillTuningTests
     [Fact]
     public void Concurrency_stays_within_what_universalis_tolerates()
     {
-        // Raising this to 16 produced sustained 504s from Universalis, which the retry policy
-        // then masked as client timeouts. Both loops run their own pass, so the load on the
-        // upstream API is double this figure.
+        // 16 produced sustained 504s from Universalis, which the retry policy masked as client
+        // timeouts. Both loops run their own pass, so upstream load is double this figure.
         Tuning.Concurrency.Should().BeLessThanOrEqualTo(4);
     }
 

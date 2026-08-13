@@ -11,9 +11,7 @@ public static class BackfillChunkRunner
 {
     /// <summary>
     /// <paramref name="fetch"/> returns false for a chunk that should be retried, and owns whatever
-    /// it does with a successful result - the runner holds nothing but the outstanding chunks, so a
-    /// pass costs the same memory whether it has ten buckets or a thousand. Returns the number of
-    /// chunks that never succeeded.
+    /// it does with a successful result. Returns the number of chunks that never succeeded.
     /// </summary>
     public static async Task<int> RunAsync<TChunk>(
         IReadOnlyList<TChunk> chunks,

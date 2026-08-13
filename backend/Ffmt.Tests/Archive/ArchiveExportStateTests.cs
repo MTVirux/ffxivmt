@@ -11,8 +11,8 @@ using NSubstitute;
 
 namespace Ffmt.Tests.Archive;
 
-/// <summary>Export state is keyed by (world, day). Reading it per item turns the nightly archive
-/// into items x days redundant Scylla reads per world, so the call count is pinned here.</summary>
+/// <summary>Export state is keyed by (world, day). Reading it per item would turn the nightly
+/// archive into items x days redundant Scylla reads per world.</summary>
 public sealed class ArchiveExportStateTests
 {
     private const int LookbackDays = 3;

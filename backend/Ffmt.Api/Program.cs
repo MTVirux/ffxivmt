@@ -29,14 +29,11 @@ builder.Services.AddFfmtMetrics();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
-    // C# property names serialize as snake_case (item_id, world_name, ...); the SPA's
-    // hand-written types in src/api/types.ts match that casing. Dictionary keys are deliberately
-    // left as-is so /api/v1/worlds keeps preserving original region/datacenter casing.
+    // The SPA's hand-written types in src/api/types.ts match this casing. Dictionary keys are
+    // not renamed by the policy, so /api/v1/worlds keeps its region/datacenter casing.
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
 
-    // Inbound payloads from Universalis mix `worldID` and `worldId` casings depending on
-    // the upstream endpoint hit. Match case-insensitively so both bind to the same
-    // C# property.
+    // Universalis payloads mix `worldID` and `worldId` depending on the endpoint hit.
     options.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
@@ -45,7 +42,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddRequestTimeouts();
 
-// `/openapi/v1.json` is always-on (public read-only API, no secret schema); UI is dev-only.
+// The JSON doc is always-on - public read-only API, no secret schema. The UI is dev-only.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

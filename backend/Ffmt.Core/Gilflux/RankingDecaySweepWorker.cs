@@ -7,12 +7,10 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Gilflux;
 
-/// <summary>
-/// gilflux_rankings is only written when a sale lands for that pair, so a row for an item that
-/// stopped selling keeps its last-computed sums indefinitely. This sweep deletes rows whose widest
-/// timeframe has lapsed and re-queues merely-stale ones through the dirty-pair queue so the
-/// existing DeferredSweepWorker recomputes them under its own concurrency bound.
-/// </summary>
+// gilflux_rankings is only written when a sale lands, so a pair that stopped selling keeps its
+// last-computed sums forever. Deletes rows whose widest timeframe has lapsed and re-queues
+// merely-stale ones through the dirty-pair queue, so DeferredSweepWorker recomputes them under
+// its own concurrency bound.
 public sealed class RankingDecaySweepWorker : BackgroundService
 {
     private readonly IWorldStore _worldStore;

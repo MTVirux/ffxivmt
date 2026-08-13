@@ -174,7 +174,7 @@ public static class ToolsEndpoints
             return Results.Ok(new { status = true, data = rows });
         });
 
-        // Score = (min_price * velocity / cost) * daily_market_cap_percent — gil-per-cost
+        // Score = (min_price * velocity / cost) * daily_market_cap_percent - gil-per-cost
         // efficiency weighted by the item's share of the daily market cap.
         group.MapGet("/currency_efficiency_calculator", async (
             string? search_term,
@@ -297,8 +297,7 @@ public static class ToolsEndpoints
 
     private static readonly string[] InstanceTypes = ["Dungeons", "Trials", "Raids"];
 
-    /// <summary>Returns the 400 envelope when the query is unusable, otherwise null with
-    /// <paramref name="resolvedId"/> set to the caller's id or a fresh one.</summary>
+    // A null result means the query is usable; resolvedId falls back to a fresh random id.
     private static IResult? ValidateToolQuery(string? term, string? location, string? requestId, out string resolvedId)
     {
         resolvedId = string.Empty;
@@ -319,7 +318,7 @@ public static class ToolsEndpoints
         return null;
     }
 
-    /// <summary>Upper median: the stack size sitting at index n/2 of the observations sorted ascending.</summary>
+    // Upper median: the stack size at index n/2 of the observations sorted ascending.
     internal static int MedianStackSize(IReadOnlyDictionary<int, int> histogram)
     {
         var buckets = histogram.Where(kv => kv.Value > 0).OrderBy(kv => kv.Key).ToList();

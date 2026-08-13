@@ -2,14 +2,10 @@ using Prometheus;
 
 namespace Ffmt.Core.Metrics;
 
-/// <summary>
-/// Single source of truth for every Prometheus instrument in the FFMT services.
-/// Cardinality discipline: never label by item_id or sale_id (millions of values).
-/// World IDs (~80), endpoint names (~20), op types (~10) are acceptable.
-/// </summary>
+// Cardinality budget, enforced by MetricsCatalogTests: never label by item_id or sale_id.
+// World IDs (~80), endpoint names (~20) and op types (~10) are the acceptable label sets.
 public static class MetricsCatalog
 {
-    // HTTP RED (populated by HttpMetrics middleware)
     public static readonly Counter HttpRequestsTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_http_requests_total",
         "HTTP requests handled.",
@@ -24,7 +20,6 @@ public static class MetricsCatalog
             Buckets = Histogram.ExponentialBuckets(start: 0.001, factor: 2, count: 14),
         });
 
-    // Scylla driver
     public static readonly Histogram ScyllaQueryDurationSeconds = Prometheus.Metrics.CreateHistogram(
         "ffmt_scylla_query_duration_seconds",
         "Client-observed CQL query latency.",
@@ -39,7 +34,6 @@ public static class MetricsCatalog
         "In-flight CQL requests, by op.",
         new GaugeConfiguration { LabelNames = ["op"] });
 
-    // Universalis WS ingest
     public static readonly Counter WsSalesReceivedTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_ws_sales_received_total",
         "Sales received from the Universalis websocket.",
@@ -55,7 +49,6 @@ public static class MetricsCatalog
         "1 when the websocket consumer is subscribed and the connection is open, else 0.",
         new GaugeConfiguration { LabelNames = ["world"] });
 
-    // RankingCoalescer
     public static readonly Gauge CoalescerQueueDepth = Prometheus.Metrics.CreateGauge(
         "ffmt_coalescer_queue_depth",
         "Current depth of the ranking-refresh queue.");
@@ -73,7 +66,6 @@ public static class MetricsCatalog
         "1 when a coalescer worker is currently executing a refresh, else 0.",
         new GaugeConfiguration { LabelNames = ["worker_id"] });
 
-    // Gilflux
     public static readonly Histogram GilfluxRefreshDurationSeconds = Prometheus.Metrics.CreateHistogram(
         "ffmt_gilflux_refresh_duration_seconds",
         "End-to-end duration of one RefreshAsync call (eight CQL queries).",
@@ -102,7 +94,6 @@ public static class MetricsCatalog
         "ffmt_gilflux_decay_sweep_rows_enqueued_total",
         "Stale gilflux_rankings rows the decay sweep re-queued for a recompute.");
 
-    // Backfill
     public static readonly Counter BackfillPagesTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_backfill_pages_total",
         "Universalis history pages fetched by the backfill service.",
@@ -133,7 +124,6 @@ public static class MetricsCatalog
         "Backfill loop state per region and loop: 0=idle, 1=running, 2=paused, 3=error.",
         new GaugeConfiguration { LabelNames = ["region", "loop"] });
 
-    // Sale anomaly quarantine
     public static readonly Counter SalesQuarantinedTotal = Prometheus.Metrics.CreateCounter(
         "ffmt_sales_quarantined_total",
         "Sales diverted to sales_quarantine as price anomalies.",
@@ -157,7 +147,7 @@ public static class MetricsCatalog
         "Duration of one update-baselines run.",
         new HistogramConfiguration { Buckets = Histogram.ExponentialBuckets(1, 2, 14) });
 
-    /// <summary>Used by tests to enumerate the catalog. Order matches definition order above.</summary>
+    // Enumerated by the catalog tests; touching it also registers every instrument eagerly.
     public static IReadOnlyList<Collector> All =>
     [
         HttpRequestsTotal,

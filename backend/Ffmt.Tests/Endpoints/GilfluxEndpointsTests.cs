@@ -17,10 +17,9 @@ using NSubstitute;
 
 namespace Ffmt.Tests.Endpoints;
 
-/// <summary>Drives the mapped gilflux route delegates directly so the response bodies are pinned
-/// byte-for-byte, including key order and the extra envelope fields the shared helper cannot carry.
-/// Uses a bare route builder rather than a second WebApplicationFactory - the API host installs a
-/// process-global runtime metrics collector that only tolerates one.</summary>
+/// <summary>Drives the mapped route delegates directly so response bodies are pinned byte-for-byte,
+/// key order included. A bare route builder rather than a second WebApplicationFactory - the API
+/// host installs a process-global runtime metrics collector that only tolerates one.</summary>
 public sealed class GilfluxEndpointsTests : IDisposable
 {
     private const int ItemId = 5057;

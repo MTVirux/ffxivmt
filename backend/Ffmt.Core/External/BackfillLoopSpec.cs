@@ -4,8 +4,8 @@ using Ffmt.Core.Models;
 namespace Ffmt.Core.External;
 
 /// <summary>
-/// How one bucket ended a pass. <c>Skipped</c> and <c>Stalled</c> are decided by the pass itself -
-/// a bucket with nothing worth asking for, and a bucket whose request never succeeded.
+/// <c>Skipped</c> and <c>Stalled</c> are set by the pass, not the spec: a bucket with nothing worth
+/// asking for, and a bucket whose request never succeeded.
 /// </summary>
 public enum BackfillBucketOutcome
 {

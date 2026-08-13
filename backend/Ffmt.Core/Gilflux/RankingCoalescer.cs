@@ -46,7 +46,9 @@ public sealed class RankingCoalescer : IHostedService
         });
     }
 
-    /// <summary>Submit a (worldId, itemId) for refresh. Drops silently if recently fired or queue full.</summary>
+    // Never blocks: pairs are dropped when recently fired or the queue is full, deliberately, so a
+    // slow refresh can't stall the websocket loop. Dropped pairs are recovered later from
+    // gilflux_dirty_pairs by DeferredSweepWorker.
     public void Submit(int worldId, int itemId)
     {
         var key = (worldId, itemId);

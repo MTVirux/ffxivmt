@@ -2,15 +2,14 @@ namespace Ffmt.Core.External;
 
 /// <summary>
 /// Splits the marketable catalogue into stable buckets, each about one Universalis request.
-/// Progress is tracked per bucket so one failing request stalls only its own slice of the
-/// catalogue instead of blocking the whole pass from advancing.
+/// Progress is tracked per bucket so one failing request stalls only its own items instead of
+/// holding up the whole pass.
 /// </summary>
 public static class BackfillBuckets
 {
     public static int BucketCountFor(int itemCount, int itemsPerRequest) =>
         Math.Max(1, (int)Math.Ceiling(itemCount / (double)itemsPerRequest));
 
-    /// <summary>Membership is derived from the item id, so it survives the catalogue growing.</summary>
     public static int BucketFor(int itemId, int bucketCount) =>
         Math.Abs(itemId % bucketCount);
 

@@ -1,9 +1,6 @@
 namespace Ffmt.Core.Models;
 
-/// <summary>
-/// Import progress for one slice of the marketable catalogue. Each bucket advances on its own,
-/// so a request that keeps failing stalls only its own items.
-/// </summary>
+/// <summary>Import progress for one slice of the marketable catalogue.</summary>
 public sealed record BackfillBucketState(
     string Region,
     string Loop,

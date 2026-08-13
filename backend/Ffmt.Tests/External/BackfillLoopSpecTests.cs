@@ -4,10 +4,8 @@ using Ffmt.Core.Models;
 
 namespace Ffmt.Tests.External;
 
-/// <summary>
-/// Pins the window and pointer rules the two backfill loops had inline in SalesBackfillService.
-/// Getting these wrong either re-imports the same window forever or silently skips days.
-/// </summary>
+/// <summary>Window and pointer rules for the two backfill loops. Getting these wrong either
+/// re-imports the same window forever or silently skips days.</summary>
 public sealed class BackfillLoopSpecTests
 {
     private static readonly DateTimeOffset Now = new(2026, 8, 7, 12, 0, 0, TimeSpan.Zero);

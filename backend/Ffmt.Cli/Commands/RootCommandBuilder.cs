@@ -62,8 +62,8 @@ internal static class RootCommandBuilder
 
     private static Command BuildArchive(IServiceProvider services)
     {
-        // One Option instance spans both commands, as it always has: that is why `archive merge
-        // --help` renders the parent's wording, and it keeps `archive --dry-run merge` parsing.
+        // Both commands share one Option instance: `archive merge --help` shows the parent's
+        // wording, and `archive --dry-run merge` still parses.
         var dryRunOption = new Option<bool>("--dry-run", "Log what would be exported without writing or deleting anything.");
 
         var archiveCmd = WithDryRun<ArchiveCommand>(services,

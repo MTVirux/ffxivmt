@@ -13,8 +13,8 @@ using NSubstitute;
 
 namespace Ffmt.Tests.Quarantine;
 
-/// <summary>The baseline job batches items so the (item, world) fan-out keeps its semaphore busy;
-/// what must not change is that every pair in a configured region is read exactly once.</summary>
+/// <summary>Every (item, world) pair in a configured region must be read exactly once, whatever
+/// the item batch size works out to.</summary>
 public sealed class BaselineFanOutTests
 {
     private static readonly World[] EuropeWorlds =

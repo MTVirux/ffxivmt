@@ -6,7 +6,7 @@ namespace Ffmt.Tests.External;
 
 public sealed class TokenBucketTests
 {
-    /// <summary>Stopwatch-scale clock the test moves by hand, so refill maths needs no real waiting.</summary>
+    /// <summary>Stopwatch-scale ticks, advanced by hand so refill maths needs no real waiting.</summary>
     private sealed class FakeClock
     {
         private long _ticks;
@@ -16,7 +16,7 @@ public sealed class TokenBucketTests
         public void Advance(TimeSpan by) => _ticks += (long)(by.TotalSeconds * Stopwatch.Frequency);
     }
 
-    /// <summary>A consume that has to wait for a refill blocks until its token arrives, so a short
+    /// <summary>A consume that must wait for a refill blocks until its token arrives, so a short
     /// cancellation is how the test asserts "this one would have waited".</summary>
     private static async Task<bool> ConsumesWithoutWaiting(TokenBucket bucket)
     {

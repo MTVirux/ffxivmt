@@ -22,8 +22,6 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         VALUES (?, ?, ?, ?, ?, ?)
         """;
 
-    // Reads from sales_by_buyer; the API caller does follow-up reads on `sales`
-    // for the fields this companion does not carry (hq, on_mannequin).
     private const string CqlSearchBuyer = """
         SELECT buyer_name, sale_time, item_id, world_id, quantity, unit_price
         FROM sales_by_buyer
@@ -108,10 +106,9 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
             parsed++;
         };
 
-        // Group by sales partition key so single-partition unlogged batches stay one-coordinator.
-        // sales_by_buyer rows go into the same batch as their parent sale — they may target
-        // different partitions, but at this batch size (≤200) the coordinator overhead is
-        // acceptable and atomic-per-sale write semantics are preserved.
+        // Group by the sales partition key so each unlogged batch stays on one coordinator.
+        // sales_by_buyer rows ride in the same batch as their parent sale - a different
+        // partition, but at ≤200 rows the extra coordinator hop is worth keeping the pair atomic.
         foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
         {
             await ScyllaBatchWriter.ExecuteBatchedAsync(scylla, partition, bind, "sale_insert", ct).ConfigureAwait(false);
@@ -132,10 +129,9 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         var stmt = await scylla.PrepareAsync(cql, ct).ConfigureAwait(false);
         var rows = await scylla.Session.ExecuteAsync(stmt.Bind(args)).ConfigureAwait(false);
 
-        // sales_by_buyer carries the keys plus quantity/unit_price; hq and on_mannequin
-        // stay zeroed. Rows written before the columns were added come back null, which
-        // SafeInt maps to 0 - the endpoint treats that as "unknown", since no real sale
-        // has a zero quantity.
+        // sales_by_buyer has no hq/on_mannequin, so they stay false and the endpoint re-reads
+        // `sales` for them. Rows predating quantity/unit_price come back null; SafeInt maps
+        // those to 0, which the endpoint reads as unknown - no real sale has zero quantity.
         var result = new List<Sale>();
         foreach (var row in rows)
         {

@@ -9,8 +9,7 @@ public static class FfmtCliServiceCollectionExtensions
 {
     public static IServiceCollection AddFfmtCli(this IServiceCollection services)
     {
-        // No Polly retry: GitHub raw is reliable enough that a single attempt with a generous
-        // timeout is fine, and the parser races two URLs anyway.
+        // No Polly retry: GitHub raw is reliable, and the loader downloads every source in parallel anyway.
         services.AddHttpClient(ItemCsvSource.HttpClientName, http => http.Timeout = TimeSpan.FromSeconds(60));
 
         services.AddSingleton<ItemCsvSource>();

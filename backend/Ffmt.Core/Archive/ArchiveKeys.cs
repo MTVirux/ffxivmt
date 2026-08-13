@@ -1,7 +1,6 @@
 namespace Ffmt.Core.Archive;
 
-/// <summary>The object-storage layout is frozen: every key already in the bucket was written by
-/// these formats, so changing them orphans the archive.</summary>
+// Key layout is frozen - every key in the bucket was written by these formats. Never build one by hand.
 public static class ArchiveKeys
 {
     public const string ArchivePrefix = "archive/";

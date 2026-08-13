@@ -8,6 +8,6 @@ public interface IElasticItemSearch
 
     Task UpsertAsync(int id, string name, CancellationToken ct = default);
 
-    /// <summary>One bulk round-trip per call; document ids match <see cref="UpsertAsync"/>.</summary>
+    // One bulk round-trip per call; document ids match UpsertAsync.
     Task UpsertManyAsync(IEnumerable<(int Id, string Name)> items, CancellationToken ct = default);
 }

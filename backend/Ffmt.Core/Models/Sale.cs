@@ -1,6 +1,6 @@
 namespace Ffmt.Core.Models;
 
-/// <summary>One row in the <c>sales</c> Scylla table; rows are kept forever (no TTL).</summary>
+/// <summary>One row in the <c>sales</c> Scylla table. No TTL - rows leave only via the archive prune.</summary>
 public sealed record Sale(
     int ItemId,
     int WorldId,

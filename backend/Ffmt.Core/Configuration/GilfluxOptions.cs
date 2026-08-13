@@ -16,7 +16,7 @@ public sealed class GilfluxOptions
     public int DeferredSweepConcurrency { get; init; } = 4;
     public int DirtyPairBucket { get; init; } = 0;
 
-    /// <summary>Added on top of the widest timeframe to derive the gilflux_rankings row TTL.</summary>
+    // Added on top of the widest timeframe to derive the gilflux_rankings row TTL.
     public int RankingTtlGraceSeconds { get; init; } = 86_400;
 
     public bool DecaySweepEnabled { get; init; } = true;

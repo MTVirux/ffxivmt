@@ -3,7 +3,8 @@ using Ffmt.Core.Metrics;
 
 namespace Ffmt.Core.Storage.Scylla;
 
-/// <summary>Single home for the unlogged-batch-at-LocalOne write pattern the Scylla stores share.</summary>
+/// <summary>The only place that builds a BatchStatement (unlogged, LocalOne). Every store batches
+/// through ExecuteBatchedAsync instead of hand-rolling a chunk-and-flush loop.</summary>
 internal static class ScyllaBatchWriter
 {
     public const int BatchRows = 200;
@@ -13,11 +14,7 @@ internal static class ScyllaBatchWriter
             .SetBatchType(BatchType.Unlogged)
             .SetConsistencyLevel(ConsistencyLevel.LocalOne);
 
-    /// <summary>
-    /// Adds every row to an unlogged batch, flushing each <paramref name="batchRows"/> rows.
-    /// Callers group by partition key themselves and call once per group. A non-null
-    /// <paramref name="op"/> routes the execute through the metrics wrapper.
-    /// </summary>
+    /// <summary>Callers group by partition key themselves and call once per group.</summary>
     public static async Task ExecuteBatchedAsync<T>(
         IScyllaSession scylla,
         IEnumerable<T> rows,

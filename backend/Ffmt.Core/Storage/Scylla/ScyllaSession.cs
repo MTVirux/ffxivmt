@@ -22,8 +22,7 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
                     .WithLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()))
                     .WithQueryOptions(new QueryOptions().SetConsistencyLevel(ConsistencyLevel.LocalOne))
                     .WithSocketOptions(new SocketOptions().SetReadTimeoutMillis(opts.QueryTimeoutMillis))
-                    // Fire a speculative retry against a second replica after 400 ms; repeat once more
-                    // if still no response. Caps at 3 total requests in flight per query.
+                    // Retry against another replica every 400 ms, twice - 3 requests in flight max.
                     .WithSpeculativeExecutionPolicy(new ConstantSpeculativeExecutionPolicy(400, 2));
 
                 if (!string.IsNullOrEmpty(opts.Username))
@@ -47,7 +46,7 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
 
     public Task<PreparedStatement> PrepareAsync(string cql, CancellationToken ct = default)
     {
-        // Driver caches prepared statements per cluster by CQL text; repeat calls are hash lookups.
+        // The driver caches prepared statements per cluster by CQL text, so repeats are lookups.
         return Session.PrepareAsync(cql);
     }
 

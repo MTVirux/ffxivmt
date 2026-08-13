@@ -4,9 +4,8 @@ public sealed class ScyllaOptions
 {
     public const string SectionName = "Scylla";
 
-    // Empty, not a seeded default: the configuration binder appends bound values to whatever the
-    // array already holds. appsettings.json supplies the single-host value; the app VM override
-    // replaces index 0 with the private IP.
+    // Empty, not a seeded default: the config binder appends bound values to whatever the array
+    // already holds, so any default here survives alongside the configured contact points.
     public string[] ContactPoints { get; init; } = [];
     public int Port { get; init; } = 9042;
     public string Keyspace { get; init; } = "ffmt";

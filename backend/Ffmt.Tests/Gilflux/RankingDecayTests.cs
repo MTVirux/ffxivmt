@@ -20,7 +20,7 @@ public sealed class RankingDecayTests
         ["7d"] = 100,
     };
 
-    /// <summary>A row frozen at its last sale: refreshed by that sale, and carrying its timestamp.</summary>
+    // updated_at and last_sale share one timestamp: the row was last refreshed by its own last sale.
     private static IReadOnlyDictionary<string, long> DecayFrozenAt(DateTimeOffset lastTouched) =>
         RankingDecay.Apply(Frozen(), Timeframes, lastTouched.ToUnixTimeMilliseconds(), lastTouched.ToUnixTimeMilliseconds(), Now);
 

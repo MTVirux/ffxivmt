@@ -47,8 +47,8 @@ public sealed class MetricsCatalogTests
     [Fact]
     public void Backfill_counts_passes_that_refused_to_advance_their_pointer()
     {
-        // A pass that leaves its pointer put re-crawls the same window forever. Nothing else
-        // distinguishes that from healthy work, so it needs its own signal.
+        // A pass that leaves its pointer put re-crawls the same window forever, and nothing else
+        // distinguishes that from healthy work.
         MetricsCatalog.BackfillPointerStalledTotal.LabelNames.Should().Contain("region");
         MetricsCatalog.BackfillPointerStalledTotal.LabelNames.Should().Contain("loop");
     }

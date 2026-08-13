@@ -4,7 +4,7 @@ public sealed class UpdatedbOptions
 {
     public const string SectionName = "Updatedb";
 
-    /// <summary>Candidate URLs; the largest response wins.</summary>
+    // Candidates tried in order; the largest response wins.
     public string[] ItemCsvSources { get; init; } =
     [
         "https://raw.githubusercontent.com/MTVirux/ffxiv-datamining/master/csv/en/Item.csv",

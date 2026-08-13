@@ -4,8 +4,8 @@ namespace Ffmt.Tests.Endpoints;
 
 public sealed class MedianStackSizeTests
 {
-    /// <summary>The implementation the cumulative-count walk replaced: flatten every observation,
-    /// sort, read index n/2.</summary>
+    /// <summary>Reference oracle: the flatten-sort-take-middle implementation the cumulative-count
+    /// walk replaced.</summary>
     private static int FlattenAndSort(IReadOnlyDictionary<int, int> histogram)
     {
         if (histogram.Count == 0) return 0;

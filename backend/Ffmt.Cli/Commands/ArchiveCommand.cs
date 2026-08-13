@@ -82,8 +82,8 @@ public sealed class ArchiveCommand(
     {
         var byDate = new Dictionary<DateOnly, List<Sale>>();
 
-        // Export state varies per (world, day), never per item - read the window once instead of
-        // once per (item, day), which is ~16.8k redundant Scylla reads per day per world.
+        // Export state is per (world, day), never per item - reading it once per item costs
+        // ~16.8k redundant Scylla reads per day per world.
         var exportedDays = new List<DateOnly>(lookbackDays);
         for (var i = 0; i < lookbackDays; i++)
         {

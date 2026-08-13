@@ -4,10 +4,9 @@ using NSubstitute;
 
 namespace Ffmt.Tests.Fakes;
 
+// Captures prepared CQL strings; execution is unstubbed, so callers try/catch the call and assert on the CQL.
 internal static class CapturingScyllaSession
 {
-    /// <summary>Records every prepared CQL string. Execution is left unstubbed, so callers run the
-    /// store inside a try/catch and assert on the captured CQL rather than the driver round-trip.</summary>
     public static (IScyllaSession Session, List<string> Captured) New()
     {
         var session = Substitute.For<IScyllaSession>();

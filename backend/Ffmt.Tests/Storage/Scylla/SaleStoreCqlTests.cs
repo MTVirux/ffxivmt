@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Ffmt.Tests.Storage.Scylla;
 
+// Freezes the generated CQL: the capturing session records each prepare then fails, hence the empty catches.
 public sealed class SaleStoreCqlTests
 {
     [Fact]
@@ -12,9 +13,8 @@ public sealed class SaleStoreCqlTests
         var (store, capturedCql) = NewStore();
 
         try { await store.AddBatchAsync(Array.Empty<Ffmt.Core.Models.Sale>()); }
-        catch { /* expected: no real session */ }
+        catch { }
 
-        // Empty input: AddBatchAsync should short-circuit without preparing anything.
         capturedCql.Should().BeEmpty();
     }
 
@@ -22,7 +22,7 @@ public sealed class SaleStoreCqlTests
     public async Task SearchBuyerAsync_PreparesCqlAgainstSalesByBuyerCompanion()
     {
         var (store, captured) = NewStore();
-        try { await store.SearchBuyerAsync("Alice", null); } catch { /* no real session */ }
+        try { await store.SearchBuyerAsync("Alice", null); } catch { }
 
         captured.Should().ContainSingle()
             .Which.Should().Contain("FROM sales_by_buyer")
@@ -34,7 +34,7 @@ public sealed class SaleStoreCqlTests
     public async Task SearchBuyerAsync_SelectsQuantityAndUnitPrice()
     {
         var (store, captured) = NewStore();
-        try { await store.SearchBuyerAsync("Alice", null); } catch { /* no real session */ }
+        try { await store.SearchBuyerAsync("Alice", null); } catch { }
 
         captured.Should().ContainSingle()
             .Which.Should().Contain("quantity")
@@ -45,7 +45,7 @@ public sealed class SaleStoreCqlTests
     public async Task SearchBuyerAsync_WithWorld_UsesWorldPrefixLookup()
     {
         var (store, captured) = NewStore();
-        try { await store.SearchBuyerAsync("Alice", worldId: 21); } catch { /* no real session */ }
+        try { await store.SearchBuyerAsync("Alice", worldId: 21); } catch { }
 
         captured.Should().Contain(c => c.Contains("FROM sales_by_buyer") && c.Contains("AND world_id = ?"));
         captured.Should().NotContain(c => c.Contains("FROM sales_by_buyer") && c.Contains("ALLOW FILTERING"));

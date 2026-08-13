@@ -44,8 +44,8 @@ public sealed class QuarantineScrubCommand(
         var totalQuarantined = 0;
         var affected = new HashSet<(int WorldId, int ItemId)>();
 
-        // Sequentially this walk is worlds x items x days round trips, which runs for
-        // most of a day. Bounded the same way ffmt archive bounds its identical walk.
+        // Worlds x items x days round trips runs for most of a day sequentially. Bounded like
+        // ffmt archive bounds its identical walk.
         var concurrency = Math.Max(1, archiveOptions.Value.ExportConcurrency);
         using var semaphore = new SemaphoreSlim(concurrency, concurrency);
 

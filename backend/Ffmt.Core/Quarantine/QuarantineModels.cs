@@ -8,8 +8,7 @@ public sealed record PriceBaseline(long MedianUnitPrice, int SampleCount, DateTi
 
 public sealed record QuarantinedSale(Sale Sale, string Reason, long BaselineMedian, DateTimeOffset QuarantinedAt);
 
-/// <summary><paramref name="NoBaseline"/> is the subset of <paramref name="Accepted"/> that was
-/// accepted without evaluation, so the caller can meter the fail-open gap.</summary>
+// NoBaseline is the subset of Accepted that was let through unevaluated, so callers can meter the fail-open gap.
 public sealed record AnomalyPartition(
     IReadOnlyList<Sale> Accepted,
     IReadOnlyList<QuarantinedSale> Quarantined,

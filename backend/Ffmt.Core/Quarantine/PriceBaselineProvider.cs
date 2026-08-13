@@ -44,7 +44,7 @@ public sealed class PriceBaselineProvider(
             return;
         }
 
-        // Stale: refresh in the background and serve the current snapshot to this caller.
+        // Stale: reload in the background, serve the current snapshot to this caller.
         if (Interlocked.CompareExchange(ref _reloading, 1, 0) == 0)
         {
             _ = Task.Run(async () =>
@@ -85,8 +85,8 @@ public sealed class PriceBaselineProvider(
         }
         catch (Exception ex)
         {
-            // Fail open. An unreadable baseline table must never break ingest; the previous
-            // snapshot stays in place and the age gauge climbs so it is visible in Grafana.
+            // Fail open - an unreadable baseline table must never break ingest. The previous snapshot
+            // stays in place and the age gauge climbs so it shows up in Grafana.
             logger.LogWarning(ex, "Price-baseline load failed; retaining the previous snapshot of {Count} row(s).",
                 _snapshot.Count);
             if (_loadedAt == DateTimeOffset.MinValue)

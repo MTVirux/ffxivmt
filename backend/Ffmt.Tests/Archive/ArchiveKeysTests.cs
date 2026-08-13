@@ -2,8 +2,8 @@ using Ffmt.Core.Archive;
 
 namespace Ffmt.Tests.Archive;
 
-/// <summary>Pins the S3 layout against the literals the archive commands used before
-/// <see cref="ArchiveKeys"/> existed. A diff here orphans every object already in the bucket.</summary>
+/// <summary>The S3 key layout is frozen - a diff here orphans every object already in the
+/// bucket.</summary>
 public sealed class ArchiveKeysTests
 {
     private static string LegacyArchiveKey(DateOnly date, string dc, string world) =>

@@ -20,8 +20,7 @@ public interface ISaleStore : ISaleWriter
     Task<IReadOnlyList<PricePoint>> GetPricePointsSinceAsync(
         int itemId, int worldId, DateTimeOffset since, CancellationToken ct = default);
 
-    /// <summary>Deletes exactly these rows from sales and sales_by_buyer. Unlike
-    /// DeleteByItemAndWorldInRangeAsync this does not take neighbouring sales with it.</summary>
+    /// <summary>Unlike DeleteByItemAndWorldInRangeAsync, takes no neighbouring sales with it.</summary>
     Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
 
     Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);

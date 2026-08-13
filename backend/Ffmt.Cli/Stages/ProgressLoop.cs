@@ -2,8 +2,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Ffmt.Cli.Stages;
 
-/// <summary>Bounded fan-out for the per-row updatedb stages, keeping the sequential loops'
-/// reporting: one line per 1000 completions plus a final total.</summary>
 public static class ProgressLoop
 {
     public const int DefaultConcurrency = 16;

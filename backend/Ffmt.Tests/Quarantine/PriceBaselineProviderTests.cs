@@ -14,8 +14,7 @@ public sealed class PriceBaselineProviderTests
 
         var provider = new PriceBaselineProvider(
             session,
-            // Stated rather than inherited from the option defaults: the provider loads per region,
-            // so with no regions configured there is nothing for these tests to exercise.
+            // Stated explicitly - the provider loads per region, so an empty default exercises nothing.
             Options.Create(new UniversalisOptions { RegionsToUse = ["Europe", "North-America"] }),
             Options.Create(new QuarantineOptions()),
             NullLogger<PriceBaselineProvider>.Instance);

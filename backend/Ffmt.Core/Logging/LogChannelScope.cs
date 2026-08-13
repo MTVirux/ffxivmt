@@ -5,11 +5,11 @@ namespace Ffmt.Core.Logging;
 
 public static class LogChannelScope
 {
-    /// <summary>Routes events emitted inside the scope to the matching per-channel file sink.</summary>
+    // Pushes the Serilog LogContext, which is what routes events to the channel's file sink.
     public static IDisposable Begin(string channel) =>
         LogContext.PushProperty(LogChannels.ContextPropertyName, channel);
 
-    /// <summary>Also opens an MEL scope so structured properties are visible to non-Serilog consumers.</summary>
+    // Adds an MEL scope on top so the property is visible to non-Serilog consumers too.
     public static IDisposable Begin(ILogger logger, string channel)
     {
         var serilog = Begin(channel);

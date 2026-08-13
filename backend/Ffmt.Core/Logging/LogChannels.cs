@@ -1,6 +1,6 @@
 namespace Ffmt.Core.Logging;
 
-/// <summary>Promtail tails one rolling file per channel under <see cref="Configuration.LoggingOptions.LogDirectory"/>.</summary>
+// Each enabled channel gets its own rolling file under LoggingOptions.LogDirectory.
 public static class LogChannels
 {
     public const string Error = "ERROR";

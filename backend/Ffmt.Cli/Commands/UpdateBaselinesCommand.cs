@@ -76,9 +76,8 @@ public sealed class UpdateBaselinesCommand(
 
             var written = 0;
 
-            // One item is only ~4-8 worlds, so fanning out per item leaves most permits idle.
-            // Batching the items keeps the (item, world) cross product wide enough to saturate them
-            // without holding every item's price points in memory at once.
+            // One item spans only ~4-8 worlds, so per-item fan-out leaves most permits idle.
+            // Batching widens the cross product without buffering every item's points at once.
             foreach (var itemBatch in itemIds.Chunk(Math.Max(1, opts.BaselineComputeConcurrency)))
             {
                 ct.ThrowIfCancellationRequested();

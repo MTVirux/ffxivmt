@@ -71,9 +71,8 @@ public sealed class BackfillWindowTests
     [Fact]
     public void Entries_within_is_measured_from_now_not_from_the_window_width()
     {
-        // The Universalis history endpoint only accepts a window relative to now, so a crawl
-        // walking backwards must ask for everything since the window start and discard the
-        // newer part. Measuring the window's own width would silently skip the older half.
+        // The history endpoint only accepts a window relative to now, so a backwards crawl asks
+        // for everything since the window start; the window's own width would skip the older half.
         var windowStart = Now.AddDays(-9);
 
         BackfillWindow.EntriesWithinSeconds(windowStart, Now)

@@ -72,7 +72,8 @@ public sealed class GilfluxRankingReader
             : await MergeRawAsync(resolution, ct).ConfigureAwait(false);
         var enrichedAll = Enrich(raw, worldsById, itemNames, _timeframesMs, now);
 
-        // Always populate the unfiltered cache so siblings that include this location can reuse it.
+        // Populate the unfiltered cache even on a crafted-only request - the crafted list is a
+        // subset, so the full set is the reusable one.
         _cache.Set(GilfluxCacheKeys.For(resolution.CanonicalName, craftedOnly: false), enrichedAll, _ttl);
 
         if (!craftedOnly)
@@ -92,7 +93,6 @@ public sealed class GilfluxRankingReader
         return new RankingByLocationResult(resolution, crafted, FromCache: false);
     }
 
-    /// <summary>Resolves the location, reads the item's rows and enriches only the ones in scope.</summary>
     public async Task<IReadOnlyList<EnrichedGilfluxRanking>?> GetByItemAndLocationAsync(
         int itemId, string targetLocation, CancellationToken ct = default)
     {
@@ -121,8 +121,6 @@ public sealed class GilfluxRankingReader
         return Enrich(raw, worldsById, itemNames, _timeframesMs, DateTimeOffset.UtcNow);
     }
 
-    /// <summary>Public helper exposed for endpoints that want to enrich a list returned
-    /// directly by the store (e.g. the per-item endpoint).</summary>
     public async Task<IReadOnlyList<EnrichedGilfluxRanking>> EnrichAsync(
         IEnumerable<GilfluxRanking> rows, CancellationToken ct = default)
     {
@@ -140,8 +138,9 @@ public sealed class GilfluxRankingReader
         return perWorldTasks.SelectMany(t => t.Result).ToList();
     }
 
-    /// <summary>Rows are only rewritten when a sale lands, so stored sums must be decayed against
-    /// <paramref name="now"/> before they are served; a row with nothing left is not a mover at all.</summary>
+    // Rows are only rewritten when a sale lands, so stored sums must be decayed before they are
+    // served; a row with nothing left is not a mover and is dropped. Skipping the decay resurrects
+    // stale top movers with frozen sums.
     private static IReadOnlyList<EnrichedGilfluxRanking> Enrich(
         IEnumerable<GilfluxRanking> rows,
         IReadOnlyDictionary<int, World> worldsById,

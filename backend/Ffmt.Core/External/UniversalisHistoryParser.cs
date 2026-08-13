@@ -8,8 +8,8 @@ public static class UniversalisHistoryParser
     /// <summary>
     /// Universalis returns three shapes: a multi-item request yields "items" as an object keyed by
     /// item id, a single-item request yields "entries" at the root, and "items" as an array is
-    /// accepted defensively. Handling only the array shape silently yields zero sales for every
-    /// multi-item request, which is how a backfill can look healthy while importing nothing.
+    /// accepted defensively. Missing the object shape means every multi-item backfill imports
+    /// nothing while still looking healthy.
     /// </summary>
     public static List<Sale> Parse(string json)
     {

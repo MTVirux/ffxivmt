@@ -6,12 +6,8 @@ namespace Ffmt.Core.Metrics;
 
 public static class ScyllaInstrumentation
 {
-    /// <summary>
-    /// Executes a CQL statement with prometheus-net duration + inflight instrumentation.
-    /// The <paramref name="op"/> label must be a low-cardinality constant string
-    /// (e.g. "sale_insert", "gilflux_refresh", "backfill_state_read"). Never pass
-    /// user-controlled values.
-    /// </summary>
+    // op is a metric label, so it must be a low-cardinality constant ("sale_insert",
+    // "gilflux_refresh", ...). Never pass a user-controlled value.
     public static async Task<RowSet> MeasuredExecuteAsync(
         this IScyllaSession scylla,
         IStatement statement,

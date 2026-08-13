@@ -4,8 +4,7 @@ namespace Ffmt.Core.Quarantine;
 
 public interface IPriceBaselineProvider
 {
-    /// <summary>Blocks on the first call while the snapshot loads; afterwards returns immediately,
-    /// kicking a background reload when the snapshot has aged past the refresh interval.</summary>
+    // Blocks only on the first call; later calls return at once and reload in the background when stale.
     Task EnsureLoadedAsync(CancellationToken ct = default);
 
     Task ReloadAsync(CancellationToken ct = default);

@@ -8,10 +8,8 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Quarantine;
 
-/// <summary>
-/// Single chokepoint for anomaly filtering. Both ingest paths call ISaleWriter.AddBatchAsync and are
-/// protected without knowing this exists; every failure mode here writes the sale rather than losing it.
-/// </summary>
+// Single chokepoint for anomaly filtering: both ingest paths go through ISaleWriter.AddBatchAsync.
+// Every failure mode here writes the sale rather than losing it.
 public sealed class FilteringSaleStore(
     ISaleWriter inner,
     ISaleAnomalyFilter filter,

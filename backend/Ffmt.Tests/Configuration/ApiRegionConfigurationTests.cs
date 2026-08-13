@@ -5,10 +5,8 @@ using Microsoft.Extensions.Configuration;
 
 namespace Ffmt.Tests.Configuration;
 
-/// <summary>
-/// UniversalisOptions seeds no regions on purpose (see OptionsArrayBindingTests), so the worlds
-/// endpoint filters its entire tree away and 404s unless the shipped appsettings supplies them.
-/// </summary>
+/// <summary>UniversalisOptions seeds no regions on purpose (see OptionsArrayBindingTests), so the
+/// worlds endpoint filters its whole tree away and 404s unless appsettings supplies them.</summary>
 public sealed class ApiRegionConfigurationTests
 {
     private static UniversalisOptions ShippedOptions()

@@ -8,15 +8,12 @@ public sealed record RankingSweepPlan(
 
 public static class RankingDecay
 {
-    /// <summary>
-    /// A stored timeframe sum covers [updated_at - T, updated_at]. Two independent facts force it
-    /// to zero, and a timeframe is only live when neither applies:
-    /// no sale can land after updated_at without triggering a refresh, so a row older than T has
-    /// an empty live window; and last_sale_time is the most recent sale there is, so a sale older
-    /// than T likewise leaves nothing inside it. The second is not implied by the first - a row
-    /// refreshed yesterday can still carry a sale that sat at the far edge of its window.
-    /// Timeframes that survive both may be overstated and need a real refresh to correct.
-    /// </summary>
+    // A stored sum for timeframe T covers [updated_at - T, updated_at]. Two independent facts force
+    // it to zero: a row older than T proves the live window is empty (no sale lands without
+    // triggering a refresh), and a last_sale_time older than T leaves nothing inside it either.
+    // The second is not implied by the first - a row refreshed yesterday can still carry a sale
+    // that sat at the far edge of its window. Surviving timeframes may be overstated; only a real
+    // refresh corrects those.
     public static IReadOnlyDictionary<string, long> Apply(
         IReadOnlyDictionary<string, long> rankings,
         IReadOnlyDictionary<string, long> timeframesMs,

@@ -13,7 +13,7 @@ public interface IUniversalisClient
         string location, IReadOnlyList<int> itemIds, CancellationToken ct = default);
 }
 
-/// <summary>StackSizeHistogram maps stack size → occurrence count.</summary>
+/// <summary>StackSizeHistogram maps stack size -> occurrence count.</summary>
 public sealed record UniversalisMarketBoardListing(
     int MinPrice,
     double RegularSaleVelocity,

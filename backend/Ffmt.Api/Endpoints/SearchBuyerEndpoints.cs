@@ -33,10 +33,9 @@ public static class SearchBuyerEndpoints
 
                 var history = await sales.SearchBuyerAsync(buyer_name, worldId, ct);
 
-                // sales_by_buyer does not carry Hq/OnMannequin; project explicitly so we
-                // don't ship zeroed fields the frontend would misread as legitimate
-                // values. Quantity 0 means the row predates the quantity/unit_price
-                // columns, so it surfaces as null rather than a real zero.
+                // sales_by_buyer carries no Hq/OnMannequin, so project explicitly instead of
+                // shipping zeroes the frontend would read as real. Quantity 0 means the row
+                // predates the quantity/unit_price columns, so it surfaces as null.
                 var projection = history.Select(s => new
                 {
                     s.ItemId,

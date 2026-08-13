@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Http;
 
 namespace Ffmt.Api;
 
-/// <summary>The two response envelopes every endpoint shares. Key casing comes from the
-/// global serializer options in <c>Program.cs</c>.</summary>
 internal static class ApiResults
 {
     public static IResult Fail(string message, int statusCode) =>

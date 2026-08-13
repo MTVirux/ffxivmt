@@ -4,8 +4,7 @@ using Ffmt.Core.Storage.Scylla;
 
 namespace Ffmt.Tests.Fakes;
 
-/// <summary>Inert <see cref="ISaleStore"/>; tests derive from it and override only the members
-/// they exercise.</summary>
+// Inert ISaleStore; tests derive from it and override only the members they exercise.
 internal class FakeSaleStore : ISaleStore
 {
     public virtual Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
