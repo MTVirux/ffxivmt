@@ -8,7 +8,7 @@ namespace Ffmt.Tests.Storage.Scylla;
 public sealed class SaleStoreCqlTests
 {
     [Fact]
-    public async Task AddBatchAsync_PreparesSalesInsertWithoutDerivableColumns()
+    public async Task AddBatchAsync_WithEmptyInput_PreparesNothing()
     {
         var (store, capturedCql) = NewStore();
 
