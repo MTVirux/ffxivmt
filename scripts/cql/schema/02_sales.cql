@@ -23,5 +23,7 @@ CREATE TABLE IF NOT EXISTS ffmt.sales_by_buyer (
     world_id   int,
     sale_time  timestamp,
     item_id    int,
+    quantity   int,
+    unit_price int,
     PRIMARY KEY ((buyer_name), world_id, sale_time, item_id)
 ) WITH CLUSTERING ORDER BY (world_id ASC, sale_time DESC, item_id ASC);

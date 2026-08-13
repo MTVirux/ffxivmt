@@ -18,20 +18,20 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
     private const string CqlInsertSaleByBuyer = """
         INSERT INTO sales_by_buyer
-            (buyer_name, world_id, sale_time, item_id)
-        VALUES (?, ?, ?, ?)
+            (buyer_name, world_id, sale_time, item_id, quantity, unit_price)
+        VALUES (?, ?, ?, ?, ?, ?)
         """;
 
     // Reads from sales_by_buyer; the API caller does follow-up reads on `sales`
-    // for full sale fields if needed.
+    // for the fields this companion does not carry (hq, on_mannequin).
     private const string CqlSearchBuyer = """
-        SELECT buyer_name, sale_time, item_id, world_id
+        SELECT buyer_name, sale_time, item_id, world_id, quantity, unit_price
         FROM sales_by_buyer
         WHERE buyer_name = ?
         """;
 
     private const string CqlSearchBuyerWithWorld = """
-        SELECT buyer_name, sale_time, item_id, world_id
+        SELECT buyer_name, sale_time, item_id, world_id, quantity, unit_price
         FROM sales_by_buyer
         WHERE buyer_name = ? AND world_id = ?
         """;
@@ -104,7 +104,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
                 // total_price is the legacy int column, clamped rather than wrapped until it is dropped.
                 (int)Math.Min(totalPrice, int.MaxValue), totalPrice));
             batch.Add(byBuyerStmt.Bind(
-                s.BuyerName, s.WorldId, s.SaleTime, s.ItemId));
+                s.BuyerName, s.WorldId, s.SaleTime, s.ItemId, s.Quantity, s.UnitPrice));
             parsed++;
         };
 
@@ -132,10 +132,10 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         var stmt = await scylla.PrepareAsync(cql, ct).ConfigureAwait(false);
         var rows = await scylla.Session.ExecuteAsync(stmt.Bind(args)).ConfigureAwait(false);
 
-        // Each row in sales_by_buyer holds only the keys; we return Sale records with
-        // the buyer/time/item/world keys filled and the remaining fields zeroed. Callers
-        // that need full sale fields can fan out to GetByItemAndWorldAsync for each pair,
-        // but the current SearchBuyer endpoint only displays the buyer-keyed projection.
+        // sales_by_buyer carries the keys plus quantity/unit_price; hq and on_mannequin
+        // stay zeroed. Rows written before the columns were added come back null, which
+        // SafeInt maps to 0 - the endpoint treats that as "unknown", since no real sale
+        // has a zero quantity.
         var result = new List<Sale>();
         foreach (var row in rows)
         {
@@ -145,8 +145,8 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
                 BuyerName: row.GetValue<string>("buyer_name") ?? string.Empty,
                 Hq: false,
                 OnMannequin: false,
-                Quantity: 0,
-                UnitPrice: 0,
+                Quantity: row.SafeInt("quantity"),
+                UnitPrice: row.SafeInt("unit_price"),
                 SaleTime: row.GetValue<DateTimeOffset>("sale_time")));
         }
         return result;

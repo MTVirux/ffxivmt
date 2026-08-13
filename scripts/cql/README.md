@@ -29,6 +29,13 @@ There is no second copy to keep in sync.
   consumer and the backfill service stop writing sales. This is an ingestion
   outage, not a degraded mode. `schema/02_sales.cql` already declares the
   column, so only pre-existing clusters need the migration.
+- **`migrations/alter_sales_by_buyer_add_quantity_unit_price.cql` must land
+  before the deploy that writes those columns.** Same failure mode as above:
+  `ScyllaSaleStore.AddBatchAsync` writes `quantity` and `unit_price` into
+  `sales_by_buyer` on every insert, so a missing column is an ingestion outage.
+  `schema/02_sales.cql` already declares them, so only pre-existing clusters
+  need the migration. Rows written before it lands read back null and the buyer
+  search renders them blank; they age out with the archive prune (~8 days).
 - **`schema/12_item_price_baseline.cql` must land before
   `ffmt update-baselines`**, and that job must run before the anomaly filter is
   armed. Until baselines exist the filter fails open on every sale, which is

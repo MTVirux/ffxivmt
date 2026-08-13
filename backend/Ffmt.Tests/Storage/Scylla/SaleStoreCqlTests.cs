@@ -31,6 +31,17 @@ public sealed class SaleStoreCqlTests
     }
 
     [Fact]
+    public async Task SearchBuyerAsync_SelectsQuantityAndUnitPrice()
+    {
+        var (store, captured) = NewStore();
+        try { await store.SearchBuyerAsync("Alice", null); } catch { /* no real session */ }
+
+        captured.Should().ContainSingle()
+            .Which.Should().Contain("quantity")
+            .And.Contain("unit_price");
+    }
+
+    [Fact]
     public async Task SearchBuyerAsync_WithWorld_UsesWorldPrefixLookup()
     {
         var (store, captured) = NewStore();
@@ -53,6 +64,21 @@ public sealed class SaleStoreCqlTests
             c.Contains("INSERT INTO sales") &&
             c.Contains("total_price") &&
             c.Contains("total_price_gil"));
+    }
+
+    [Fact]
+    public async Task AddBatchAsync_writes_quantity_and_unit_price_into_the_buyer_companion()
+    {
+        var (store, captured) = NewStore();
+        var sale = new Ffmt.Core.Models.Sale(2, 21, "Alisaie", false, false, 3, 100,
+            new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero));
+
+        try { await store.AddBatchAsync([sale]); } catch { }
+
+        captured.Should().Contain(c =>
+            c.Contains("INSERT INTO sales_by_buyer") &&
+            c.Contains("quantity") &&
+            c.Contains("unit_price"));
     }
 
     private static (ScyllaSaleStore Store, List<string> Captured) NewStore()
