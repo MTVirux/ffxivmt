@@ -24,7 +24,7 @@ const EST_ROW_HEIGHT = 37;
 
 type Props = {
   rows: RankingRow[];
-  /** True when the response covers more than one world. Toggles the expand column. */
+  /** True when the response covers more than one world. */
   showWorldExpand: boolean;
   timeframes: readonly { key: string; label: string }[];
   ignoredItemIds?: number[];
@@ -143,8 +143,8 @@ export default function RankingTable({
     return cols;
   }, [showWorldExpand, timeframes, ignoredItemIds, onIgnore, onUnignore]);
 
-  // Timeframe columns are toggleable, so a constant '1h' default would name a
-  // missing column whenever the user hides it.
+  // Timeframe columns are toggleable, so a constant '1h' default would name a column
+  // that no longer exists once the user hides it.
   const fallbackSort = useMemo<SortingState>(() => {
     const preferred = timeframes.some((tf) => tf.key === '1h') ? '1h' : timeframes[0]?.key;
     return [{ id: preferred ?? 'last_sale', desc: true }];

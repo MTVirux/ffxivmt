@@ -18,7 +18,7 @@ function toggle(id: number) {
 }
 
 // Stable handler identities keep virtualized tables from rebuilding their columns
-// - and re-deriving their sort - on every render.
+// and re-deriving their sort on every render.
 export function useIgnoredItems() {
   const [prefs] = useUserPrefs();
   const ids = prefs.ignoredItemIds;

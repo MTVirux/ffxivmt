@@ -15,8 +15,8 @@ const BuyerSearchPage = lazy(() => import('./routes/tools/BuyerSearchPage'));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Gilflux server cache is 20s (GilfluxOptions.RankingCacheSeconds); align so we
-      // don't refetch faster than the backend can produce fresh values.
+      // Matches the 20s Gilflux server cache (GilfluxOptions.RankingCacheSeconds), so
+      // we never refetch faster than the backend can produce fresh values.
       staleTime: 20_000,
       refetchOnWindowFocus: false,
     },

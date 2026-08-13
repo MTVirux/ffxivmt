@@ -3,8 +3,8 @@ import type { OnChangeFn, SortingState } from '@tanstack/react-table';
 import { useUserPrefs, type TableSortKey } from './useUserPrefs';
 import { resolveSort } from '../lib/tableSort';
 
-// Drop-in for useState<SortingState> that survives reloads. Pass a stable
-// fallback and validIds — the returned sorting feeds useReactTable's state.
+// Drop-in for useState<SortingState> that survives reloads. fallback and validIds
+// must be stable references - they are memo/callback deps.
 export function usePersistedSort(
   key: TableSortKey,
   fallback: SortingState,

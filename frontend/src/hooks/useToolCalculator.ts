@@ -5,7 +5,7 @@ import type { ToolResponse } from '../api/types';
 type Args = {
   searchTerm: string;
   location: string;
-  /** Set when the user clicks "Calculate" — prevents firing on every keystroke. */
+  /** Set when the user clicks "Calculate" - prevents firing on every keystroke. */
   enabled: boolean;
 };
 

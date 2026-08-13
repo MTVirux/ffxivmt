@@ -14,8 +14,7 @@ type Props = {
   error?: string;
 };
 
-// Combobox over the known currencies, grouped by type. Free text still submits,
-// so anything missing from the catalogue stays reachable.
+// Free text still submits, so currencies missing from the catalogue stay reachable.
 export default function CurrencySelect({
   label,
   value,
@@ -28,8 +27,8 @@ export default function CurrencySelect({
   const inputId = useId();
   const listId = useId();
 
-  // A committed pick would otherwise filter the list down to itself, leaving no
-  // way to browse to another currency without clearing the field first.
+  // Filtering on a committed pick would narrow the list to itself, leaving no way to
+  // browse to another currency without clearing the field first.
   const groups = useMemo(
     () => (isKnownCurrency(value) ? CURRENCY_GROUPS : filterCurrencyGroups(CURRENCY_GROUPS, value)),
     [value],

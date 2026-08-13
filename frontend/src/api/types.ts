@@ -1,11 +1,11 @@
-// Until `pnpm openapi:gen` populates src/api/generated/schema.ts from a live
-// /openapi/v1.json, this file is the import boundary call sites use.
+// Hand-written until `pnpm openapi:gen` populates src/api/generated/schema.ts.
+// The backend serializes snake_case, so these field names must match that casing.
 
 export type ApiEnvelope<T> =
   | { status: true; message: string; data: T }
   | { status: false; message: string };
 
-/** GET /api/v1/item/:id — minimal Item shape returned today. */
+/** GET /api/v1/item/:id */
 export type Item = {
   id: number;
   name: string;
@@ -15,12 +15,12 @@ export type Item = {
 };
 
 /**
- * GET /api/v1/worlds — region → datacenter → worldId(string) → worldName.
+ * GET /api/v1/worlds - region → datacenter → worldId(string) → worldName.
  * Region/DC keys keep their original casing; only property names are snake_cased.
  */
 export type WorldStructure = Record<string, Record<string, Record<string, string>>>;
 
-/** GET /api/v1/gilflux — one row per (item, world); aggregations are client-side. */
+/** GET /api/v1/gilflux - one row per (item, world); aggregations are client-side. */
 export type GilfluxRanking = {
   item_id: number;
   item_name: string;
@@ -30,9 +30,9 @@ export type GilfluxRanking = {
   region: string;
   /** Keyed by timeframe label (e.g. "1h", "7d"). */
   rankings: Record<string, number>;
-  /** Epoch millis — null if the ranking has never been refreshed. */
+  /** Epoch millis; null if never refreshed. */
   updated_at: number | null;
-  /** Epoch millis of the most recent sale used for the ranking; null if no sales yet. */
+  /** Epoch millis of the most recent sale; null if none. */
   last_sale_time: number | null;
 };
 
@@ -40,7 +40,7 @@ export type LocationKind = 'world' | 'datacenter' | 'region';
 
 export type Location = {
   kind: LocationKind;
-  /** Sent as `target_location` — must match the name as it appears in `worlds`. */
+  /** Sent as `target_location`; must match the name as it appears in `worlds`. */
   name: string;
   /** Set only when kind === 'world'. */
   worldId?: number;
@@ -58,7 +58,7 @@ export type ToolResponse<T> =
   | ({ status: true; message?: string; data: T[] } & ToolMeta)
   | { status: false; message: string };
 
-/** Result row for /api/v1/tools/item_product_profit_calculator. */
+/** Row for /api/v1/tools/item_product_profit_calculator. */
 export type ProfitRow = {
   id: number;
   name: string;
@@ -69,7 +69,7 @@ export type ProfitRow = {
 
 export type ItemProductProfitResponse = ToolResponse<ProfitRow>;
 
-/** Result row for /api/v1/tools/currency_efficiency_calculator. */
+/** Row for /api/v1/tools/currency_efficiency_calculator. */
 export type CurrencyEfficiencyRow = {
   id: number;
   name: string;
@@ -87,7 +87,7 @@ export type CurrencyEfficiencyRow = {
 
 export type CurrencyEfficiencyResponse = ToolResponse<CurrencyEfficiencyRow>;
 
-/** GET /api/v1/item/:id/sales — single Scylla `sales` row. */
+/** GET /api/v1/item/:id/sales - one Scylla `sales` row. */
 export type Sale = {
   item_id: number;
   world_id: number;
@@ -101,22 +101,22 @@ export type Sale = {
   quantity: number;
   unit_price: number;
   total: number;
-  /** ISO 8601 with timezone offset (e.g. "2026-05-08T12:34:56+00:00"). */
+  /** ISO 8601 with timezone offset. */
   sale_time: string;
 };
 
-/** GET /api/v1/config — server-side configuration for the frontend. */
+/** GET /api/v1/config */
 export type AppConfig = {
   /** Gilflux timeframe keys in ascending duration order (e.g. ["1h","3h","7d"]). */
   gilflux_timeframes: string[];
 };
 
-/** GET /api/v1/search_buyer — one row per purchase found for the buyer. */
+/** GET /api/v1/search_buyer - one row per purchase. */
 export type BuyerSearchRow = {
   item_id: number;
   world_id: number;
   buyer_name: string;
-  /** ISO 8601 with timezone offset (e.g. "2026-05-08T12:34:56+00:00"). */
+  /** ISO 8601 with timezone offset. */
   sale_time: string;
   /** Null for rows written before sales_by_buyer gained the column. */
   quantity: number | null;

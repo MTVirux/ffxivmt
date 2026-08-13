@@ -8,7 +8,7 @@ type Props = {
   className?: string;
 };
 
-// Cascading Region · DC · World; the deepest non-empty pick wins.
+// Cascading Region / DC / World; the deepest non-empty pick wins.
 export default function TieredLocationSelect({ value, onChange, className }: Props) {
   const { data } = useWorlds();
   const ids = {
@@ -135,8 +135,8 @@ function Field({
 
 type Trio = { region?: string; dc?: string; worldId?: number };
 
-// Recovers (region, dc, world) by walking the world tree — needed because a
-// Location only carries the deepest pick's name (e.g. "Light" with no region).
+// A Location only carries the deepest pick's name (e.g. "Light" with no region), so
+// the other two levels have to be recovered by walking the world tree.
 function deriveTrio(
   value: Location | undefined,
   tree: Record<string, Record<string, Record<string, string>>> | undefined,

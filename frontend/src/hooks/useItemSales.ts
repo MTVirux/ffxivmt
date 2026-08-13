@@ -21,8 +21,7 @@ export function useItemSales(
       Number.isFinite(itemId) &&
       location !== undefined &&
       location.name.length > 0,
-    // Sales arrive on the ws hot path; a short staleTime keeps fresh prices visible
-    // without hammering the API on tab refocus.
+    // Short staleTime keeps fresh prices visible without refetching on every tab refocus.
     staleTime: TWENTY_SECONDS,
   });
 }

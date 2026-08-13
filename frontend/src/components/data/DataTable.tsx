@@ -23,7 +23,6 @@ type Props<T> = {
   emptyMessage: string;
   /** Field the search box filters on. Defaults to `name`. */
   nameFilterKey?: keyof T;
-  /** Extra classes for the row, e.g. dimming ignored items. */
   rowClassName?: (row: T) => string;
 };
 

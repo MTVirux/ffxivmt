@@ -1,8 +1,7 @@
 import type { SortingState } from '@tanstack/react-table';
 
-// Columns come and go (Gilflux timeframes are toggleable), so a stored sort can
-// name a column that no longer exists. Distinguishes "never sorted" (undefined)
-// from "deliberately unsorted" ([]).
+// Gilflux timeframes are toggleable, so a stored sort can name a column that is gone.
+// undefined means "never sorted", [] means "deliberately unsorted".
 export function resolveSort(
   saved: SortingState | undefined,
   validIds: readonly string[],

@@ -2,7 +2,6 @@ type Props = {
   label: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-  /** Matches the surrounding text size: 'sm' in filter bars, 'xs' in result headers. */
   size?: 'sm' | 'xs';
 };
 

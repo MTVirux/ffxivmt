@@ -1,10 +1,9 @@
 export type Currency = { id: number; name: string };
 export type CurrencyGroup = { category: string; currencies: Currency[] };
 
-// Names are the exact in-game strings the API resolves against; ids are carried
-// only as stable keys. Every entry was checked against the calculator - anything
-// that returns no marketable rows (e.g. Allagan Tomestone of Mnemonics, whose
-// current-tier gear is untradable) is deliberately absent.
+// Names are the exact in-game strings the API resolves against; ids are only stable keys.
+// Every entry was checked against the calculator - anything returning no marketable rows
+// (e.g. Allagan Tomestone of Mnemonics, whose gear is untradable) is deliberately absent.
 export const CURRENCY_GROUPS: CurrencyGroup[] = [
   {
     category: 'Tomestones',

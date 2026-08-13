@@ -73,8 +73,8 @@ export function parsePrefs(raw: string | null): UserPrefs {
 
 type PatchArg = Partial<UserPrefs> | ((prev: UserPrefs) => Partial<UserPrefs>);
 
-// One store for the whole app: independent hook instances would otherwise each hold
-// their own copy and overwrite each other's keys on the next write.
+// One store for the whole app: per-hook copies would overwrite each other's keys on the
+// next write. Mutate through patchPrefs, never a local useState copy.
 let snapshot: UserPrefs | null = null;
 const listeners = new Set<() => void>();
 let storageBound = false;
@@ -106,7 +106,7 @@ export function subscribePrefs(listener: () => void): () => void {
   };
 }
 
-// Shallow merge — patches touching tableSort or toolInputs must spread the previous nested object.
+// Shallow merge - patches touching tableSort or toolInputs must spread the previous nested object.
 export function patchPrefs(patch: PatchArg): void {
   const prev = getPrefsSnapshot();
   const partial = typeof patch === 'function' ? patch(prev) : patch;

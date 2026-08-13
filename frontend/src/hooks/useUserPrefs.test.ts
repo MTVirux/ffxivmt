@@ -102,7 +102,7 @@ describe('parsePrefs', () => {
   });
 });
 
-// A fake `window` so the store can be exercised without a DOM environment.
+// Fake window so the store can be exercised without a DOM environment.
 function installWindow() {
   const storage = new Map<string, string>();
   const handlers = new Map<string, Set<(event: unknown) => void>>();

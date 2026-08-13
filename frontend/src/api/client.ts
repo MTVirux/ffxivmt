@@ -44,8 +44,8 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   return env.data;
 }
 
-// Same error semantics as apiGet, but hands back the whole envelope for endpoints
-// that put meaningful fields (item_name, location, request_id) beside `data`.
+// Like apiGet, but hands back the whole envelope for endpoints that put meaningful
+// fields (item_name, location, request_id) beside `data`.
 export async function apiGetEnvelope<T extends { status: boolean; message?: string }>(
   path: string,
   init?: RequestInit,

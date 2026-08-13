@@ -4,8 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // Mirrors the `@/*` paths in tsconfig.app.json, which would otherwise typecheck and
-  // then fail at bundle time.
+  // Mirrors the `@/*` paths in tsconfig.app.json; without it those imports typecheck
+  // but fail at bundle time.
   resolve: {
     alias: {
       '@': '/src',

@@ -13,7 +13,6 @@ import type { Location } from '../../api/types';
 
 export type ToolFormValues = { searchTerm: string };
 
-/** Props the calculator tables take for the ignore/unhide column. */
 export type ToolTableActions = {
   ignoredItemIds?: number[];
   onIgnore?: (id: number) => void;
