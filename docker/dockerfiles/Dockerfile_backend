@@ -1,24 +1,20 @@
-# Multi-stage build for the .NET 9 ffmt backend (Ffmt.Api + Ffmt.Cli).
 # Build context: repo root.
 
-# ---- build ----
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Copy props/manifests first for better layer caching.
+# Props/manifests first so a source edit doesn't bust the restore layer.
 COPY backend/global.json backend/Directory.Build.props backend/Directory.Packages.props ./backend/
 COPY backend/Ffmt.Core/Ffmt.Core.csproj ./backend/Ffmt.Core/
 COPY backend/Ffmt.Api/Ffmt.Api.csproj ./backend/Ffmt.Api/
 COPY backend/Ffmt.Cli/Ffmt.Cli.csproj ./backend/Ffmt.Cli/
 
-# Restore each project explicitly. Solution-level restore over a .slnx sometimes leaves
-# transitive packages un-materialized, which then trips the per-project publish below; per-
-# project restore avoids that.
+# Per-project, not solution-level: restore over a .slnx sometimes leaves transitive packages
+# un-materialized and the publish below then fails.
 RUN dotnet restore ./backend/Ffmt.Api/Ffmt.Api.csproj \
  && dotnet restore ./backend/Ffmt.Cli/Ffmt.Cli.csproj
 
-# Copy the rest and publish. Drop --no-restore so each publish does its own restore as a
-# belt-and-suspenders against the .slnx transitive-pinning quirk.
+# No --no-restore below: each publish restores again as a guard against the same quirk.
 COPY backend/ ./backend/
 
 RUN dotnet publish ./backend/Ffmt.Api/Ffmt.Api.csproj \
@@ -30,11 +26,10 @@ RUN dotnet publish ./backend/Ffmt.Api/Ffmt.Api.csproj \
         -o /app/cli \
         /p:UseAppHost=false
 
-# ---- runtime ----
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# tini for signal-handling; curl for healthcheck/diagnostics.
+# tini for signal handling; curl for the healthcheck.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends tini curl \
  && rm -rf /var/lib/apt/lists/*
@@ -42,7 +37,7 @@ RUN apt-get update \
 COPY --from=build /app/api ./api
 COPY --from=build /app/cli ./cli
 
-# Convenience: `docker exec ffmt_backend ffmt updatedb` instead of the full dotnet path.
+# Lets the crons run `docker exec ffmt_backend ffmt <cmd>` instead of the full dotnet path.
 RUN printf '#!/bin/sh\nexec dotnet /app/cli/Ffmt.Cli.dll "$@"\n' > /usr/local/bin/ffmt \
  && chmod +x /usr/local/bin/ffmt
 

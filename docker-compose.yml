@@ -1,5 +1,6 @@
-# Shared by the two .NET services. SCYLLA_PRIVATE_IP is empty in single-host dev,
-# so the default keeps them on the compose-network service name.
+# Shared by the two .NET services, merged in with `<<: *dotnet-env` - which is why
+# their `environment:` is map form, not list form. SCYLLA_PRIVATE_IP is empty in
+# single-host dev, so the default keeps them on the compose-network service name.
 x-dotnet-env: &dotnet-env
   ASPNETCORE_ENVIRONMENT: Production
   Scylla__ContactPoints__0: ${SCYLLA_PRIVATE_IP:-ffmt_scylla_node}
@@ -87,10 +88,9 @@ services:
     image: ffmt_scylla
     profiles: ["scylla"]
     restart: "unless-stopped"
-    # Host port publications live in the per-VM override
-    # (docker-compose.scylla-vm.yml) — keeping them here would (a) leak Scylla
-    # to the public NIC and (b) collide with ffmt_node_exporter on :9100 and
-    # the override's private-IP bindings (compose appends port lists).
+    # Host ports are published only by docker-compose.scylla-vm.yml. Compose
+    # appends port lists, so publishing here would leak Scylla to the public NIC
+    # and collide with both node_exporter's :9100 and the override's bindings.
     volumes:
       - ./docker/scylla/persistent/data:/var/lib/scylla
       - ./docker/scylla/persistent/commitlog:/var/lib/scylla/commitlog
@@ -146,14 +146,14 @@ services:
       - "/:/host:ro,rslave"
 
 networks:
-  # Keeps the external name ffmt_network - the monitoring stack joins it.
+  # Named explicitly because the monitoring stack joins it as an external network.
   default:
     name: ffmt_network
     driver: bridge
 
 volumes:
-  # Persists Caddy's ACME state across recreates so certs aren't re-issued every build.
+  # Holds Caddy's ACME state, so certs aren't re-issued on every recreate.
   caddy_data:
   caddy_config:
-  # Without this the items index sits in the container layer and dies on every recreate.
+  # Without this the items index sits in the container layer and dies on recreate.
   elastic_data:

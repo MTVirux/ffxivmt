@@ -1,5 +1,5 @@
-# Config, entrypoint and schema all arrive via the compose bind mounts, so a
-# `git pull` on the Scylla VM takes effect without an image rebuild.
+# Config, entrypoint and schema arrive via compose bind mounts, so a `git pull` on the
+# Scylla VM takes effect without an image rebuild.
 FROM scylladb/scylla:5.1
 
 RUN mkdir -p /backup

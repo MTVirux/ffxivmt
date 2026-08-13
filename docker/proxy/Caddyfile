@@ -1,6 +1,5 @@
 # ACME state persists in the caddy_data named volume so recreates don't re-issue.
-# `handle` (not `handle_path`) preserves the full request path — the .NET endpoints
-# expect /api/v1/... intact.
+# `handle`, not `handle_path`: the .NET endpoints expect the full /api/v1/... path.
 
 {
     email {$ZERO_SSL_USER_EMAIL}

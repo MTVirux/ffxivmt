@@ -1,48 +1,25 @@
-# Lines using ${VAR} are envsubst placeholders — they're filled in by the
-# bootstrap (scripts/bootstrap/app.sh + scripts/bootstrap/redeploy.sh) before
-# `docker compose up`. For local dev, run `envsubst < env > .env` (requires
-# `gettext-base` on Debian/Ubuntu) with those vars exported in your shell.
-# Plain `cp env .env` will leave them unsubstituted.
-
-# ######################## Docker Compose ######################## #
-#
-# Docker Compose v2 only auto-loads a file literally named `.env` (with a leading dot).
-# Copy this file once before running any `docker compose` command:
-#
-#     cp env .env
-#
-# `.env` is gitignored so it can hold real secrets without leaking into the repo;
-# this committed `env` is the template. As an alternative to copying, pass
-# `--env-file env` on every invocation (e.g. `docker compose --env-file env up -d ...`).
+# This is an envsubst template, not a working file: every placeholder below is
+# filled in by scripts/bootstrap/app.sh and scripts/bootstrap/redeploy.sh, which
+# write the result to .env before `docker compose up`. Plain `cp env .env` leaves
+# the placeholders as-is; for local dev export them and run envsubst yourself.
+# Substituted vars are the ZERO_SSL_*, the private IPs and the Archive__* below.
 
 COMPOSE_PROJECT_NAME=ffmt
 
-
-# ######################## HOST BIND PORTS ######################## #
-
-# ffmt_proxy (Caddy) binds 80/443; backend services are network-internal only.
-# docker-compose.dev.yml re-exposes the backend on ${BACKEND_HOST_PORT:-8080}.
-
-
-# ######################## SSL CERT CONFIG ######################## #
 
 ZERO_SSL_USER_EMAIL=${ZERO_SSL_USER_EMAIL}
 ZERO_SSL_MAIN_DOMAIN=${ZERO_SSL_MAIN_DOMAIN}
 ZERO_SSL_MONITORING_DOMAIN=${ZERO_SSL_MONITORING_DOMAIN}
 
 
-# ######################## Private network IPs (rendered by bootstrap) ######################## #
-
-# Cloud-init substitutes this with the Scylla VM's private IP. Empty in single-host dev.
+# Both are empty in single-host dev.
 SCYLLA_PRIVATE_IP=${SCYLLA_PRIVATE_IP}
 APP_PRIVATE_IP=${APP_PRIVATE_IP}
 
-# Whichever of the two above belongs to *this* VM. The role scripts set it before
-# rendering; node_exporter binds it so only the private NIC is exposed.
+# Whichever of the two above belongs to *this* VM - the role scripts set it
+# before rendering. node_exporter binds it to stay off the public NIC.
 HOST_PRIVATE_IP=${HOST_PRIVATE_IP}
 
-
-# ######################## Archive (Hetzner Object Storage) ######################## #
 
 Archive__Endpoint=${Archive__Endpoint}
 Archive__Bucket=${Archive__Bucket}
@@ -50,9 +27,7 @@ Archive__AccessKey=${Archive__AccessKey}
 Archive__SecretKey=${Archive__SecretKey}
 
 
-# ######################## Sale anomaly quarantine ######################## #
-
-# Operator knobs, not envsubst placeholders. ShadowMode=true evaluates and
-# records anomalies but still writes them to sales; set false to divert.
+# Operator knobs, not placeholders. ShadowMode=true records anomalies but still
+# writes them to sales; set false to divert them into quarantine.
 Quarantine__ShadowMode=false
 Quarantine__MedianMultiplier=20

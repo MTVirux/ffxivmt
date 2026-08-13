@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Repo path is expected to be passed via FFMT_REPO (defaults to /opt/ffmt).
+# Repo path comes from the cron line's FFMT_REPO - don't hardcode it back.
 FFMT_REPO="${FFMT_REPO:-/opt/ffmt}"
 
 LOG_DIR="${LOG_DIR:-/root/logs}"
@@ -11,7 +11,7 @@ echo "$(date -Is) - store_logs cron started" >> "$LOG_DIR/cron.log"
 
 mkdir -p "$LOG_DIR" "$TEMP"
 
-# One subdir per service, mounted at /app/logs in each container
+# One subdir per service, bind-mounted at /app/logs in each container
 # (docker-compose.yml: ./logs/backend, ./logs/ws_worker).
 for dir in "$FFMT_REPO"/logs/*/; do
     [ -d "$dir" ] || continue

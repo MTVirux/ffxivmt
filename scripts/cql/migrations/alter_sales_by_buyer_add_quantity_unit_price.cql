@@ -1,6 +1,6 @@
 -- APPLY THIS BEFORE DEPLOYING the code that writes these columns.
 -- ScyllaSaleStore.AddBatchAsync writes quantity and unit_price into
--- sales_by_buyer on every insert. Without the columns, every
+-- sales_by_buyer on every insert; until they exist, every
 -- INSERT INTO sales_by_buyer fails on an unknown column and both ingest paths
 -- stop writing sales entirely.
 --

@@ -1,4 +1,4 @@
-# Build context is the repo root so we can copy from frontend/ and docker/frontend/.
+# Build context: repo root, so both frontend/ and docker/frontend/ are reachable.
 
 FROM node:22-alpine AS build
 WORKDIR /app
@@ -9,7 +9,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY frontend/ ./
 
-# Default assumes same-origin via Caddy; override only when hosting the SPA elsewhere.
+# Same-origin via Caddy; override only when hosting the SPA elsewhere.
 ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 

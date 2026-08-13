@@ -1,6 +1,5 @@
-# Dev image for the .NET backend. Built on the SDK so `dotnet watch` works; paired with the
-# `./backend:/src/backend` bind-mount in docker-compose.dev.yml so source edits
-# on the host trigger an in-container rebuild.
+# SDK base so `dotnet watch` works, paired with the ./backend bind-mount in
+# docker-compose.dev.yml so host edits rebuild in the container.
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0
 

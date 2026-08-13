@@ -19,8 +19,8 @@ public sealed class UniversalisWsConsumer : BackgroundService
     /// children rather than resolving them per message.</summary>
     private sealed record WorldMetrics(Counter.Child Received, Counter.Child InsertOk, Counter.Child InsertError);
 
-    /// <summary>The worlds this consumer subscribed to. A message for anything else is unexpected,
-    /// so membership doubles as the validity check the loop used to ask the catalogue for.</summary>
+    /// <summary>The worlds this consumer subscribed to, so membership doubles as the per-message
+    /// validity check.</summary>
     private sealed record Subscription(IReadOnlyList<int> WorldIds, IReadOnlyDictionary<int, WorldMetrics> Metrics);
 
     private readonly ISaleWriter _saleWriter;

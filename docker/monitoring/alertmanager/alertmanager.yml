@@ -1,5 +1,4 @@
-# v1 has no alert routes — this file exists so Alertmanager can boot.
-# When alerting is enabled, replace this with a real routing tree.
+# No alert routes yet - this file exists so Alertmanager can boot.
 route:
   receiver: 'null'
 

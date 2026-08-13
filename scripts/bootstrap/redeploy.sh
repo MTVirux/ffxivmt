@@ -1,5 +1,4 @@
 #!/bin/bash
-# redeploy.sh — pull + rebuild + re-up the app stack.
 # Usage: bash scripts/bootstrap/redeploy.sh [--updatedb] [--ref <ref>]
 
 set -euo pipefail
@@ -24,13 +23,11 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-# Refuse on dirty tree (no implicit stash).
 if ! git diff --quiet || ! git diff --cached --quiet; then
     log_err "Working tree has uncommitted changes — refusing to redeploy."
     exit 1
 fi
 
-# Sync to the requested ref (default: tracked branch's tip).
 git fetch --tags
 if [ -n "$ARG_REF" ]; then
     log_info "Checking out ref: $ARG_REF"
@@ -39,7 +36,8 @@ else
     git pull --ff-only
 fi
 
-# Load existing .env so re-rendering preserves bootstrap-set values.
+# The new template is rendered from the OLD .env, so source it first to carry
+# over the values bootstrap set.
 if [ -f .env ]; then
     set -a
     # shellcheck disable=SC1091
@@ -47,14 +45,12 @@ if [ -f .env ]; then
     set +a
 fi
 
-# A .env predating the HOST_PRIVATE_IP template entry has no value to carry over,
-# so derive it here - this is the app VM, so it is APP_PRIVATE_IP.
+# An .env predating the HOST_PRIVATE_IP entry has nothing to carry over, so
+# re-export it here - this is the app VM, so it is APP_PRIVATE_IP.
 export HOST_PRIVATE_IP="${APP_PRIVATE_IP:?APP_PRIVATE_IP missing from .env}"
 
-# Re-render env in case template changed.
 render_env_file env .env
 
-# Rebuild + re-up.
 docker compose up -d --build
 
 wait_for_http http://127.0.0.1:8080/health 300

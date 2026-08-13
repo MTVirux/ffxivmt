@@ -1,5 +1,4 @@
-# Rendered by bootstrap via envsubst. Both VMs run node_exporter bound to the
-# private IP only.
+# Rendered by bootstrap via envsubst. node_exporter binds the private IP only on both VMs.
 - targets:
     - ${APP_PRIVATE_IP}:9100
   labels:

@@ -1,10 +1,7 @@
 #!/bin/bash
-# scylla.sh — Scylla VM in-box bootstrap. Invoked by the cloud-init shim.
-# Required env vars (set by the shim):
-#   SCYLLA_VOLUME_DEVICE  — /dev/disk/by-id/... path of the Hetzner volume
-#   SCYLLA_PRIVATE_IP     — this VM's private network IP
-#   APP_PRIVATE_IP        — peer app VM's private IP
-#   REPO_URL, REPO_REF    — informational; repo is already cloned at /opt/ffmt
+# Scylla VM bootstrap, invoked by the cloud-init shim. Runs under `set -u`, so
+# the shim must export all of: SCYLLA_VOLUME_DEVICE (the /dev/disk/by-id path of
+# the Hetzner volume), SCYLLA_PRIVATE_IP, APP_PRIVATE_IP.
 
 set -euo pipefail
 exec > >(tee -a /var/log/ffmt-bootstrap.log) 2>&1
@@ -18,8 +15,8 @@ log_info "=== scylla.sh start ==="
 export COMPOSE_FILE=docker-compose.yml:docker-compose.scylla-vm.yml
 export COMPOSE_PROFILES=scylla,host_metrics
 
-# 1. Volume prep
 wait_for_volume_device "$SCYLLA_VOLUME_DEVICE" 60
+# Only format when the device carries no filesystem, so a re-run keeps the data.
 if ! blkid "$SCYLLA_VOLUME_DEVICE" >/dev/null 2>&1; then
     log_info "Formatting $SCYLLA_VOLUME_DEVICE as ext4..."
     mkfs.ext4 -L scylla-data "$SCYLLA_VOLUME_DEVICE"
@@ -28,23 +25,18 @@ ensure_fstab "$SCYLLA_VOLUME_DEVICE  /mnt/scylla-data  ext4  defaults,nofail,dis
 mkdir -p /mnt/scylla-data/{data,commitlog,saved_caches,log,backup}
 mount -a
 
-# 2. Render env (only fields Scylla compose interpolates)
 export HOST_PRIVATE_IP="$SCYLLA_PRIVATE_IP"
 render_env_file env .env
 
-# 3. Bring up Scylla
 log_info "Starting Scylla container..."
 docker compose up -d --build ffmt_scylla_node ffmt_node_exporter
 
-# 4. Wait for CQL
 wait_for_tcp "${SCYLLA_PRIVATE_IP}" 9042 600
-# Schema/keyspace creation runs from the container's run_entrypoints.sh
-# over the bind-mounted scripts/cql/schema/*.cql — no extra step needed here.
+# Keyspace and tables come from the container's run_entrypoints.sh over the
+# bind-mounted scripts/cql/schema/*.cql, so there is no schema step here.
 
-# 5. Install backup cron
 ensure_cron "0 3 * * * FFMT_REPO=/opt/ffmt /opt/ffmt/scripts/cron/backup_scylla.sh >> /var/log/ffmt-cron.log 2>&1"
 
-# 6. Sentinel
 mkdir -p /var/lib/ffmt
 touch /var/lib/ffmt/.scylla-bootstrap-done
 log_info "=== scylla.sh done ==="

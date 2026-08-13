@@ -12,10 +12,9 @@ using System.Collections.Concurrent;
 namespace WsWorker.Workers;
 
 /// <summary>
-/// Imports Universalis history into <c>sales</c>. Progress is tracked per catalogue bucket rather
-/// than per region: a pass is well over three hundred requests, and requiring every one of them to
-/// succeed before advancing meant a single upstream failure pinned the whole region on the same
-/// window indefinitely.
+/// Imports Universalis history into <c>sales</c>. Progress is per catalogue bucket, not per region:
+/// a pass is hundreds of requests, and advancing only when all of them succeed let one upstream
+/// failure pin a whole region on the same window indefinitely.
 /// </summary>
 public sealed class SalesBackfillService : BackgroundService
 {
@@ -34,7 +33,6 @@ public sealed class SalesBackfillService : BackgroundService
     private const int StateRunning = 1;
     private const int StateError = 3;
 
-    /// <summary>One bucket's slice of a pass: its pointer row, its items, and the window it asks for.</summary>
     private sealed record BucketWork(
         BackfillBucketState State,
         IReadOnlyList<int> Items,
@@ -140,8 +138,8 @@ public sealed class SalesBackfillService : BackgroundService
 
             var outcomes = new ConcurrentBag<BackfillBucketOutcome>();
 
-            // Leaving a bucket's pointer put is what makes it retry next pass, so a chunk only
-            // counts as done once its rows are written and its pointer moved.
+            // An unmoved pointer is what makes a bucket retry next pass, so a chunk counts as done
+            // only once its rows are written and its pointer moved.
             var stalled = await BackfillChunkRunner.RunAsync(
                 work,
                 async (bucket, token) =>
@@ -216,10 +214,8 @@ public sealed class SalesBackfillService : BackgroundService
         return outcome;
     }
 
-    /// <summary>
-    /// Buckets advance independently, so the depth guaranteed across the whole catalogue is the
-    /// one furthest behind.
-    /// </summary>
+    /// <summary>Buckets advance independently, so the depth guaranteed across the catalogue is the
+    /// one furthest behind.</summary>
     private async Task ReportHistoryDepth(string region, DateTimeOffset now, CancellationToken ct)
     {
         var states = await _stateStore.GetBucketsAsync(region, BackfillLoops.Historical, ct);
@@ -313,9 +309,8 @@ public sealed class SalesBackfillService : BackgroundService
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            // This budget spans the Polly retries, not one response, so exhausting it usually means
-            // repeated transient 5xx rather than a slow server. Logging it as a plain timeout hid a
-            // run of upstream 504s behind what looked like latency.
+            // The budget spans the Polly retries, not one response, so exhausting it usually means
+            // repeated transient 5xx rather than a slow server.
             MetricsCatalog.BackfillPagesTotal.WithLabels(region, "timeout").Inc();
             _logger.LogWarning(
                 "FetchChunk [{Region}] exhausted its {Timeout:F0}s budget for {Count} items - retries of transient 5xx are included in that budget",
