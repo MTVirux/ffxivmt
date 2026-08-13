@@ -91,16 +91,11 @@ export type CurrencyEfficiencyResponse = ToolResponse<CurrencyEfficiencyRow>;
 export type Sale = {
   item_id: number;
   world_id: number;
-  item_name: string;
-  world_name: string;
-  datacenter: string;
-  region: string;
   buyer_name: string;
   hq: boolean;
   on_mannequin: boolean;
   quantity: number;
   unit_price: number;
-  total: number;
   /** ISO 8601 with timezone offset. */
   sale_time: string;
 };

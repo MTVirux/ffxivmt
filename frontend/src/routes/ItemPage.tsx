@@ -213,7 +213,7 @@ function RecentSalesTable({ sales, showWorld }: { sales: Sale[]; showWorld: bool
                 {formatNumber(s.unit_price)}
               </Td>
               <Td align="right" mono>
-                {formatNumber(s.total)}
+                {formatNumber(s.quantity * s.unit_price)}
               </Td>
               <Td>
                 {s.hq ? (
