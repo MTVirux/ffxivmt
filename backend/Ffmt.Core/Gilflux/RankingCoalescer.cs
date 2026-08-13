@@ -132,7 +132,7 @@ public sealed class RankingCoalescer : IHostedService
 
         if (coalesced > 0 || full > 0)
         {
-            _logger.LogInformation("RankingCoalescer drops in last 60s — coalesced: {Coalesced}, queue-full: {Full}", coalesced, full);
+            _logger.LogInformation("RankingCoalescer drops in last 60s - coalesced: {Coalesced}, queue-full: {Full}", coalesced, full);
         }
 
         var cutoff = Stopwatch.GetTimestamp() - (long)(_coalesceWindow.TotalSeconds * 10 * Stopwatch.Frequency);

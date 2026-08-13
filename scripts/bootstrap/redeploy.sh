@@ -24,7 +24,7 @@ while [ $# -gt 0 ]; do
 done
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
-    log_err "Working tree has uncommitted changes — refusing to redeploy."
+    log_err "Working tree has uncommitted changes - refusing to redeploy."
     exit 1
 fi
 

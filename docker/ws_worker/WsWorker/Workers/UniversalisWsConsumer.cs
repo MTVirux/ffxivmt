@@ -89,7 +89,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
                 SetConnected(false);
                 var jitter = Random.Shared.NextDouble() * 2;
                 var delay = backoffSeconds + jitter;
-                _logger.LogWarning(ex, "WebSocket consumer loop failed — reconnecting in {Delay:F1}s", delay);
+                _logger.LogWarning(ex, "WebSocket consumer loop failed - reconnecting in {Delay:F1}s", delay);
                 await Task.Delay(TimeSpan.FromSeconds(delay), ct);
                 backoffSeconds = Math.Min(backoffSeconds * 2, 60.0);
             }
@@ -186,7 +186,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
 
             if (!subscription.Metrics.TryGetValue(worldId, out var worldMetrics))
             {
-                _logger.LogWarning("Received sales/add for unknown worldId {WorldId} — skipping", worldId);
+                _logger.LogWarning("Received sales/add for unknown worldId {WorldId} - skipping", worldId);
                 continue;
             }
 

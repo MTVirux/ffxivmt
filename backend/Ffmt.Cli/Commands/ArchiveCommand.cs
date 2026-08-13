@@ -58,7 +58,7 @@ public sealed class ArchiveCommand(
 
             if (sales.Count == 0)
             {
-                logger.LogDebug("No sales for world {World} on {Date:d} — skipping", world.Name, date);
+                logger.LogDebug("No sales for world {World} on {Date:d} - skipping", world.Name, date);
                 continue;
             }
 

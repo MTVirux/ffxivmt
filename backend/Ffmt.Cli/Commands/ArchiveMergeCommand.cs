@@ -30,7 +30,7 @@ public sealed class ArchiveMergeCommand(
             var corrBytes = await uploader.DownloadAsync(corrKey, ct).ConfigureAwait(false);
             if (corrBytes is null)
             {
-                logger.LogWarning("Corrections file {Key} vanished during merge — skipping", corrKey);
+                logger.LogWarning("Corrections file {Key} vanished during merge - skipping", corrKey);
                 continue;
             }
 

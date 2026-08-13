@@ -32,7 +32,7 @@ public sealed class DeferredSweepWorker : BackgroundService
         var concurrency = Math.Max(1, _options.DeferredSweepConcurrency);
 
         _logger.LogInformation(
-            "DeferredSweepWorker started — poll={PollDelay}s batch={Batch} concurrency={Concurrency}",
+            "DeferredSweepWorker started - poll={PollDelay}s batch={Batch} concurrency={Concurrency}",
             pollDelay.TotalSeconds, batchSize, concurrency);
 
         while (!ct.IsCancellationRequested)
