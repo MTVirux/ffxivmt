@@ -10,6 +10,8 @@ x-dotnet-env: &dotnet-env
   # Ffmt.Cli ships no appsettings.json, so `docker exec ffmt_backend ffmt ...` only sees these.
   Universalis__RegionsToUse__0: Europe
   Universalis__RegionsToUse__1: North-America
+  Universalis__RegionsToUse__2: Japan
+  Universalis__RegionsToUse__3: Oceania
   Quarantine__ShadowMode: ${Quarantine__ShadowMode}
   Quarantine__MedianMultiplier: ${Quarantine__MedianMultiplier}
 
