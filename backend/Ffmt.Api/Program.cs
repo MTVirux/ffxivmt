@@ -38,6 +38,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddExceptionHandler<BackendUnavailableExceptionHandler>();
+builder.Services.AddExceptionHandler<UpstreamUnavailableExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddRequestTimeouts();
