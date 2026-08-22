@@ -58,6 +58,9 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<GilfluxRankingReader>();
         services.AddSingleton<ItemSalesReader>();
 
+        // Transient so it does not pin the typed Universalis HttpClient for the process lifetime.
+        services.AddTransient<MarketBoardReader>();
+
         services.AddHttpClient<IUniversalisClient, UniversalisClient>(UniversalisClient.HttpClientName, (sp, http) =>
             {
                 var opts = sp.GetRequiredService<IOptions<UniversalisOptions>>().Value;

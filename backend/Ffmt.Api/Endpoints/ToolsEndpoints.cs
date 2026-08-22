@@ -23,7 +23,7 @@ public static class ToolsEndpoints
             IElasticItemSearch elastic,
             WorldStructureService structure,
             IGarlandClient garland,
-            IUniversalisClient universalis,
+            MarketBoardReader marketBoard,
             ILogger<ItemProductProfitLog> logger,
             CancellationToken ct) =>
         {
@@ -53,7 +53,7 @@ public static class ToolsEndpoints
             idsToFetch.AddRange(garlandDetail.RelatedItemIds);
             idsToFetch.Add(top.Id);
 
-            var mb = await universalis.GetMarketBoardDataAsync(location!, idsToFetch, ct);
+            var mb = await marketBoard.GetAsync(location!, idsToFetch, ct);
             if (mb.Count == 0)
             {
                 logger.LogWarning("item_product_profit_calculator [{RequestId}] Universalis returned no rows for {Location}.", requestId, location);
@@ -93,7 +93,7 @@ public static class ToolsEndpoints
             string? location,
             WorldStructureService structure,
             IGarlandClient garland,
-            IUniversalisClient universalis,
+            MarketBoardReader marketBoard,
             ILogger<InstanceProfitLog> logger,
             CancellationToken ct) =>
         {
@@ -133,13 +133,7 @@ public static class ToolsEndpoints
                 foreach (var id in marketable) allMarketableLootIds.Add(id);
             }
 
-            // Universalis caps multi-id lookups around 100.
-            var listings = new Dictionary<int, UniversalisMarketBoardListing>();
-            foreach (var chunk in allMarketableLootIds.Chunk(100))
-            {
-                var partial = await universalis.GetMarketBoardDataAsync(location, chunk, ct);
-                foreach (var (id, listing) in partial) listings[id] = listing;
-            }
+            var listings = await marketBoard.GetAsync(location, allMarketableLootIds.ToList(), ct);
 
             var itemNames = await structure.GetItemNamesAsync(ct);
 
@@ -183,7 +177,7 @@ public static class ToolsEndpoints
             IElasticItemSearch elastic,
             WorldStructureService structure,
             IGarlandClient garland,
-            IUniversalisClient universalis,
+            MarketBoardReader marketBoard,
             ILogger<CurrencyEfficiencyLog> logger,
             CancellationToken ct) =>
         {
@@ -222,13 +216,7 @@ public static class ToolsEndpoints
                 return ApiResults.Fail("All trade-currency items are untradable", StatusCodes.Status404NotFound);
             }
 
-            // Universalis caps multi-id lookups around 50.
-            var mb = new Dictionary<int, UniversalisMarketBoardListing>();
-            foreach (var chunk in byItemId.Keys.Chunk(50))
-            {
-                var partial = await universalis.GetMarketBoardDataAsync(location!, chunk, ct);
-                foreach (var (id, l) in partial) mb[id] = l;
-            }
+            var mb = await marketBoard.GetAsync(location!, byItemId.Keys.ToList(), ct);
 
             var itemNames = await structure.GetItemNamesAsync(ct);
 
