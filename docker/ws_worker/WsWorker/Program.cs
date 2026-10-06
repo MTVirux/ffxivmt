@@ -45,6 +45,9 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<UniversalisWsConsu
 
 builder.Services.AddHostedService<SalesBackfillService>();
 
+builder.Services.AddSingleton<WriteStallTracker>();
+builder.Services.AddHostedService<SaleWriteWatchdog>();
+
 builder.Services.AddHealthChecks()
     .AddCheck<ScyllaHealthCheck>("scylla")
     .AddCheck<WsConsumerHealthCheck>("ws_consumer");

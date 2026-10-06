@@ -1,5 +1,6 @@
 using Ffmt.Core.Configuration;
 using Ffmt.Core.Gilflux;
+using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Metrics;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
@@ -26,6 +27,7 @@ public sealed class UniversalisWsConsumer : BackgroundService
     private readonly ISaleWriter _saleWriter;
     private readonly WorldStructureService _catalog;
     private readonly RankingCoalescer _coalescer;
+    private readonly WriteStallTracker _writeStallTracker;
     private readonly UniversalisOptions _options;
     private readonly ILogger<UniversalisWsConsumer> _logger;
 
@@ -38,12 +40,14 @@ public sealed class UniversalisWsConsumer : BackgroundService
         ISaleWriter saleWriter,
         WorldStructureService catalog,
         RankingCoalescer coalescer,
+        WriteStallTracker writeStallTracker,
         IOptions<UniversalisOptions> options,
         ILogger<UniversalisWsConsumer> logger)
     {
         _saleWriter = saleWriter;
         _catalog = catalog;
         _coalescer = coalescer;
+        _writeStallTracker = writeStallTracker;
         _options = options.Value;
         _logger = logger;
     }
@@ -251,10 +255,12 @@ public sealed class UniversalisWsConsumer : BackgroundService
         catch (Exception ex)
         {
             metrics.InsertError.Inc();
+            _writeStallTracker.RecordFailure(DateTimeOffset.UtcNow);
             _logger.LogError(ex, "Scylla fire-and-forget sale-batch insert failed");
             return;
         }
 
         metrics.InsertOk.Inc();
+        _writeStallTracker.RecordSuccess(DateTimeOffset.UtcNow);
     }
 }
