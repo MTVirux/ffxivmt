@@ -116,7 +116,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         sw.Stop();
         var seconds = sw.Elapsed.TotalSeconds;
-        logger.LogInformation("Inserted {Parsed} sales in {Seconds:F3}s.", parsed, seconds);
+        logger.LogDebug("Inserted {Parsed} sales in {Seconds:F3}s.", parsed, seconds);
         return new SaleBatchResult(parsed, seconds);
     }
 
