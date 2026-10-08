@@ -6,12 +6,19 @@
 # Reads GF_SECURITY_ADMIN_PASSWORD, GF_SECURITY_SECRET_KEY and
 # ZERO_SSL_MONITORING_DOMAIN from the main stack's .env.
 
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "5"
+
 services:
 
   ffmt_prometheus:
     image: prom/prometheus:v2.55.1
     container_name: ffmt_prometheus
     restart: unless-stopped
+    logging: *logging
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -30,6 +37,7 @@ services:
     image: grafana/grafana:11.3.0
     container_name: ffmt_grafana
     restart: unless-stopped
+    logging: *logging
     depends_on:
       - ffmt_prometheus
     environment:
@@ -50,6 +58,7 @@ services:
     image: prom/alertmanager:v0.27.0
     container_name: ffmt_alertmanager
     restart: unless-stopped
+    logging: *logging
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
     volumes:
