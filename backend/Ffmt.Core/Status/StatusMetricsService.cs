@@ -28,26 +28,26 @@ public sealed class StatusMetricsService(
     internal const string WorldsTotalQuery = "count(ffmt_ws_connected)";
     internal const string SalesLast10mQuery = "sum(increase(ffmt_ws_sales_received_total[10m]))";
 
-    public async Task<StatusMetricsResponse> GetAsync(CancellationToken ct)
+    public Task<StatusMetricsResponse> GetAsync(CancellationToken ct)
     {
-        if (cache.TryGetValue<StatusMetricsResponse>(CacheKey, out var cached) && cached is not null)
+        // One build is shared by every caller and never sees a caller's token, so clients that
+        // disconnect early cannot cancel it and trigger a fresh round of Prometheus queries.
+        var build = cache.GetOrCreate(CacheKey, entry =>
         {
-            return cached;
-        }
-
-        var response = await BuildAsync(ct).ConfigureAwait(false);
-        cache.Set(CacheKey, response, CacheTtl);
-        return response;
+            entry.AbsoluteExpirationRelativeToNow = CacheTtl;
+            return new Lazy<Task<StatusMetricsResponse>>(BuildAsync);
+        })!;
+        return build.Value.WaitAsync(ct);
     }
 
-    private async Task<StatusMetricsResponse> BuildAsync(CancellationToken ct)
+    private async Task<StatusMetricsResponse> BuildAsync()
     {
         var now = time.GetUtcNow();
         try
         {
-            var snapshots = Queries.ToDictionary(q => q.Key, q => LoadAsync(q.Value, now, ct));
-            var worldsTotal = prometheus.QueryAsync(WorldsTotalQuery, ct);
-            var salesLast10m = prometheus.QueryAsync(SalesLast10mQuery, ct);
+            var snapshots = Queries.ToDictionary(q => q.Key, q => LoadAsync(q.Value, now));
+            var worldsTotal = prometheus.QueryAsync(WorldsTotalQuery);
+            var salesLast10m = prometheus.QueryAsync(SalesLast10mQuery);
             await Task.WhenAll([.. snapshots.Values, worldsTotal, salesLast10m]).ConfigureAwait(false);
 
             var metrics = snapshots.ToDictionary(s => s.Key, s => s.Value.Result);
@@ -61,17 +61,17 @@ public sealed class StatusMetricsService(
 
             return new StatusMetricsResponse(true, verdict.State, verdict.Reasons, now.ToUnixTimeSeconds(), metrics);
         }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
+        catch (Exception ex)
         {
             logger.LogWarning(ex, "Prometheus unavailable for status metrics");
             return new StatusMetricsResponse(false, "unknown", [], now.ToUnixTimeSeconds(), new Dictionary<string, MetricSnapshot>());
         }
     }
 
-    private async Task<MetricSnapshot> LoadAsync(string promql, DateTimeOffset now, CancellationToken ct)
+    private async Task<MetricSnapshot> LoadAsync(string promql, DateTimeOffset now)
     {
-        var value = prometheus.QueryAsync(promql, ct);
-        var series = prometheus.QueryRangeAsync(promql, now - Window, now, Step, ct);
+        var value = prometheus.QueryAsync(promql);
+        var series = prometheus.QueryRangeAsync(promql, now - Window, now, Step);
         await Task.WhenAll(value, series).ConfigureAwait(false);
         return new MetricSnapshot(value.Result, series.Result);
     }

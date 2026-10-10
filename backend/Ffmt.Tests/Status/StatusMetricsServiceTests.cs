@@ -87,16 +87,36 @@ public sealed class StatusMetricsServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Cancelled_request_is_not_cached_as_unavailable()
+    public async Task Concurrent_callers_share_one_build()
     {
-        using var cts = new CancellationTokenSource();
-        await cts.CancelAsync();
-        _prometheus.QueryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).ThrowsAsync(new TaskCanceledException());
-
-        await CreateService().Invoking(s => s.GetAsync(cts.Token)).Should().ThrowAsync<OperationCanceledException>();
-
+        var worldsTotal = new TaskCompletionSource<double?>(TaskCreationOptions.RunContinuationsAsynchronously);
         PrometheusReturns(80);
+        _prometheus.QueryAsync(StatusMetricsService.WorldsTotalQuery, Arg.Any<CancellationToken>()).Returns(worldsTotal.Task);
+
+        var first = CreateService().GetAsync(CancellationToken.None);
+        var second = CreateService().GetAsync(CancellationToken.None);
+        worldsTotal.SetResult(80);
+
+        (await first).Should().BeSameAs(await second);
+        await _prometheus.Received(1).QueryAsync(StatusMetricsService.WorldsTotalQuery, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Cancelled_caller_does_not_cancel_the_shared_build()
+    {
+        var worldsTotal = new TaskCompletionSource<double?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        PrometheusReturns(80);
+        _prometheus.QueryAsync(StatusMetricsService.WorldsTotalQuery, Arg.Any<CancellationToken>())
+            .Returns(ci => worldsTotal.Task.WaitAsync(ci.Arg<CancellationToken>()));
+        using var cts = new CancellationTokenSource();
+
+        var cancelled = CreateService().GetAsync(cts.Token);
+        await cts.CancelAsync();
+        await FluentActions.Awaiting(() => cancelled).Should().ThrowAsync<OperationCanceledException>();
+
+        worldsTotal.SetResult(80);
         (await CreateService().GetAsync(CancellationToken.None)).Available.Should().BeTrue();
+        await _prometheus.Received(1).QueryAsync(StatusMetricsService.WorldsTotalQuery, Arg.Any<CancellationToken>());
     }
 
     [Fact]
