@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { Td, Th } from '../../components/data/TableCells';
-import CheckboxToggle from '../../components/form/CheckboxToggle';
 import TieredLocationSelect from '../../components/form/TieredLocationSelect';
 import EmptyState from '../../components/layout/EmptyState';
 import { QUERY_SKELETON_CLASS } from '../../components/layout/QueryBoundary';
@@ -33,7 +32,7 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const scope = `${location?.name}|${filters.hqOnly}|${filters.minUnitPrice}`;
+  const scope = `${location?.name}|${filters.minUnitPrice}`;
   const { head, history } = useMannequinSales(location?.name, filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
   const rows = useMemo(
@@ -90,11 +89,6 @@ export default function MannequinSalesPage() {
         <MinPriceInput
           value={filters.minUnitPrice}
           onCommit={(minUnitPrice) => setFilters({ minUnitPrice })}
-        />
-        <CheckboxToggle
-          label="HQ only"
-          checked={filters.hqOnly}
-          onChange={(hqOnly) => setFilters({ hqOnly })}
         />
       </div>
 

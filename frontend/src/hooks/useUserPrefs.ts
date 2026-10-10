@@ -46,10 +46,9 @@ const prefsSchema = z.object({
   buyerSearchWorld: z.string().catch(''),
   mannequinFilters: z
     .object({
-      hqOnly: z.boolean().catch(false),
       minUnitPrice: z.number().int().nonnegative().max(MAX_MIN_UNIT_PRICE).catch(0),
     })
-    .catch({ hqOnly: false, minUnitPrice: 0 }),
+    .catch({ minUnitPrice: 0 }),
 });
 
 export type UserPrefs = z.infer<typeof prefsSchema>;
@@ -66,7 +65,7 @@ function defaults(): UserPrefs {
     tableSort: {},
     toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
     buyerSearchWorld: '',
-    mannequinFilters: { hqOnly: false, minUnitPrice: 0 },
+    mannequinFilters: { minUnitPrice: 0 },
   };
 }
 
