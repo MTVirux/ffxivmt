@@ -128,6 +128,17 @@ export default function DataTable<T>({
                   <Fragment key={row.id}>
                     <tr
                       onClick={renderExpanded ? () => toggleExpanded(row.id) : undefined}
+                      tabIndex={renderExpanded ? 0 : undefined}
+                      onKeyDown={
+                        renderExpanded
+                          ? (e) => {
+                              if (e.target !== e.currentTarget) return;
+                              if (e.key !== 'Enter' && e.key !== ' ') return;
+                              e.preventDefault();
+                              toggleExpanded(row.id);
+                            }
+                          : undefined
+                      }
                       aria-expanded={renderExpanded ? isExpanded : undefined}
                       className={[
                         'border-t border-border/40 hover:bg-card/30',

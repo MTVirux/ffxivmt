@@ -67,11 +67,19 @@ export default function GcSealsPage() {
     return computeRows(catalogue.data, listings.data.board, current, planner);
   }, [planner, catalogue.data, listings.data, mode, quantity, sealTarget]);
 
-  const visibleRows = showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.id));
+  const visibleRows = useMemo(
+    () => (showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.id))),
+    [rows, showHidden, ignoredItemIds],
+  );
   const max = mode === 'quantity' ? MAX_GC_QUANTITY : MAX_SEAL_TARGET;
   // Plain consts so the narrowing below carries into the breakdown closure.
   const result = listings.data;
   const names = catalogue.data?.names;
+  const progressNotice = (
+    <div className={NOTICE_CLASS}>
+      Fetching market data from Universalis… {progress.done}/{progress.total || '?'}
+    </div>
+  );
 
   const commitAmount = () => {
     const current = mode === 'quantity' ? quantity : sealTarget;
@@ -196,6 +204,10 @@ export default function GcSealsPage() {
           <div className={ERROR_CLASS}>
             Could not load the expert delivery catalogue. Try again later.
           </div>
+        ) : ids.length === 0 ? (
+          <EmptyState>
+            The expert delivery catalogue is empty right now. Try again later.
+          </EmptyState>
         ) : target === null ? (
           <EmptyState>
             Pick a location and load prices. They come straight from Universalis; a whole region
@@ -204,11 +216,10 @@ export default function GcSealsPage() {
         ) : listings.isError ? (
           <div className={ERROR_CLASS}>{(listings.error as Error).message}</div>
         ) : !result || !planner || !names ? (
-          <div className={NOTICE_CLASS}>
-            Fetching market data from Universalis… {progress.done}/{progress.total || '?'}
-          </div>
+          progressNotice
         ) : (
           <>
+            {listings.isFetching && progressNotice}
             <header className="flex flex-wrap items-baseline justify-between gap-3 text-xs text-muted-foreground">
               <span>
                 <span className="font-mono text-foreground">{visibleRows.length}</span> items on{' '}
@@ -229,6 +240,11 @@ export default function GcSealsPage() {
             )}
             <GcSealsTable
               rows={visibleRows}
+              emptyMessage={
+                rows.length > 0
+                  ? 'Every item is hidden. Tick Show hidden items to see them.'
+                  : undefined
+              }
               renderBreakdown={(row) => (
                 <GcSealsBreakdownView
                   breakdown={buildBreakdown(row, planner, result.board)}

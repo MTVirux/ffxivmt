@@ -11,12 +11,13 @@ type Props = {
   ignoredItemIds?: number[];
   onIgnore?: (id: number) => void;
   onUnignore?: (id: number) => void;
+  emptyMessage?: string;
 };
 
 const DEFAULT_SORT: SortingState = [{ id: 'gil_per_seal', desc: false }];
 
-// Unpriceable rows carry null; sorting them as +Infinity keeps them at the bottom.
-const orLast = (value: number | null) => value ?? Number.POSITIVE_INFINITY;
+// Unpriceable rows carry null; mapped to undefined, sortUndefined keeps them last in both directions.
+const orUndefined = (value: number | null) => value ?? undefined;
 
 const rowId = (row: GcSealsRow) => String(row.id);
 
@@ -42,6 +43,7 @@ export default function GcSealsTable({
   ignoredItemIds,
   onIgnore,
   onUnignore,
+  emptyMessage = 'No expert delivery items to price.',
 }: Props) {
   const columns = useMemo<ColumnDef<GcSealsRow>[]>(() => {
     const base: ColumnDef<GcSealsRow>[] = [
@@ -83,22 +85,25 @@ export default function GcSealsTable({
       {
         id: 'buy_cost',
         header: 'Buy',
-        accessorFn: (r) => orLast(r.buy_cost),
+        accessorFn: (r) => orUndefined(r.buy_cost),
         sortingFn: 'basic',
+        sortUndefined: 'last',
         cell: ({ row }) => <Gil value={row.original.buy_cost} />,
       },
       {
         id: 'craft_cost',
         header: 'Craft',
-        accessorFn: (r) => orLast(r.craft_cost),
+        accessorFn: (r) => orUndefined(r.craft_cost),
         sortingFn: 'basic',
+        sortUndefined: 'last',
         cell: ({ row }) => <Gil value={row.original.craft_cost} />,
       },
       {
         id: 'best_cost',
         header: 'Best',
-        accessorFn: (r) => orLast(r.best_cost),
+        accessorFn: (r) => orUndefined(r.best_cost),
         sortingFn: 'basic',
+        sortUndefined: 'last',
         cell: ({ row }) =>
           row.original.method === null ? (
             <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs text-destructive">
@@ -116,8 +121,9 @@ export default function GcSealsTable({
       {
         id: 'gil_per_seal',
         header: 'Gil/seal',
-        accessorFn: (r) => orLast(r.gil_per_seal),
+        accessorFn: (r) => orUndefined(r.gil_per_seal),
         sortingFn: 'basic',
+        sortUndefined: 'last',
         cell: ({ row }) => (
           <span className="font-mono text-sm font-medium tabular-nums text-accent">
             {row.original.gil_per_seal === null
@@ -139,7 +145,7 @@ export default function GcSealsTable({
       columns={columns}
       sortStorageKey="gcSeals"
       defaultSort={DEFAULT_SORT}
-      emptyMessage="No expert delivery items to price."
+      emptyMessage={emptyMessage}
       getRowId={rowId}
       renderExpanded={renderBreakdown}
       rowClassName={(r) => (ignoredItemIds?.includes(r.id) ? 'opacity-50' : '')}

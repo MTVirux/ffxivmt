@@ -1,3 +1,4 @@
+/* eslint @tanstack/query/exhaustive-deps: ["error", { allowlist: { variables: ["setProgress"] } }] */
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { fetchListings, type ListingsProgress } from '../lib/universalisListings';
@@ -8,7 +9,6 @@ export type ListingsTarget = { location: string; worldId?: number };
 
 export function useMarketListings(target: ListingsTarget | null, ids: readonly number[]) {
   const [progress, setProgress] = useState<ListingsProgress>({ done: 0, total: 0 });
-  // eslint-disable-next-line @tanstack/query/exhaustive-deps -- setProgress is a stable setter, not a query input
   const query = useQuery({
     queryKey: ['gcSealsListings', target, ids] as const,
     queryFn: ({ signal }) => {
