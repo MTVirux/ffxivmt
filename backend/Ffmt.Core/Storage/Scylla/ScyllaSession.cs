@@ -8,10 +8,12 @@ namespace Ffmt.Core.Storage.Scylla;
 public sealed class ScyllaSession : IScyllaSession, IDisposable
 {
     private readonly Lazy<(Cluster Cluster, ISession Session)> _state;
+    private readonly PreparedStatementCache _prepared;
 
     public ScyllaSession(IOptions<ScyllaOptions> options, ILogger<ScyllaSession> logger)
     {
         var opts = options.Value;
+        _prepared = new PreparedStatementCache(cql => Session.PrepareAsync(cql));
 
         _state = new Lazy<(Cluster, ISession)>(
             () =>
@@ -44,11 +46,7 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
 
     public ISession Session => _state.Value.Session;
 
-    public Task<PreparedStatement> PrepareAsync(string cql, CancellationToken ct = default)
-    {
-        // The driver caches prepared statements per cluster by CQL text, so repeats are lookups.
-        return Session.PrepareAsync(cql);
-    }
+    public Task<PreparedStatement> PrepareAsync(string cql, CancellationToken ct = default) => _prepared.GetAsync(cql);
 
     public void Dispose()
     {
