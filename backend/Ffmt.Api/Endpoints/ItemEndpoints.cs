@@ -1,6 +1,7 @@
 using System.Globalization;
 using Ffmt.Core.Storage.Elastic;
 using Ffmt.Core.Storage.Scylla;
+using Ffmt.Core.Worlds;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -71,6 +72,23 @@ public static class ItemEndpoints
             var hits = await search.SearchByNameAsync(normalised, size: 25, ct);
 
             return ApiResults.Ok("Name provided", hits);
+        });
+
+        group.MapGet("/names", async (
+            string? v,
+            HttpResponse response,
+            WorldStructureService structure,
+            CancellationToken ct) =>
+        {
+            var names = await structure.GetVersionedItemNamesAsync(ct);
+
+            // Only a URL carrying the current version may be cached, so a name change reaches
+            // the SPA as soon as /config advertises the new version.
+            response.Headers.CacheControl = v == names.Version
+                ? "public, max-age=31536000, immutable"
+                : "no-store";
+
+            return ApiResults.Ok("Item names retrieved successfully", names.Names);
         });
 
         return app;

@@ -13,6 +13,7 @@ public sealed class WorldStructureService
     private const string WorldsCacheKey = "ffmt:worlds:all";
     private const string WorldsByIdCacheKey = "ffmt:worlds:byId";
     private const string ItemNamesCacheKey = "ffmt:items:namesById";
+    private const string VersionedItemNamesCacheKey = "ffmt:items:namesVersioned";
     private const string MarketableIdsCacheKey = "ffmt:items:marketableIds";
 
     private readonly IWorldStore _worldStore;
@@ -51,6 +52,10 @@ public sealed class WorldStructureService
 
     public Task<IReadOnlyDictionary<int, string>> GetItemNamesAsync(CancellationToken ct = default) =>
         GetOrCreateAsync(ItemNamesCacheKey, () => _itemStore.GetAllNamesAsync(ct));
+
+    public Task<VersionedItemNames> GetVersionedItemNamesAsync(CancellationToken ct = default) =>
+        GetOrCreateAsync(VersionedItemNamesCacheKey, async () =>
+            VersionedItemNames.From(await GetItemNamesAsync(ct).ConfigureAwait(false)));
 
     public Task<IReadOnlyList<int>> GetMarketableItemIdsAsync(CancellationToken ct = default) =>
         GetOrCreateAsync(MarketableIdsCacheKey, () => _itemStore.GetMarketableIdsAsync(ct));
