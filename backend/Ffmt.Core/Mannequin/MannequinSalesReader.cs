@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Mannequin;
 
-public sealed record MannequinFeedQuery(string? TargetLocation, DateTimeOffset? Before, int Limit, int MinUnitPrice);
+public sealed record MannequinFeedQuery(string? TargetLocation, DateTimeOffset? Before, int Limit, bool? Hq, int MinUnitPrice);
 
 public sealed record MannequinFeedPage(IReadOnlyList<Sale> Sales, DateTimeOffset? NextBefore);
 
@@ -32,7 +32,7 @@ public sealed class MannequinSalesReader(
         }
 
         var cacheKey = query.Before is null
-            ? $"mannequin:{resolution?.CanonicalName ?? "*"}:{query.Limit}:{query.MinUnitPrice}"
+            ? $"mannequin:{resolution?.CanonicalName ?? "*"}:{query.Limit}:{query.Hq?.ToString() ?? "*"}:{query.MinUnitPrice}"
             : null;
         if (cacheKey is not null && cache.TryGetValue(cacheKey, out MannequinFeedPage? cached) && cached is not null)
         {
@@ -78,7 +78,7 @@ public sealed class MannequinSalesReader(
                 .ConfigureAwait(false);
             collected.AddRange(perWorld
                 .SelectMany(rows => rows)
-                .Where(s => s.UnitPrice >= query.MinUnitPrice));
+                .Where(s => (query.Hq is null || s.Hq == query.Hq) && s.UnitPrice >= query.MinUnitPrice));
             scanned++;
         }
 

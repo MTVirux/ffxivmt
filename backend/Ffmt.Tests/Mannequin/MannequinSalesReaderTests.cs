@@ -37,8 +37,9 @@ public sealed class MannequinSalesReaderTests
     private static Sale At(int worldId, DateTimeOffset time, bool hq = false, int price = 100, int item = 1, string buyer = "B") =>
         new(item, worldId, buyer, hq, true, 1, price, time);
 
-    private static MannequinFeedQuery Query(string? location, DateTimeOffset? before, int limit = 50, int minPrice = 0) =>
-        new(location, before, limit, minPrice);
+    private static MannequinFeedQuery Query(
+        string? location, DateTimeOffset? before, int limit = 50, bool? hq = null, int minPrice = 0) =>
+        new(location, before, limit, hq, minPrice);
 
     [Fact]
     public async Task Unknown_location_returns_null()
@@ -147,6 +148,31 @@ public sealed class MannequinSalesReaderTests
         var page = await NewReader().GetAsync(Query("Spriggan", Oct(11), minPrice: 100));
 
         page!.Sales.Select(s => s.SaleTime).Should().Equal(Oct(10, 11), Oct(10, 10));
+    }
+
+    [Theory]
+    [InlineData(null, new[] { true, false })]
+    [InlineData(true, new[] { true })]
+    [InlineData(false, new[] { false })]
+    public async Task Quality_filter_applies(bool? hq, bool[] expected)
+    {
+        await _store.AddAsync([At(85, Oct(10, 10), hq: false), At(85, Oct(10, 11), hq: true)]);
+
+        var page = await NewReader().GetAsync(Query("Spriggan", Oct(11), hq: hq));
+
+        page!.Sales.Select(s => s.Hq).Should().Equal(expected);
+    }
+
+    [Fact]
+    public async Task First_page_cache_is_keyed_by_quality()
+    {
+        await _store.AddAsync([At(85, DateTimeOffset.UtcNow.AddHours(-1), hq: true)]);
+        var reader = NewReader();
+
+        await reader.GetAsync(Query("Spriggan", before: null, hq: true));
+        var nq = await reader.GetAsync(Query("Spriggan", before: null, hq: false));
+
+        nq!.Sales.Should().BeEmpty();
     }
 
     [Fact]

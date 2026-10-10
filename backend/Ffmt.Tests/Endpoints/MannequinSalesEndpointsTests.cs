@@ -90,6 +90,22 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task Hq_false_returns_only_nq_sales()
+    {
+        await _store.AddAsync([
+            new Sale(5057, 85, "Alisaie", true, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero)),
+            new Sale(5057, 86, "Alphinaud", false, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 13, 0, 0, TimeSpan.Zero)),
+        ]);
+
+        var (status, body) = await GetAsync($"?hq=false&before={Oct11Ms}");
+
+        status.Should().Be(StatusCodes.Status200OK);
+        var sales = JsonDocument.Parse(body).RootElement.GetProperty("data").EnumerateArray().ToList();
+        sales.Select(s => s.GetProperty("world_id").GetInt32()).Should().Equal(86);
+        sales.Select(s => s.GetProperty("hq").GetBoolean()).Should().Equal(false);
+    }
+
+    [Fact]
     public async Task Unknown_location_is_a_404()
     {
         var (status, _) = await GetAsync("?target_location=Nowhere");
