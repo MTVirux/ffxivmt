@@ -7,7 +7,7 @@ import { useItemNames } from '../../hooks/useItemNames';
 import { useMannequinSales, type MannequinFilters } from '../../hooks/useMannequinSales';
 import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
-import { formatGilExact, formatNumber } from '../../lib/format';
+import { formatGilExact } from '../../lib/format';
 import {
   MAX_MIN_UNIT_PRICE,
   accumulateHead,
@@ -275,8 +275,6 @@ function ResultsTable({
             <Th>Item</Th>
             <Th>World</Th>
             <Th>Buyer</Th>
-            <Th align="right">Qty</Th>
-            <Th align="right">Unit price</Th>
             <Th align="right">Total</Th>
             <Th>When</Th>
           </tr>
@@ -305,12 +303,6 @@ function ResultsTable({
                 </Td>
                 <Td>{worldNameMap.get(row.world_id) ?? String(row.world_id)}</Td>
                 <Td muted>{row.buyer_name}</Td>
-                <Td align="right" mono>
-                  {formatNumber(row.quantity)}
-                </Td>
-                <Td align="right" mono>
-                  {formatGilExact(row.unit_price)}
-                </Td>
                 <Td align="right" mono>
                   {formatGilExact(row.total_price)}
                 </Td>
