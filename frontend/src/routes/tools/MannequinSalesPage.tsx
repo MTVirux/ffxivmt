@@ -4,7 +4,11 @@ import { Td, Th } from '../../components/data/TableCells';
 import EmptyState from '../../components/layout/EmptyState';
 import { QUERY_SKELETON_CLASS } from '../../components/layout/QueryBoundary';
 import { useItemNames } from '../../hooks/useItemNames';
-import { useMannequinSales, type MannequinFilters } from '../../hooks/useMannequinSales';
+import {
+  useMannequinSales,
+  type MannequinFilters,
+  type MannequinQuality,
+} from '../../hooks/useMannequinSales';
 import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact } from '../../lib/format';
@@ -23,13 +27,17 @@ import type { MannequinSale, WorldStructure } from '../../api/types';
 const HIGHLIGHT_MS = 5_000;
 const AUTO_CONTINUE_MAX_PAGES = 5;
 
+const LABEL_CLASS = 'text-xs uppercase tracking-widest text-muted-foreground';
+const SELECT_CLASS =
+  'rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50';
+
 export default function MannequinSalesPage() {
   const [prefs] = useUserPrefs();
   const filters = prefs.mannequinFilters;
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const scope = `${filters.datacenter}|${filters.minUnitPrice}`;
+  const scope = `${filters.datacenter}|${filters.minUnitPrice}|${filters.quality}`;
   const { head, history } = useMannequinSales(filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
   const rows = useMemo(
@@ -87,6 +95,7 @@ export default function MannequinSalesPage() {
           value={filters.datacenter}
           onChange={(datacenter) => setFilters({ datacenter })}
         />
+        <QualitySelect value={filters.quality} onChange={(quality) => setFilters({ quality })} />
         <MinPriceInput
           value={filters.minUnitPrice}
           onCommit={(minUnitPrice) => setFilters({ minUnitPrice })}
@@ -153,10 +162,7 @@ function DatacenterSelect({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor="mannequin-datacenter"
-        className="text-xs uppercase tracking-widest text-muted-foreground"
-      >
+      <label htmlFor="mannequin-datacenter" className={LABEL_CLASS}>
         Datacenter
       </label>
       <select
@@ -164,7 +170,7 @@ function DatacenterSelect({
         value={value}
         disabled={!worlds}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className={SELECT_CLASS}
       >
         <option value="">All</option>
         {Object.entries(worlds ?? {}).map(([region, dcs]) => (
@@ -176,6 +182,32 @@ function DatacenterSelect({
             ))}
           </optgroup>
         ))}
+      </select>
+    </div>
+  );
+}
+
+function QualitySelect({
+  value,
+  onChange,
+}: {
+  value: MannequinQuality;
+  onChange: (next: MannequinQuality) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor="mannequin-quality" className={LABEL_CLASS}>
+        Quality
+      </label>
+      <select
+        id="mannequin-quality"
+        value={value}
+        onChange={(e) => onChange(e.target.value as MannequinQuality)}
+        className={SELECT_CLASS}
+      >
+        <option value="all">All</option>
+        <option value="hq">HQ Only</option>
+        <option value="nq">NQ Only</option>
       </select>
     </div>
   );

@@ -53,8 +53,9 @@ const prefsSchema = z.object({
         .nonnegative()
         .max(MAX_MIN_UNIT_PRICE)
         .catch(DEFAULT_MIN_UNIT_PRICE),
+      quality: z.enum(['all', 'hq', 'nq']).catch('all'),
     })
-    .catch({ datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE }),
+    .catch({ datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' }),
 });
 
 export type UserPrefs = z.infer<typeof prefsSchema>;
@@ -71,7 +72,7 @@ function defaults(): UserPrefs {
     tableSort: {},
     toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
     buyerSearchWorld: '',
-    mannequinFilters: { datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE },
+    mannequinFilters: { datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' },
   };
 }
 
