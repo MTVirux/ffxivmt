@@ -10,6 +10,7 @@ const ItemPage = lazy(() => import('./routes/ItemPage'));
 const GilfluxPage = lazy(() => import('./routes/GilfluxPage'));
 const ItemProfitPage = lazy(() => import('./routes/tools/ItemProfitPage'));
 const CurrencyEffPage = lazy(() => import('./routes/tools/CurrencyEffPage'));
+const GcSealsPage = lazy(() => import('./routes/tools/GcSealsPage'));
 const BuyerSearchPage = lazy(() => import('./routes/tools/BuyerSearchPage'));
 const MannequinSalesPage = lazy(() => import('./routes/tools/MannequinSalesPage'));
 const StatusPage = lazy(() => import('./routes/StatusPage'));
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/gilflux" element={<GilfluxPage />} />
             <Route path="/tools/item-product-profit-calculator" element={<ItemProfitPage />} />
             <Route path="/tools/currency-efficiency-calculator" element={<CurrencyEffPage />} />
+            <Route path="/tools/gc-seals-calculator" element={<GcSealsPage />} />
             <Route path="/tools/buyer-search" element={<BuyerSearchPage />} />
             <Route path="/tools/mannequin-sales" element={<MannequinSalesPage />} />
             <Route path="/status" element={<StatusPage />} />

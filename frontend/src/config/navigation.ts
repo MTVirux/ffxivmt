@@ -20,6 +20,12 @@ export const navItems: NavItem[] = [
     description: 'The most profitable way to spend your tokens, scrips, and seals.',
   },
   {
+    name: 'GC seals',
+    navLabel: 'GC seals',
+    to: '/tools/gc-seals-calculator',
+    description: 'The cheapest Expert Delivery items to buy or craft for Grand Company seals.',
+  },
+  {
     name: 'Item product profit',
     navLabel: 'Profit solver',
     to: '/tools/item-product-profit-calculator',
