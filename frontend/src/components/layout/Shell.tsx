@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Outlet } from 'react-router';
+import { Link, Outlet } from 'react-router';
 import Navbar from './Navbar';
 import { QUERY_SKELETON_CLASS } from './QueryBoundary';
 
@@ -27,13 +27,16 @@ export default function Shell() {
         </Suspense>
       </main>
       <footer className="border-t border-border/60 py-6">
-        <div className="mx-auto flex w-full lg:w-[70%] items-center justify-between gap-6 px-6 text-sm text-muted-foreground">
+        <div className="mx-auto grid w-full lg:w-[70%] grid-cols-3 items-center gap-6 px-6 text-sm text-muted-foreground">
           <span>FFXIV Market Tools - Not affiliated with Square Enix.</span>
+          <Link to="/status" className="justify-self-center transition-colors hover:text-foreground">
+            Status
+          </Link>
           <a
             href="https://github.com/MTVirux/ffxivmt"
             target="_blank"
             rel="noreferrer noopener"
-            className="flex items-center gap-2 transition-colors hover:text-foreground"
+            className="flex items-center gap-2 justify-self-end transition-colors hover:text-foreground"
             aria-label="FFXIV Market Tools on GitHub"
           >
             <GithubIcon />

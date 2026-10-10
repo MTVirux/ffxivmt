@@ -5,13 +5,14 @@ import Shell from './components/layout/Shell';
 import HomePage from './routes/HomePage';
 import NotFoundPage from './routes/NotFoundPage';
 
-// Split out so recharts (ItemPage) and react-virtual (GilfluxPage) stay out of the entry chunk.
+// Split out so recharts (ItemPage, StatusPage) and react-virtual (GilfluxPage) stay out of the entry chunk.
 const ItemPage = lazy(() => import('./routes/ItemPage'));
 const GilfluxPage = lazy(() => import('./routes/GilfluxPage'));
 const ItemProfitPage = lazy(() => import('./routes/tools/ItemProfitPage'));
 const CurrencyEffPage = lazy(() => import('./routes/tools/CurrencyEffPage'));
 const BuyerSearchPage = lazy(() => import('./routes/tools/BuyerSearchPage'));
 const MannequinSalesPage = lazy(() => import('./routes/tools/MannequinSalesPage'));
+const StatusPage = lazy(() => import('./routes/StatusPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/tools/currency-efficiency-calculator" element={<CurrencyEffPage />} />
             <Route path="/tools/buyer-search" element={<BuyerSearchPage />} />
             <Route path="/tools/mannequin-sales" element={<MannequinSalesPage />} />
+            <Route path="/status" element={<StatusPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
