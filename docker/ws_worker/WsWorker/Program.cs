@@ -4,6 +4,7 @@ using Ffmt.Core.DI;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Logging;
+using Ffmt.Core.Mannequin;
 using Ffmt.Core.Metrics;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -39,6 +40,8 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<RankingCoalescer>(
 builder.Services.AddHostedService<DeferredSweepWorker>();
 
 builder.Services.AddHostedService<RankingDecaySweepWorker>();
+
+builder.Services.AddHostedService<MannequinCapWorker>();
 
 builder.Services.AddSingleton<UniversalisWsConsumer>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UniversalisWsConsumer>());
