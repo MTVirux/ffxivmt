@@ -25,6 +25,7 @@ public static class FfmtCliServiceCollectionExtensions
         services.AddSingleton<ArchiveMergeCommand>();
         services.AddSingleton<UpdateBaselinesCommand>();
         services.AddSingleton<QuarantineScrubCommand>();
+        services.AddSingleton<BackfillMannequinCommand>();
 
         return services;
     }

@@ -57,6 +57,11 @@ internal static class RootCommandBuilder
             "Log what would be quarantined without writing or deleting anything.",
             (cmd, dryRun, ct) => cmd.RunAsync(dryRun, ct)));
 
+        root.AddCommand(WithDryRun<BackfillMannequinCommand>(services,
+            "backfill-mannequin", "Copy existing mannequin sales from the sales table into the mannequin feed.",
+            "Count mannequin sales without writing anything.",
+            (cmd, dryRun, ct) => cmd.RunAsync(dryRun, ct)));
+
         return root;
     }
 

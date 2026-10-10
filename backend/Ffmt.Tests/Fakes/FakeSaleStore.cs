@@ -30,4 +30,7 @@ internal class FakeSaleStore : ISaleStore
 
     public virtual Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default) =>
         Task.CompletedTask;
+
+    public virtual Task<IReadOnlyList<Sale>> GetMannequinInTokenRangeAsync(long start, long end, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Sale>>([]);
 }

@@ -77,6 +77,14 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
         WHERE item_id = ? AND world_id = ? AND sale_time = ? AND buyer_name = ?
         """;
 
+    private const string CqlGetMannequinInTokenRange = """
+        SELECT item_id, world_id, sale_time, buyer_name, hq, on_mannequin, quantity, unit_price
+        FROM sales
+        WHERE token(item_id, world_id) > ? AND token(item_id, world_id) <= ?
+          AND on_mannequin = true
+        ALLOW FILTERING
+        """;
+
     private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
 
     private static readonly TimeSpan MannequinRetryAfter = TimeSpan.FromMinutes(5);
@@ -295,6 +303,13 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
                 "sale_backfill",
                 ct).ConfigureAwait(false);
         }
+    }
+
+    public async Task<IReadOnlyList<Sale>> GetMannequinInTokenRangeAsync(long start, long end, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlGetMannequinInTokenRange, ct).ConfigureAwait(false);
+        var rows = await scylla.Session.ExecuteAsync(stmt.Bind(start, end)).ConfigureAwait(false);
+        return rows.Select(MapSaleRow).ToList();
     }
 
     private static Sale MapSaleRow(Row row) => new(

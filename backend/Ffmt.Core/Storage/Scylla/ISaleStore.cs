@@ -24,4 +24,7 @@ public interface ISaleStore : ISaleWriter
     Task DeleteExactAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
 
     Task BackfillTotalPriceAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
+
+    /// <summary>One slice of a full-table scan for the one-off mannequin backfill. Never call on a request path.</summary>
+    Task<IReadOnlyList<Sale>> GetMannequinInTokenRangeAsync(long start, long end, CancellationToken ct = default);
 }
