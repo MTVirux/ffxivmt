@@ -84,7 +84,9 @@ describe('parsePrefs', () => {
     });
   });
   it('falls back per field rather than discarding siblings', () => {
-    expect(parsePrefs('{"showHidden":"yes","craftedOnly":true,"buyerSearchWorld":"Phoenix"}')).toEqual({
+    expect(
+      parsePrefs('{"showHidden":"yes","craftedOnly":true,"buyerSearchWorld":"Phoenix"}'),
+    ).toEqual({
       ...DEFAULTS,
       craftedOnly: true,
       buyerSearchWorld: 'Phoenix',
@@ -92,17 +94,28 @@ describe('parsePrefs', () => {
   });
   it('drops malformed sort entries but keeps valid ones', () => {
     expect(
-      parsePrefs('{"tableSort":{"ranking":[{"id":"1h","desc":true},{"id":5},null],"itemProfit":"bad"}}'),
+      parsePrefs(
+        '{"tableSort":{"ranking":[{"id":"1h","desc":true},{"id":5},null],"itemProfit":"bad"}}',
+      ),
     ).toEqual({
       ...DEFAULTS,
       tableSort: { ranking: [{ id: '1h', desc: true }], itemProfit: [] },
     });
   });
   it('falls back to default mannequin filters when they are malformed', () => {
-    expect(parsePrefs(JSON.stringify({ mannequinFilters: { hqOnly: 'yes', minUnitPrice: -5 } })).mannequinFilters).toEqual({
+    expect(
+      parsePrefs(JSON.stringify({ mannequinFilters: { hqOnly: 'yes', minUnitPrice: -5 } }))
+        .mannequinFilters,
+    ).toEqual({
       hqOnly: false,
       minUnitPrice: 0,
     });
+  });
+  it('drops a min unit price the API cannot accept', () => {
+    expect(
+      parsePrefs(JSON.stringify({ mannequinFilters: { hqOnly: true, minUnitPrice: 3000000000 } }))
+        .mannequinFilters,
+    ).toEqual({ hqOnly: true, minUnitPrice: 0 });
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');

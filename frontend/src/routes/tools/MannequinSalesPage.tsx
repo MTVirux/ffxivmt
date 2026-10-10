@@ -10,7 +10,7 @@ import { useMannequinSales, type MannequinFilters } from '../../hooks/useMannequ
 import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact, formatNumber } from '../../lib/format';
-import { mannequinSaleKey, mergeSales, newSaleKeys } from '../../lib/mannequin';
+import { MAX_MIN_UNIT_PRICE, mannequinSaleKey, mergeSales, newSaleKeys } from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
 import type { Location, MannequinSale } from '../../api/types';
@@ -149,7 +149,8 @@ function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: nu
   const [draft, setDraft] = useState(value > 0 ? String(value) : '');
 
   const commit = () => {
-    const next = Math.max(0, Math.floor(Number(draft) || 0));
+    const next = Math.min(MAX_MIN_UNIT_PRICE, Math.max(0, Math.floor(Number(draft) || 0)));
+    setDraft(next > 0 ? String(next) : '');
     if (next !== value) onCommit(next);
   };
 

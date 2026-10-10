@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
+import { MAX_MIN_UNIT_PRICE } from '../lib/mannequin';
 
 const locationSchema = z.object({
   kind: z.enum(['world', 'datacenter', 'region']),
@@ -46,7 +47,7 @@ const prefsSchema = z.object({
   mannequinFilters: z
     .object({
       hqOnly: z.boolean().catch(false),
-      minUnitPrice: z.number().finite().nonnegative().catch(0),
+      minUnitPrice: z.number().int().nonnegative().max(MAX_MIN_UNIT_PRICE).catch(0),
     })
     .catch({ hqOnly: false, minUnitPrice: 0 }),
 });
