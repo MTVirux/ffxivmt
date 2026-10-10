@@ -2,12 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { MannequinSale } from '../api/types';
 import {
   MAX_MIN_UNIT_PRICE,
-  MAX_PAGES_PER_LOAD,
   accumulateHead,
   formatMinPrice,
   mannequinSaleKey,
   mergeSales,
-  needsMoreHistory,
   newSaleKeys,
   parseMinPrice,
 } from './mannequin';
@@ -40,7 +38,7 @@ describe('newSaleKeys', () => {
     expect([...newSaleKeys([sale(t1)], [fresh, sale(t1)])]).toEqual([mannequinSaleKey(fresh)]);
   });
 
-  it('never flags older rows appended by load older', () => {
+  it('never flags older rows appended by load more', () => {
     expect(newSaleKeys([sale(t1)], [sale(t1), sale(t0)]).size).toBe(0);
   });
 
@@ -93,23 +91,6 @@ describe('accumulateHead', () => {
       sale(t1),
       sale(t0),
     ]);
-  });
-});
-
-describe('needsMoreHistory', () => {
-  it('fetches while fewer rows are loaded than wanted', () => {
-    expect(needsMoreHistory({ loaded: 12, wanted: 50, pagesThisLoad: 1 })).toBe(true);
-  });
-
-  it('stops once enough rows are loaded', () => {
-    expect(needsMoreHistory({ loaded: 50, wanted: 50, pagesThisLoad: 1 })).toBe(false);
-    expect(needsMoreHistory({ loaded: 73, wanted: 50, pagesThisLoad: 2 })).toBe(false);
-  });
-
-  it('stops after the per-load page cap even when short of rows', () => {
-    expect(needsMoreHistory({ loaded: 3, wanted: 50, pagesThisLoad: MAX_PAGES_PER_LOAD })).toBe(
-      false,
-    );
   });
 });
 

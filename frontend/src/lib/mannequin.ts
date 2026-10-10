@@ -14,24 +14,6 @@ export function formatMinPrice(n: number): string {
   return n > 0 ? formatNumber(n) : '';
 }
 
-export const MANNEQUIN_PAGE_ROWS = 50;
-
-// A page covers a bounded number of days, so a sparse filter takes several pages to fill.
-// Capped so a filter matching nothing doesn't walk the whole day index in one go.
-export const MAX_PAGES_PER_LOAD = 10;
-
-export function needsMoreHistory({
-  loaded,
-  wanted,
-  pagesThisLoad,
-}: {
-  loaded: number;
-  wanted: number;
-  pagesThisLoad: number;
-}): boolean {
-  return loaded < wanted && pagesThisLoad < MAX_PAGES_PER_LOAD;
-}
-
 export function mannequinSaleKey(s: MannequinSale): string {
   return `${s.world_id}|${s.item_id}|${s.sale_time}|${s.buyer_name}`;
 }

@@ -13,12 +13,10 @@ import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact } from '../../lib/format';
 import {
-  MANNEQUIN_PAGE_ROWS,
   accumulateHead,
   formatMinPrice,
   mannequinSaleKey,
   mergeSales,
-  needsMoreHistory,
   newSaleKeys,
   parseMinPrice,
 } from '../../lib/mannequin';
@@ -41,42 +39,13 @@ export default function MannequinSalesPage() {
   const scope = `${filters.datacenter}|${filters.world}|${filters.minUnitPrice}|${filters.quality}`;
   const { head, history } = useMannequinSales(filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
-  const pages = history.data?.pages;
-  const pageCount = pages?.length ?? 0;
-  const historyRows = useMemo(() => pages?.flatMap((p) => p.data) ?? [], [pages]);
-
-  // firstPage is where the current load started, for the per-load page cap.
-  const [load, setLoad] = useState({ scope, wanted: MANNEQUIN_PAGE_ROWS, firstPage: 0 });
-  const current =
-    load.scope === scope ? load : { scope, wanted: MANNEQUIN_PAGE_ROWS, firstPage: 0 };
-  const shownHistory = useMemo(
-    () => historyRows.slice(0, current.wanted),
-    [historyRows, current.wanted],
+  const rows = useMemo(
+    () => mergeSales(headRows, history.data?.pages.flatMap((p) => p.data) ?? []),
+    [headRows, history.data],
   );
-  const rows = useMemo(() => mergeSales(headRows, shownHistory), [headRows, shownHistory]);
   const highlighted = useNewRowHighlight(rows, scope);
   const isError = head.isError || history.isError;
-
-  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = history;
-  const filling =
-    pageCount > 0 &&
-    hasNextPage &&
-    needsMoreHistory({
-      loaded: historyRows.length,
-      wanted: current.wanted,
-      pagesThisLoad: pageCount - current.firstPage,
-    });
-  // Stops on a failed page so it doesn't retry forever; load older retries it.
-  useEffect(() => {
-    if (filling && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
-  }, [filling, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
-
-  const loadOlder = () => {
-    setLoad({ scope, wanted: shownHistory.length + MANNEQUIN_PAGE_ROWS, firstPage: pageCount });
-    if (isFetchNextPageError) void fetchNextPage();
-  };
-  const canLoadOlder = historyRows.length > shownHistory.length || hasNextPage;
-  const searchingOlder = rows.length === 0 && !isError && filling;
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = history;
 
   const worlds = useWorlds();
   const worldNameMap = useMemo(() => buildWorldNameMap(worlds.data), [worlds.data]);
@@ -128,23 +97,21 @@ export default function MannequinSalesPage() {
             ) : (
               !isError && (
                 <EmptyState>
-                  {searchingOlder
-                    ? 'Searching older history…'
-                    : hasNextPage
-                      ? 'No mannequin sales in recent history.'
-                      : 'No mannequin sales found.'}
+                  {hasNextPage
+                    ? 'No mannequin sales in recent history.'
+                    : 'No mannequin sales found.'}
                 </EmptyState>
               )
             )}
             {isError && <LoadError />}
-            {canLoadOlder && !searchingOlder && (
+            {hasNextPage && (
               <button
                 type="button"
-                onClick={loadOlder}
+                onClick={() => void fetchNextPage()}
                 disabled={isFetchingNextPage}
                 className="rounded-md border border-border/60 bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isFetchingNextPage ? 'Loading…' : 'Load older'}
+                {isFetchingNextPage ? 'Loading…' : 'Load more'}
               </button>
             )}
           </>
@@ -323,7 +290,7 @@ function useNewRowHighlight(rows: MannequinSale[], scope: string): Set<string> {
     if (fresh.size > 0) setHighlighted(fresh);
   }, [rows, scope]);
 
-  // Its own effect so a rows change with nothing new (load older, a filter switch)
+  // Its own effect so a rows change with nothing new (load more, a filter switch)
   // can't cancel the pending clear and leave rows lit.
   useEffect(() => {
     if (highlighted.size === 0) return;
