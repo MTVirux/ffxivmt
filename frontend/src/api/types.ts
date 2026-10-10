@@ -139,3 +139,25 @@ export type MannequinSalesResponse = {
   /** Unix ms cursor for the next older page; null once history runs out. */
   next_before: number | null;
 };
+
+/** GET /api/v1/status/metrics */
+export type StatusState = 'operational' | 'degraded' | 'down' | 'unknown';
+
+export type SeriesPoint = { t: number; v: number | null };
+
+export type StatusMetric = { value: number | null; series: SeriesPoint[]; total?: number | null };
+
+export type StatusMetricKey =
+  | 'requests_per_second'
+  | 'error_rate'
+  | 'sales_per_second'
+  | 'worlds_connected'
+  | 'backfill_rows_per_second';
+
+export type StatusMetrics = {
+  available: boolean;
+  state: StatusState;
+  reasons: string[];
+  generated_at: number;
+  metrics: Partial<Record<StatusMetricKey, StatusMetric>>;
+};
