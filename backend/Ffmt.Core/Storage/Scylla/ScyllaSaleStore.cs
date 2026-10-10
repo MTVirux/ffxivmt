@@ -79,6 +79,33 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
     private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
 
+    private static readonly TimeSpan MannequinRetryAfter = TimeSpan.FromMinutes(5);
+    private long _mannequinRetryAt;
+
+    // The mannequin tables arrive by a hand-applied CQL file and other sessions deploy main,
+    // so sales must keep flowing without their mannequin copy until the tables exist.
+    private async Task<(PreparedStatement Sale, PreparedStatement Day)?> TryPrepareMannequinAsync(CancellationToken ct)
+    {
+        if (Environment.TickCount64 < Interlocked.Read(ref _mannequinRetryAt))
+        {
+            return null;
+        }
+
+        try
+        {
+            var sale = await scylla.PrepareAsync(MannequinCql.InsertSale, ct).ConfigureAwait(false);
+            var day = await scylla.PrepareAsync(MannequinCql.InsertDay, ct).ConfigureAwait(false);
+            return (sale, day);
+        }
+        catch (InvalidQueryException ex)
+        {
+            Interlocked.Exchange(ref _mannequinRetryAt, Environment.TickCount64 + (long)MannequinRetryAfter.TotalMilliseconds);
+            logger.LogWarning(ex, "Mannequin tables are missing - writing sales without mannequin rows for {Minutes} minutes",
+                MannequinRetryAfter.TotalMinutes);
+            return null;
+        }
+    }
+
     public async Task<SaleBatchResult> AddBatchAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
     {
         if (sales.Count == 0)
@@ -90,6 +117,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         var saleStmt = await scylla.PrepareAsync(CqlInsertSale, ct).ConfigureAwait(false);
         var byBuyerStmt = await scylla.PrepareAsync(CqlInsertSaleByBuyer, ct).ConfigureAwait(false);
+        var mannequin = sales.Any(s => s.OnMannequin) ? await TryPrepareMannequinAsync(ct).ConfigureAwait(false) : null;
         var sw = Stopwatch.StartNew();
         var parsed = 0;
 
@@ -103,6 +131,11 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
                 (int)Math.Min(totalPrice, int.MaxValue), totalPrice));
             batch.Add(byBuyerStmt.Bind(
                 s.BuyerName, s.WorldId, s.SaleTime, s.ItemId, s.Quantity, s.UnitPrice));
+            if (s.OnMannequin && mannequin is { } m)
+            {
+                batch.Add(MannequinCql.BindSale(m.Sale, s));
+                batch.Add(MannequinCql.BindDay(m.Day, s));
+            }
             parsed++;
         };
 
@@ -225,11 +258,18 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         var saleStmt = await scylla.PrepareAsync(CqlDeleteSaleExact, ct).ConfigureAwait(false);
         var buyerStmt = await scylla.PrepareAsync(CqlDeleteSaleByBuyer, ct).ConfigureAwait(false);
+        var mannequinStmt = sales.Any(s => s.OnMannequin)
+            ? await scylla.PrepareAsync(MannequinCql.DeleteSaleExact, ct).ConfigureAwait(false)
+            : null;
 
         var bind = (BatchStatement batch, Sale s) =>
         {
             batch.Add(saleStmt.Bind(s.ItemId, s.WorldId, s.SaleTime, s.BuyerName));
             batch.Add(buyerStmt.Bind(s.BuyerName, s.WorldId, s.SaleTime));
+            if (s.OnMannequin && mannequinStmt is not null)
+            {
+                batch.Add(MannequinCql.BindDeleteExact(mannequinStmt, s));
+            }
         };
 
         foreach (var partition in sales.GroupBy(s => (s.ItemId, s.WorldId)))
