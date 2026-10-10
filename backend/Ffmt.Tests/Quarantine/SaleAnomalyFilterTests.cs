@@ -95,6 +95,20 @@ public sealed class SaleAnomalyFilterTests
     }
 
     [Fact]
+    public async Task Never_quarantines_a_mannequin_sale()
+    {
+        var baselines = new StubBaselines();
+        baselines.Rows[(ItemId, "Europe", false)] = new PriceBaseline(1_000, 50, DateTimeOffset.UnixEpoch);
+
+        var mannequin = NewSale(999_999_999) with { OnMannequin = true };
+        var result = await NewFilter(baselines).PartitionAsync([mannequin, NewSale(999_999_999)]);
+
+        result.Accepted.Should().ContainSingle().Which.Should().Be(mannequin);
+        result.Quarantined.Should().ContainSingle().Which.Sale.OnMannequin.Should().BeFalse();
+        result.NoBaseline.Should().BeEmpty("the mannequin sale was exempt, not missing a baseline");
+    }
+
+    [Fact]
     public async Task Disabled_bypasses_evaluation_entirely()
     {
         var baselines = new StubBaselines();

@@ -28,6 +28,12 @@ public sealed class SaleAnomalyFilter(
 
         foreach (var sale in sales)
         {
+            if (sale.OnMannequin)
+            {
+                accepted.Add(sale);
+                continue;
+            }
+
             if (!worldsById.TryGetValue(sale.WorldId, out var world)
                 || !baselines.TryGet(sale.ItemId, world.Region, sale.Hq, out var baseline)
                 || baseline.SampleCount < opts.MinSampleCount)
