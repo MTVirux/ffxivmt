@@ -13,7 +13,7 @@ const DEFAULTS: UserPrefs = {
   mannequinFilters: {
     datacenter: '',
     world: '',
-    minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
+    minUnitPrice: 10_000_000,
     quality: 'all',
   },
 };
