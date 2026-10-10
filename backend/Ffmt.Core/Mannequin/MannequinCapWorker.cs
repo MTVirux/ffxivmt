@@ -49,6 +49,12 @@ public sealed class MannequinCapWorker(
         }
 
         var worldIds = (await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false)).Select(w => w.Id).ToList();
+        // With no worlds every day would count as empty and lose its index row.
+        if (worldIds.Count == 0)
+        {
+            return [];
+        }
+
         var rowsPerDay = new ConcurrentDictionary<DateOnly, long>();
 
         await Parallel.ForEachAsync(
@@ -60,19 +66,28 @@ public sealed class MannequinCapWorker(
                 rowsPerDay.AddOrUpdate(p.Day, rows, (_, prev) => prev + rows);
             }).ConfigureAwait(false);
 
+        // Days left indexed with no rows (scrubbed, or a crash before the index delete) would be
+        // walked by the reader forever. An empty world list makes DeleteDayAsync remove only the index row.
+        var emptyDays = days.Where(day => rowsPerDay.GetValueOrDefault(day) == 0).ToList();
+        foreach (var day in emptyDays)
+        {
+            await store.DeleteDayAsync([], day, ct).ConfigureAwait(false);
+        }
+
+        var countedDays = rowsPerDay.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value);
         long bytesPerRow = Math.Max(1, opts.EstimatedBytesPerRow);
         var maxBytes = (long)opts.MaxSizeMb * 1024 * 1024;
-        var drop = MannequinCap.DaysToDrop(rowsPerDay, bytesPerRow, maxBytes);
+        var drop = MannequinCap.DaysToDrop(countedDays, bytesPerRow, maxBytes);
 
         foreach (var day in drop)
         {
             await store.DeleteDayAsync(worldIds, day, ct).ConfigureAwait(false);
         }
 
-        var totalRows = rowsPerDay.Values.Sum();
+        var totalRows = countedDays.Values.Sum();
         logger.LogInformation(
-            "MannequinCapWorker: {Days} day(s), {Rows} row(s), ~{Mb} MB estimated, dropped {Dropped}",
-            days.Count, totalRows, totalRows * bytesPerRow / (1024 * 1024),
+            "MannequinCapWorker: {Days} day(s), {Rows} row(s), ~{Mb} MB estimated, pruned {Pruned} empty day(s), dropped {Dropped}",
+            days.Count, totalRows, totalRows * bytesPerRow / (1024 * 1024), emptyDays.Count,
             drop.Count == 0 ? "nothing" : string.Join(", ", drop));
 
         return drop;

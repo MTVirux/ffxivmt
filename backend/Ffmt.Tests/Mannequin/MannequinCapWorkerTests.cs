@@ -45,4 +45,38 @@ public sealed class MannequinCapWorkerTests
         (await worker.RunOnceAsync(CancellationToken.None)).Should().BeEmpty();
         store.Deletes.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task An_indexed_day_with_no_rows_loses_its_index_row_and_is_not_counted_toward_the_cap()
+    {
+        var store = new FakeMannequinSaleStore();
+        await store.AddAsync([At(85, 1), At(85, 2), At(86, 3)]);
+        store.Sales.RemoveAll(s => s.SaleTime.Day == 1);
+        var worker = new MannequinCapWorker(
+            store,
+            TestWorlds.Structure(Spriggan, Twintania),
+            Options.Create(new MannequinOptions { MaxSizeMb = 1, EstimatedBytesPerRow = 1024 * 1024 }),
+            NullLogger<MannequinCapWorker>.Instance);
+
+        var dropped = await worker.RunOnceAsync(CancellationToken.None);
+
+        // Counted as a zero-row day, Oct 1 would be dropped first and Oct 2 after it.
+        dropped.Should().Equal(new DateOnly(2026, 10, 2));
+        store.Deletes.Should().HaveCount(2);
+        store.Deletes.Should().ContainSingle(d => d.Day == new DateOnly(2026, 10, 1) && d.WorldIds.Count == 0);
+        store.Days.Should().Equal(new DateOnly(2026, 10, 3));
+    }
+
+    [Fact]
+    public async Task No_known_worlds_leaves_the_day_index_alone()
+    {
+        var store = new FakeMannequinSaleStore();
+        await store.AddAsync([At(85, 1)]);
+        var worker = new MannequinCapWorker(
+            store, TestWorlds.Structure(), Options.Create(new MannequinOptions()),
+            NullLogger<MannequinCapWorker>.Instance);
+
+        (await worker.RunOnceAsync(CancellationToken.None)).Should().BeEmpty();
+        store.Deletes.Should().BeEmpty();
+    }
 }

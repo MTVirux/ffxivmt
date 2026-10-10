@@ -3,12 +3,14 @@ using Ffmt.Core.Storage.Scylla;
 
 namespace Ffmt.Tests.Fakes;
 
-// Partitions like the Scylla table so reader and cap tests exercise real day boundaries.
+// Partitions like the Scylla table so reader and cap tests exercise real day boundaries. Days is the
+// mannequin_sales_days index: removing from Sales directly simulates a scrub that leaves the index row behind.
 internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
 {
     private readonly object _gate = new();
 
     public List<Sale> Sales { get; } = [];
+    public SortedSet<DateOnly> Days { get; } = new();
     public List<(int WorldId, DateOnly Day)> Reads { get; } = [];
     public List<(IReadOnlyCollection<int> WorldIds, DateOnly Day)> Deletes { get; } = [];
 
@@ -16,7 +18,11 @@ internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
     {
         lock (_gate)
         {
-            Sales.AddRange(sales.Where(s => s.OnMannequin));
+            foreach (var s in sales.Where(s => s.OnMannequin))
+            {
+                Sales.Add(s);
+                Days.Add(MannequinCql.DayOf(s.SaleTime));
+            }
         }
         return Task.CompletedTask;
     }
@@ -39,7 +45,7 @@ internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
     {
         lock (_gate)
         {
-            IReadOnlyList<DateOnly> days = Sales.Select(s => MannequinCql.DayOf(s.SaleTime)).Distinct().Order().ToList();
+            IReadOnlyList<DateOnly> days = Days.ToList();
             return Task.FromResult(days);
         }
     }
@@ -58,6 +64,7 @@ internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
         {
             Deletes.Add((worldIds, day));
             Sales.RemoveAll(s => worldIds.Contains(s.WorldId) && MannequinCql.DayOf(s.SaleTime) == day);
+            Days.Remove(day);
         }
         return Task.CompletedTask;
     }
