@@ -7,9 +7,15 @@ public sealed record StatusVerdict(string State, IReadOnlyList<string> Reasons);
 public static class StatusRules
 {
     public const double MaxErrorRate = 0.05;
+    public const int MinServerErrors = 5;
     public const double MinWorldsConnectedRatio = 0.9;
 
-    public static StatusVerdict Evaluate(double? storedBatchesLast10m, double? errorRate, double? worldsConnected, double? worldsTotal)
+    public static StatusVerdict Evaluate(
+        double? storedBatchesLast10m,
+        double? errorRate,
+        double? serverErrorsLast5m,
+        double? worldsConnected,
+        double? worldsTotal)
     {
         if (storedBatchesLast10m is null or <= 0)
         {
@@ -17,7 +23,7 @@ public static class StatusRules
         }
 
         var reasons = new List<string>();
-        if (errorRate > MaxErrorRate)
+        if (errorRate > MaxErrorRate && serverErrorsLast5m >= MinServerErrors)
         {
             reasons.Add(string.Create(CultureInfo.InvariantCulture, $"5xx error rate {errorRate.Value * 100:0.0}% (above 5%)"));
         }

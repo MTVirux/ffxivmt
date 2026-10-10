@@ -54,6 +54,20 @@ public sealed class StatusMetricsServiceTests : IDisposable
         response.Reasons.Should().Equal("No sales stored in the last 10 minutes");
     }
 
+    [Theory]
+    [InlineData(4.0, "operational")]
+    [InlineData(5.0, "degraded")]
+    public async Task Error_rate_needs_a_minimum_count_of_server_errors(double serverErrors, string state)
+    {
+        PrometheusReturns(80);
+        _prometheus.QueryAsync(StatusMetricsService.Queries["error_rate"], Arg.Any<CancellationToken>()).Returns(0.2);
+        _prometheus.QueryAsync("sum(increase(ffmt_http_requests_total{status=~\"5..\"}[5m]))", Arg.Any<CancellationToken>()).Returns(serverErrors);
+
+        var response = await CreateService().GetAsync(CancellationToken.None);
+
+        response.State.Should().Be(state);
+    }
+
     [Fact]
     public async Task Prometheus_failure_reports_unavailable()
     {
