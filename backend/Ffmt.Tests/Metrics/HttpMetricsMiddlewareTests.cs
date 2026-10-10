@@ -1,38 +1,15 @@
 using System.Net;
-using System.Net.Http;
-using Ffmt.Core.Models;
-using Ffmt.Core.Storage.Scylla;
-using Microsoft.AspNetCore.Hosting;
+using Ffmt.Tests.Fakes;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 
 namespace Ffmt.Tests.Metrics;
 
-public sealed class HttpMetricsMiddlewareTests : IClassFixture<HttpMetricsMiddlewareTests.Factory>
+[Collection(ApiCollection.Name)]
+public sealed class HttpMetricsMiddlewareTests
 {
-    // Makes /api/v1/worlds throw an exception no handler maps, or cancel when the caller hung up.
-    public sealed class Factory : WebApplicationFactory<Program>
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            var worlds = Substitute.For<IWorldStore>();
-            worlds.GetAllAsync(Arg.Any<CancellationToken>()).Returns(ci =>
-            {
-                var ct = ci.Arg<CancellationToken>();
-                return ct.IsCancellationRequested
-                    ? Task.FromCanceled<IReadOnlyList<World>>(ct)
-                    : Task.FromException<IReadOnlyList<World>>(new InvalidOperationException("boom"));
-            });
-            builder.ConfigureTestServices(services => services.AddSingleton(worlds));
-        }
-    }
+    private readonly ApiFactory _factory;
 
-    private readonly Factory _factory;
-
-    public HttpMetricsMiddlewareTests(Factory factory)
+    public HttpMetricsMiddlewareTests(ApiFactory factory)
     {
         _factory = factory;
     }
