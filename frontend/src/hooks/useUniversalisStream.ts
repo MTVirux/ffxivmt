@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { deserialize, serialize } from 'bson';
+import { appConfigQuery } from './useAppConfig';
+import { itemNamesQuery } from './useItemNames';
 import { useWorlds } from './useWorlds';
 import { apiGet } from '../api/client';
 import { buildWorldNameMap } from '../lib/worlds';
@@ -31,6 +33,40 @@ let statusCache: StreamStatus = 'connecting';
 
 function isRecord(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null && !Array.isArray(val);
+}
+
+export function cachedItemName(queryClient: QueryClient, itemId: number): string | undefined {
+  const version = queryClient.getQueryData(appConfigQuery.queryKey)?.item_names_version;
+  const names = queryClient.getQueryData(itemNamesQuery(version).queryKey);
+  return names?.[itemId] ?? queryClient.getQueryData<Item>(['item', itemId])?.name;
+}
+
+async function listedItemName(queryClient: QueryClient, itemId: number) {
+  try {
+    const { item_names_version: version } = await queryClient.fetchQuery(appConfigQuery);
+    if (version === undefined) return undefined;
+    const names = await queryClient.fetchQuery(itemNamesQuery(version));
+    return names[itemId];
+  } catch {
+    return undefined;
+  }
+}
+
+export async function resolveItemName(queryClient: QueryClient, itemId: number): Promise<string> {
+  const listed = await listedItemName(queryClient, itemId);
+  if (listed !== undefined) return listed;
+  try {
+    const item = await queryClient.fetchQuery({
+      queryKey: ['item', itemId] as const,
+      queryFn: () => apiGet<Item>(`/item/${itemId}`),
+      staleTime: Infinity,
+      gcTime: Infinity,
+      retry: false,
+    });
+    return item.name;
+  } catch {
+    return String(itemId);
+  }
 }
 
 export function useUniversalisStream() {
@@ -68,21 +104,6 @@ export function useUniversalisStream() {
     backoffRef.current = 1_000;
     const generation = ++generationRef.current;
 
-    async function resolveItemName(itemId: number): Promise<string> {
-      try {
-        const item = await queryClient.fetchQuery({
-          queryKey: ['item', itemId] as const,
-          queryFn: () => apiGet<Item>(`/item/${itemId}`),
-          staleTime: Infinity,
-          gcTime: Infinity,
-          retry: false,
-        });
-        return item.name;
-      } catch {
-        return String(itemId);
-      }
-    }
-
     function connect() {
       if (deadRef.current) return;
 
@@ -116,7 +137,7 @@ export function useUniversalisStream() {
         if (!Array.isArray(rawSales) || !worldId || !itemId) return;
 
         const worldName = worldMap.get(worldId) ?? String(worldId);
-        const cachedName = queryClient.getQueryData<Item>(['item', itemId])?.name;
+        const cachedName = cachedItemName(queryClient, itemId);
 
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
@@ -143,7 +164,7 @@ export function useUniversalisStream() {
         });
 
         if (cachedName === undefined) {
-          void resolveItemName(itemId).then((name) => {
+          void resolveItemName(queryClient, itemId).then((name) => {
             if (connectionDead || name === String(itemId)) return;
             setSales((prev) => {
               const placeholder = String(itemId);

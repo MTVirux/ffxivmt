@@ -104,6 +104,8 @@ export type Sale = {
 export type AppConfig = {
   /** Gilflux timeframe keys in ascending duration order (e.g. ["1h","3h","7d"]). */
   gilflux_timeframes: string[];
+  /** Sent as `?v=` on /item/names. Absent from useAppConfig's fallback and older servers. */
+  item_names_version?: string;
 };
 
 /** GET /api/v1/search_buyer - one row per purchase. */
