@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
-import { DEFAULT_SEAL_TARGET, MAX_GC_QUANTITY, MAX_SEAL_TARGET } from '../lib/gcSeals';
+import { DEFAULT_SEAL_TARGET, MAX_GC_QUANTITY } from '../lib/gcSeals';
 import { DEFAULT_MIN_UNIT_PRICE, MAX_MIN_UNIT_PRICE } from '../lib/mannequin';
 
 const locationSchema = z.object({
@@ -71,7 +71,7 @@ const prefsSchema = z.object({
     .object({
       mode: z.enum(['quantity', 'seals']).catch('quantity'),
       quantity: z.number().int().min(1).max(MAX_GC_QUANTITY).catch(1),
-      sealTarget: z.number().int().min(1).max(MAX_SEAL_TARGET).catch(DEFAULT_SEAL_TARGET),
+      sealTarget: z.number().int().min(1).catch(DEFAULT_SEAL_TARGET),
     })
     .catch({ mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET }),
 });

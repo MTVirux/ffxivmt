@@ -16,7 +16,6 @@ import {
   computeRows,
   createPlanner,
   MAX_GC_QUANTITY,
-  MAX_SEAL_TARGET,
   parseBoundedInt,
   type GcSealsMode,
 } from '../../lib/gcSeals';
@@ -71,7 +70,7 @@ export default function GcSealsPage() {
     () => (showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.id))),
     [rows, showHidden, ignoredItemIds],
   );
-  const max = mode === 'quantity' ? MAX_GC_QUANTITY : MAX_SEAL_TARGET;
+  const max = mode === 'quantity' ? MAX_GC_QUANTITY : undefined;
   // Plain consts so the narrowing below carries into the breakdown closure.
   const result = listings.data;
   const names = catalogue.data?.names;

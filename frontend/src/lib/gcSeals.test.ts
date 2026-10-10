@@ -253,4 +253,7 @@ describe('parseBoundedInt', () => {
   it.each(['', '0', '-3', '2.5', 'abc'])('rejects %j', (raw) => {
     expect(parseBoundedInt(raw, 999)).toBeNull();
   });
+  it('does not clamp without a max', () => {
+    expect(parseBoundedInt('500000')).toBe(500000);
+  });
 });

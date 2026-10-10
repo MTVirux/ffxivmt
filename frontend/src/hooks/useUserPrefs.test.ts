@@ -190,9 +190,12 @@ describe('parsePrefs', () => {
     ).toEqual({ ...saved, buyer: '' });
   });
   it('falls back per field for bad gcSeals values', () => {
-    expect(parsePrefs('{"gcSeals":{"mode":"bogus","quantity":0,"sealTarget":500000}}')).toEqual(
+    expect(parsePrefs('{"gcSeals":{"mode":"bogus","quantity":0,"sealTarget":0}}')).toEqual(
       DEFAULTS,
     );
+  });
+  it('keeps a seal target above the in-game cap', () => {
+    expect(parsePrefs('{"gcSeals":{"sealTarget":500000}}').gcSeals.sealTarget).toBe(500000);
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');
