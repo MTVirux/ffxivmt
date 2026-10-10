@@ -120,6 +120,10 @@ public sealed class GcSealsCatalogueService(
             .Where(i => i.Seals > 0)
             .OrderBy(i => i.Id)
             .ToList();
+        if (items.Count == 0)
+        {
+            throw new HttpRequestException("XIVAPI returned no expert delivery items.");
+        }
 
         var recipes = new List<GcSealsRecipe>();
         var visited = new HashSet<int>();

@@ -65,6 +65,10 @@ public sealed class GcSealsCatalogueServiceTests
         return gate;
     }
 
+    private void ReturnNoCandidates() =>
+        _xivapi.GetEquipmentCandidatesAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<XivapiEquipmentCandidate>>([]));
+
     private async Task WaitUntilCachedAsync()
     {
         for (var i = 0; i < 500 && !_cache.TryGetValue(GcSealsCatalogueService.CacheKey, out _); i++)
@@ -105,7 +109,34 @@ public sealed class GcSealsCatalogueServiceTests
         _xivapi.GetExpertDeliverySealsAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyDictionary<int, int>>(new Dictionary<int, int>()));
 
-        (await _service.GetAsync()).Items.Should().BeEmpty();
+        var act = () => _service.GetAsync();
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
+
+    [Fact]
+    public async Task Throws_when_the_first_build_finds_no_items()
+    {
+        ReturnNoCandidates();
+
+        var act = () => _service.GetAsync();
+
+        await act.Should().ThrowAsync<HttpRequestException>().WithMessage("*no expert delivery items*");
+    }
+
+    [Fact]
+    public async Task An_empty_rebuild_keeps_serving_the_previous_catalogue()
+    {
+        var first = await _service.GetAsync();
+        _cache.Remove(GcSealsCatalogueService.CacheKey);
+        ReturnNoCandidates();
+        await _service.GetAsync();
+        await WaitUntilCachedAsync();
+
+        var third = await _service.GetAsync();
+
+        third.Should().BeSameAs(first);
+        await _xivapi.Received(2).GetEquipmentCandidatesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
