@@ -34,6 +34,27 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
+  // Text filters apply on blur or Search so typing doesn't fire a request per keystroke.
+  const [minPriceDraft, setMinPriceDraft] = useState(formatMinPrice(filters.minUnitPrice));
+  const [buyerDraft, setBuyerDraft] = useState(filters.buyer);
+
+  const commitMinPrice = () => {
+    const minUnitPrice = parseMinPrice(minPriceDraft);
+    if (minUnitPrice !== filters.minUnitPrice) setFilters({ minUnitPrice });
+  };
+
+  const commitBuyer = () => {
+    const buyer = buyerDraft.trim();
+    setBuyerDraft(buyer);
+    if (buyer !== filters.buyer) setFilters({ buyer });
+  };
+
+  const onSearch = (e: FormEvent) => {
+    e.preventDefault();
+    commitMinPrice();
+    commitBuyer();
+  };
+
   const { rows, hasMore, loadMore, isLoadingMore, isLoading, isError } = useMannequinSales(filters);
   const highlighted = useNewRowHighlight(rows, mannequinScope(filters));
 
@@ -52,7 +73,10 @@ export default function MannequinSalesPage() {
         </p>
       </header>
 
-      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-border/60 bg-card/40 p-4">
+      <form
+        onSubmit={onSearch}
+        className="flex flex-wrap items-end gap-4 rounded-xl border border-border/60 bg-card/40 p-4"
+      >
         <DatacenterSelect
           worlds={worlds.data}
           value={filters.datacenter}
@@ -66,12 +90,15 @@ export default function MannequinSalesPage() {
           />
         )}
         <QualitySelect value={filters.quality} onChange={(quality) => setFilters({ quality })} />
-        <MinPriceInput
-          value={filters.minUnitPrice}
-          onCommit={(minUnitPrice) => setFilters({ minUnitPrice })}
-        />
-        <BuyerInput value={filters.buyer} onCommit={(buyer) => setFilters({ buyer })} />
-      </div>
+        <MinPriceInput value={minPriceDraft} onChange={setMinPriceDraft} onBlur={commitMinPrice} />
+        <BuyerInput value={buyerDraft} onChange={setBuyerDraft} onBlur={commitBuyer} />
+        <button
+          type="submit"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90"
+        >
+          Search
+        </button>
+      </form>
 
       <section className="space-y-3">
         {isLoading ? (
@@ -220,22 +247,15 @@ function QualitySelect({
   );
 }
 
-// Committed on blur or Enter so typing a price doesn't fire a request per keystroke.
-function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: number) => void }) {
-  const [draft, setDraft] = useState(formatMinPrice(value));
+type DraftInputProps = {
+  value: string;
+  onChange: (next: string) => void;
+  onBlur: () => void;
+};
 
-  const commit = () => {
-    const next = parseMinPrice(draft);
-    if (next !== value) onCommit(next);
-  };
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    commit();
-  };
-
+function MinPriceInput({ value, onChange, onBlur }: DraftInputProps) {
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <label htmlFor="mannequin-min-price" className={LABEL_CLASS}>
         Min unit price
       </label>
@@ -244,31 +264,18 @@ function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: nu
         type="text"
         inputMode="numeric"
         placeholder="0"
-        value={draft}
-        onChange={(e) => setDraft(formatMinPrice(parseMinPrice(e.target.value)))}
-        onBlur={commit}
+        value={value}
+        onChange={(e) => onChange(formatMinPrice(parseMinPrice(e.target.value)))}
+        onBlur={onBlur}
         className={`w-36 ${INPUT_CLASS}`}
       />
-    </form>
+    </div>
   );
 }
 
-function BuyerInput({ value, onCommit }: { value: string; onCommit: (next: string) => void }) {
-  const [draft, setDraft] = useState(value);
-
-  const commit = () => {
-    const next = draft.trim();
-    setDraft(next);
-    if (next !== value) onCommit(next);
-  };
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    commit();
-  };
-
+function BuyerInput({ value, onChange, onBlur }: DraftInputProps) {
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <label htmlFor="mannequin-buyer" className={LABEL_CLASS}>
         Buyer
       </label>
@@ -276,12 +283,12 @@ function BuyerInput({ value, onCommit }: { value: string; onCommit: (next: strin
         id="mannequin-buyer"
         type="text"
         placeholder="Any"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         className={`w-52 ${INPUT_CLASS}`}
       />
-    </form>
+    </div>
   );
 }
 
