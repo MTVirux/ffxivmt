@@ -10,12 +10,13 @@ import { useMannequinSales, type MannequinFilters } from '../../hooks/useMannequ
 import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact, formatNumber } from '../../lib/format';
-import { mannequinSaleKey, newSaleKeys } from '../../lib/mannequin';
+import { mannequinSaleKey, mergeSales, newSaleKeys } from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
 import type { Location, MannequinSale } from '../../api/types';
 
 const HIGHLIGHT_MS = 5_000;
+const AUTO_CONTINUE_MAX_PAGES = 5;
 
 export default function MannequinSalesPage() {
   const [prefs] = useUserPrefs();
@@ -26,28 +27,43 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const query = useMannequinSales(location?.name, filters);
-  const rows = useMemo(() => query.data?.pages.flatMap((p) => p.data) ?? [], [query.data]);
+  const { head, history } = useMannequinSales(location?.name, filters);
+  const rows = useMemo(
+    () => mergeSales(head.data?.data ?? [], history.data?.pages.flatMap((p) => p.data) ?? []),
+    [head.data, history.data],
+  );
   const highlighted = useNewRowHighlight(
     rows,
     `${location?.name}|${filters.hqOnly}|${filters.minUnitPrice}`,
   );
+  const isError = head.isError || history.isError;
 
   // A quiet location can return an empty page that still has older history behind it.
-  // Stops on a failed page so it doesn't retry forever; the next refetch resumes it.
-  const lastPage = query.data?.pages.at(-1);
-  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = query;
+  // Capped so a location with no mannequin sales doesn't walk the whole day index, and
+  // stops on a failed page so it doesn't retry forever.
+  const lastPage = history.data?.pages.at(-1);
+  const canAutoContinue = (history.data?.pages.length ?? 0) <= AUTO_CONTINUE_MAX_PAGES;
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = history;
   useEffect(() => {
     if (
       lastPage &&
       lastPage.data.length === 0 &&
+      canAutoContinue &&
       hasNextPage &&
       !isFetchingNextPage &&
       !isFetchNextPageError
     ) {
       void fetchNextPage();
     }
-  }, [lastPage, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+  }, [
+    lastPage,
+    canAutoContinue,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage,
+  ]);
+  const searchingOlder = rows.length === 0 && !isError && hasNextPage && canAutoContinue;
 
   const worlds = useWorlds();
   const worldNameMap = useMemo(() => buildWorldNameMap(worlds.data), [worlds.data]);
@@ -80,26 +96,30 @@ export default function MannequinSalesPage() {
       <section className="space-y-3">
         {!location ? (
           <EmptyState>Pick a world, datacenter or region.</EmptyState>
-        ) : query.isLoading ? (
+        ) : history.isLoading ? (
           <div className={QUERY_SKELETON_CLASS} />
-        ) : rows.length === 0 ? (
-          query.isError ? (
-            <LoadError />
-          ) : (
-            <EmptyState>
-              {hasNextPage ? 'Searching older history…' : 'No mannequin sales found.'}
-            </EmptyState>
-          )
         ) : (
           <>
-            <ResultsTable
-              rows={rows}
-              highlighted={highlighted}
-              worldNameMap={worldNameMap}
-              itemNameMap={itemNameMap}
-            />
-            {query.isError && <LoadError />}
-            {hasNextPage && (
+            {rows.length > 0 ? (
+              <ResultsTable
+                rows={rows}
+                highlighted={highlighted}
+                worldNameMap={worldNameMap}
+                itemNameMap={itemNameMap}
+              />
+            ) : (
+              !isError && (
+                <EmptyState>
+                  {searchingOlder
+                    ? 'Searching older history…'
+                    : hasNextPage
+                      ? 'No mannequin sales in recent history.'
+                      : 'No mannequin sales found.'}
+                </EmptyState>
+              )
+            )}
+            {isError && <LoadError />}
+            {hasNextPage && !searchingOlder && (
               <button
                 type="button"
                 onClick={() => void fetchNextPage()}
