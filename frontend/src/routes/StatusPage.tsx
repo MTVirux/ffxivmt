@@ -27,7 +27,7 @@ const CARDS: Card[] = [
   },
   {
     key: 'sales_per_second',
-    label: 'Sales ingested',
+    label: 'Sales received',
     format: (m) => formatRate(m.value),
     formatPoint: formatRate,
   },

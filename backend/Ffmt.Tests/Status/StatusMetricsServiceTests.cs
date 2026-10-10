@@ -18,11 +18,11 @@ public sealed class StatusMetricsServiceTests : IDisposable
     private StatusMetricsService CreateService() =>
         new(_prometheus, _cache, TimeProvider.System, NullLogger<StatusMetricsService>.Instance);
 
-    private void PrometheusReturns(double? value, double? worldsTotal = 80, double? salesLast10m = 1000)
+    private void PrometheusReturns(double? value, double? worldsTotal = 80, double? storedBatchesLast10m = 1000)
     {
         _prometheus.QueryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(value);
         _prometheus.QueryAsync(StatusMetricsService.WorldsTotalQuery, Arg.Any<CancellationToken>()).Returns(worldsTotal);
-        _prometheus.QueryAsync(StatusMetricsService.SalesLast10mQuery, Arg.Any<CancellationToken>()).Returns(salesLast10m);
+        _prometheus.QueryAsync(StatusMetricsService.StoredBatchesLast10mQuery, Arg.Any<CancellationToken>()).Returns(storedBatchesLast10m);
         _prometheus.QueryRangeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
             .Returns([new SeriesPoint(1760000000, 1.5)]);
     }
@@ -43,13 +43,15 @@ public sealed class StatusMetricsServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Evaluates_the_banner()
+    public async Task Down_when_no_sale_batches_were_stored()
     {
-        PrometheusReturns(80, salesLast10m: 0);
+        PrometheusReturns(80);
+        _prometheus.QueryAsync("sum(increase(ffmt_ws_inserts_total{result=\"ok\"}[10m]))", Arg.Any<CancellationToken>()).Returns(0);
 
         var response = await CreateService().GetAsync(CancellationToken.None);
 
         response.State.Should().Be("down");
+        response.Reasons.Should().Equal("No sales stored in the last 10 minutes");
     }
 
     [Fact]

@@ -26,7 +26,7 @@ public sealed class StatusMetricsService(
     };
 
     internal const string WorldsTotalQuery = "count(ffmt_ws_connected)";
-    internal const string SalesLast10mQuery = "sum(increase(ffmt_ws_sales_received_total[10m]))";
+    internal const string StoredBatchesLast10mQuery = "sum(increase(ffmt_ws_inserts_total{result=\"ok\"}[10m]))";
 
     public Task<StatusMetricsResponse> GetAsync(CancellationToken ct)
     {
@@ -47,14 +47,14 @@ public sealed class StatusMetricsService(
         {
             var snapshots = Queries.ToDictionary(q => q.Key, q => LoadAsync(q.Value, now));
             var worldsTotal = prometheus.QueryAsync(WorldsTotalQuery);
-            var salesLast10m = prometheus.QueryAsync(SalesLast10mQuery);
-            await Task.WhenAll([.. snapshots.Values, worldsTotal, salesLast10m]).ConfigureAwait(false);
+            var storedBatchesLast10m = prometheus.QueryAsync(StoredBatchesLast10mQuery);
+            await Task.WhenAll([.. snapshots.Values, worldsTotal, storedBatchesLast10m]).ConfigureAwait(false);
 
             var metrics = snapshots.ToDictionary(s => s.Key, s => s.Value.Result);
             metrics["worlds_connected"] = metrics["worlds_connected"] with { Total = worldsTotal.Result };
 
             var verdict = StatusRules.Evaluate(
-                salesLast10m.Result,
+                storedBatchesLast10m.Result,
                 metrics["error_rate"].Value,
                 metrics["worlds_connected"].Value,
                 worldsTotal.Result);

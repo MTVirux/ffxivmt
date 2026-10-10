@@ -7,12 +7,12 @@ public sealed class StatusRulesTests
     [Theory]
     [InlineData(null)]
     [InlineData(0.0)]
-    public void No_recent_sales_is_down(double? sales)
+    public void No_stored_sales_is_down(double? storedBatches)
     {
-        var verdict = StatusRules.Evaluate(sales, 0.0, 80, 80);
+        var verdict = StatusRules.Evaluate(storedBatches, 0.0, 80, 80);
 
         verdict.State.Should().Be("down");
-        verdict.Reasons.Should().Equal("No sales ingested in the last 10 minutes");
+        verdict.Reasons.Should().Equal("No sales stored in the last 10 minutes");
     }
 
     [Fact]
