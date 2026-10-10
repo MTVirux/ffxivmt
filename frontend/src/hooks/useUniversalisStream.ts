@@ -138,6 +138,7 @@ export function useUniversalisStream() {
 
         const worldName = worldMap.get(worldId) ?? String(worldId);
         const cachedName = cachedItemName(queryClient, itemId);
+        const cutoff = Date.now() / 1000 - EXPIRY_S;
 
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
@@ -152,7 +153,9 @@ export function useUniversalisStream() {
             quantity: Number(s['quantity']) || 1,
             unitPrice: Number(s['pricePerUnit']) || 0,
             saleTime: Number(s['timestamp']) || 0,
-          }));
+          }))
+          // sales/add carries every sale Universalis hadn't seen, often hours old
+          .filter((e) => e.saleTime > cutoff);
 
         if (newEntries.length === 0) return;
 
