@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { parsePrefs, type UserPrefs } from './useUserPrefs';
+import { DEFAULT_MIN_UNIT_PRICE } from '../lib/mannequin';
 
 const DEFAULTS: UserPrefs = {
   hiddenTimeframes: [],
@@ -9,7 +10,7 @@ const DEFAULTS: UserPrefs = {
   tableSort: {},
   toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
   buyerSearchWorld: '',
-  mannequinFilters: { datacenter: '', minUnitPrice: 0 },
+  mannequinFilters: { datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE },
 };
 
 describe('parsePrefs', () => {
@@ -106,14 +107,14 @@ describe('parsePrefs', () => {
     expect(
       parsePrefs(JSON.stringify({ mannequinFilters: { datacenter: 7, minUnitPrice: -5 } }))
         .mannequinFilters,
-    ).toEqual({ datacenter: '', minUnitPrice: 0 });
+    ).toEqual({ datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE });
   });
   it('drops a min unit price the API cannot accept', () => {
     expect(
       parsePrefs(
         JSON.stringify({ mannequinFilters: { datacenter: 'Chaos', minUnitPrice: 3000000000 } }),
       ).mannequinFilters,
-    ).toEqual({ datacenter: 'Chaos', minUnitPrice: 0 });
+    ).toEqual({ datacenter: 'Chaos', minUnitPrice: DEFAULT_MIN_UNIT_PRICE });
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');

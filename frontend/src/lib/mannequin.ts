@@ -2,6 +2,7 @@ import type { MannequinSale } from '../api/types';
 
 // The API binds min_unit_price as an int32.
 export const MAX_MIN_UNIT_PRICE = 999_999_999;
+export const DEFAULT_MIN_UNIT_PRICE = 1_000_000;
 
 export function mannequinSaleKey(s: MannequinSale): string {
   return `${s.world_id}|${s.item_id}|${s.sale_time}|${s.buyer_name}`;

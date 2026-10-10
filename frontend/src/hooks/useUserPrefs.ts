@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
-import { MAX_MIN_UNIT_PRICE } from '../lib/mannequin';
+import { DEFAULT_MIN_UNIT_PRICE, MAX_MIN_UNIT_PRICE } from '../lib/mannequin';
 
 const locationSchema = z.object({
   kind: z.enum(['world', 'datacenter', 'region']),
@@ -47,9 +47,14 @@ const prefsSchema = z.object({
   mannequinFilters: z
     .object({
       datacenter: z.string().catch(''),
-      minUnitPrice: z.number().int().nonnegative().max(MAX_MIN_UNIT_PRICE).catch(0),
+      minUnitPrice: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(MAX_MIN_UNIT_PRICE)
+        .catch(DEFAULT_MIN_UNIT_PRICE),
     })
-    .catch({ datacenter: '', minUnitPrice: 0 }),
+    .catch({ datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE }),
 });
 
 export type UserPrefs = z.infer<typeof prefsSchema>;
@@ -66,7 +71,7 @@ function defaults(): UserPrefs {
     tableSort: {},
     toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
     buyerSearchWorld: '',
-    mannequinFilters: { datacenter: '', minUnitPrice: 0 },
+    mannequinFilters: { datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE },
   };
 }
 
