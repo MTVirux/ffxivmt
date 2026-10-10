@@ -57,7 +57,7 @@ export default function StatusPage() {
           minute.
         </p>
       </header>
-      <QueryBoundary query={query} errorText="Could not load status.">
+      <QueryBoundary query={query} errorText="Status API unreachable - the site may be down.">
         {(data) => (
           <div className="space-y-6">
             <StatusBanner state={data.state} reasons={data.reasons} />
