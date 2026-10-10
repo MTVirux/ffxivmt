@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { parsePrefs, type UserPrefs } from './useUserPrefs';
 import { DEFAULT_MIN_UNIT_PRICE } from '../lib/mannequin';
+import { DEFAULT_SEAL_TARGET } from '../lib/gcSeals';
 
 const DEFAULTS: UserPrefs = {
   hiddenTimeframes: [],
@@ -18,6 +19,7 @@ const DEFAULTS: UserPrefs = {
     quality: 'all',
     buyer: '',
   },
+  gcSeals: { mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET },
 };
 
 describe('parsePrefs', () => {
@@ -52,6 +54,7 @@ describe('parsePrefs', () => {
         quality: 'hq',
         buyer: 'Some One',
       },
+      gcSeals: { mode: 'seals', quantity: 3, sealTarget: 25000 },
     });
     expect(parsePrefs(input)).toEqual({
       hiddenTimeframes: ['1h', '3h'],
@@ -70,6 +73,7 @@ describe('parsePrefs', () => {
         quality: 'hq',
         buyer: 'Some One',
       },
+      gcSeals: { mode: 'seals', quantity: 3, sealTarget: 25000 },
     });
   });
   it('ignores non-array fields', () => {
@@ -184,6 +188,11 @@ describe('parsePrefs', () => {
     expect(
       parsePrefs(JSON.stringify({ mannequinFilters: { ...saved, buyer: 42 } })).mannequinFilters,
     ).toEqual({ ...saved, buyer: '' });
+  });
+  it('falls back per field for bad gcSeals values', () => {
+    expect(parsePrefs('{"gcSeals":{"mode":"bogus","quantity":0,"sealTarget":500000}}')).toEqual(
+      DEFAULTS,
+    );
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');
