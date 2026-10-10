@@ -20,6 +20,8 @@ export type EnrichedSale = {
   quantity: number;
   unitPrice: number;
   saleTime: number; // unix seconds
+  // sales/add carries every sale Universalis hadn't seen yet, often hours old, so expiry keys on arrival
+  receivedAt: number; // unix seconds
 };
 
 const WS_URL = 'wss://universalis.app/api/ws';
@@ -33,6 +35,11 @@ let statusCache: StreamStatus = 'connecting';
 
 function isRecord(val: unknown): val is Record<string, unknown> {
   return typeof val === 'object' && val !== null && !Array.isArray(val);
+}
+
+export function dropExpired(sales: EnrichedSale[], now: number): EnrichedSale[] {
+  const cutoff = now - EXPIRY_S;
+  return sales.filter((s) => s.receivedAt > cutoff);
 }
 
 export function cachedItemName(queryClient: QueryClient, itemId: number): string | undefined {
@@ -72,10 +79,9 @@ export async function resolveItemName(queryClient: QueryClient, itemId: number):
 export function useUniversalisStream() {
   const worlds = useWorlds();
   const queryClient = useQueryClient();
-  const [sales, setSalesState] = useState<EnrichedSale[]>(() => {
-    const cutoff = Date.now() / 1000 - EXPIRY_S;
-    return salesCache.filter((s) => s.saleTime > cutoff);
-  });
+  const [sales, setSalesState] = useState<EnrichedSale[]>(() =>
+    dropExpired(salesCache, Date.now() / 1000),
+  );
   const [status, setStatusState] = useState<StreamStatus>(() => statusCache);
 
   const setSales = useCallback((updater: (prev: EnrichedSale[]) => EnrichedSale[]) => {
@@ -138,7 +144,7 @@ export function useUniversalisStream() {
 
         const worldName = worldMap.get(worldId) ?? String(worldId);
         const cachedName = cachedItemName(queryClient, itemId);
-        const cutoff = Date.now() / 1000 - EXPIRY_S;
+        const receivedAt = Date.now() / 1000;
 
         const newEntries: EnrichedSale[] = rawSales
           .filter(isRecord)
@@ -153,9 +159,8 @@ export function useUniversalisStream() {
             quantity: Number(s['quantity']) || 1,
             unitPrice: Number(s['pricePerUnit']) || 0,
             saleTime: Number(s['timestamp']) || 0,
-          }))
-          // sales/add carries every sale Universalis hadn't seen, often hours old
-          .filter((e) => e.saleTime > cutoff);
+            receivedAt,
+          }));
 
         if (newEntries.length === 0) return;
 
@@ -205,9 +210,8 @@ export function useUniversalisStream() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      const cutoff = Date.now() / 1000 - EXPIRY_S;
       setSales((prev) => {
-        const next = prev.filter((s) => s.saleTime > cutoff);
+        const next = dropExpired(prev, Date.now() / 1000);
         return next.length === prev.length ? prev : next;
       });
     }, PRUNE_INTERVAL_MS);

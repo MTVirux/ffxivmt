@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cachedItemName, resolveItemName } from './useUniversalisStream';
+import { cachedItemName, dropExpired, resolveItemName } from './useUniversalisStream';
+import type { EnrichedSale } from './useUniversalisStream';
 
 const VERSION = '0123456789abcdef';
 const CONFIG = { gilflux_timeframes: ['1h'], item_names_version: VERSION };
@@ -67,5 +68,35 @@ describe('cachedItemName', () => {
     expect(cachedItemName(queryClient, 2)).toBeUndefined();
     await resolveItemName(queryClient, 1);
     expect(cachedItemName(queryClient, 2)).toBe('Fire Shard');
+  });
+});
+
+describe('dropExpired', () => {
+  const NOW = 1_760_000_000;
+
+  function sale(key: string, saleTime: number, receivedAt: number): EnrichedSale {
+    return {
+      key,
+      itemId: 1,
+      itemName: 'Gil',
+      worldName: 'Cerberus',
+      buyerName: 'Buyer',
+      hq: false,
+      quantity: 1,
+      unitPrice: 1,
+      saleTime,
+      receivedAt,
+    };
+  }
+
+  it('keeps hours-old sales that arrived recently', () => {
+    const late = sale('late', NOW - 14 * 3600, NOW - 5);
+    expect(dropExpired([late], NOW)).toEqual([late]);
+  });
+
+  it('drops sales that arrived over ten minutes ago', () => {
+    const fresh = sale('fresh', NOW - 60, NOW - 60);
+    const stale = sale('stale', NOW - 700, NOW - 700);
+    expect(dropExpired([fresh, stale], NOW)).toEqual([fresh]);
   });
 });

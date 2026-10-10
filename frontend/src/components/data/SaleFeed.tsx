@@ -52,7 +52,7 @@ export default function SaleFeed() {
             {(() => {
               const now = Date.now() / 1000;
               return sales.slice(0, displayCount).map((sale, i) => (
-                <SaleRow key={sale.key} sale={sale} isNewest={i === 0 && now - sale.saleTime < 30} />
+                <SaleRow key={sale.key} sale={sale} isNewest={i === 0 && now - sale.receivedAt < 30} />
               ));
             })()}
           </div>
