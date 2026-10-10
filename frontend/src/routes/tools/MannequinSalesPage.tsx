@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { Td, Th } from '../../components/data/TableCells';
-import TieredLocationSelect from '../../components/form/TieredLocationSelect';
 import EmptyState from '../../components/layout/EmptyState';
 import { QUERY_SKELETON_CLASS } from '../../components/layout/QueryBoundary';
 import { useItemNames } from '../../hooks/useItemNames';
@@ -18,22 +17,19 @@ import {
 } from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
-import type { Location, MannequinSale } from '../../api/types';
+import type { MannequinSale, WorldStructure } from '../../api/types';
 
 const HIGHLIGHT_MS = 5_000;
 const AUTO_CONTINUE_MAX_PAGES = 5;
 
 export default function MannequinSalesPage() {
   const [prefs] = useUserPrefs();
-  const location = prefs.lastLocation;
-  const setLocation = useCallback((next: Location) => patchPrefs({ lastLocation: next }), []);
-
   const filters = prefs.mannequinFilters;
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const scope = `${location?.name}|${filters.minUnitPrice}`;
-  const { head, history } = useMannequinSales(location?.name, filters);
+  const scope = `${filters.datacenter}|${filters.minUnitPrice}`;
+  const { head, history } = useMannequinSales(filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
   const rows = useMemo(
     () => mergeSales(headRows, history.data?.pages.flatMap((p) => p.data) ?? []),
@@ -85,7 +81,11 @@ export default function MannequinSalesPage() {
       </header>
 
       <div className="flex flex-wrap items-end gap-4 rounded-xl border border-border/60 bg-card/40 p-4">
-        <TieredLocationSelect value={location} onChange={setLocation} />
+        <DatacenterSelect
+          worlds={worlds.data}
+          value={filters.datacenter}
+          onChange={(datacenter) => setFilters({ datacenter })}
+        />
         <MinPriceInput
           value={filters.minUnitPrice}
           onCommit={(minUnitPrice) => setFilters({ minUnitPrice })}
@@ -93,9 +93,7 @@ export default function MannequinSalesPage() {
       </div>
 
       <section className="space-y-3">
-        {!location ? (
-          <EmptyState>Pick a world, datacenter or region.</EmptyState>
-        ) : history.isLoading ? (
+        {history.isLoading ? (
           <div className={QUERY_SKELETON_CLASS} />
         ) : (
           <>
@@ -139,6 +137,45 @@ function LoadError() {
   return (
     <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
       Failed to load mannequin sales.
+    </div>
+  );
+}
+
+function DatacenterSelect({
+  worlds,
+  value,
+  onChange,
+}: {
+  worlds: WorldStructure | undefined;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label
+        htmlFor="mannequin-datacenter"
+        className="text-xs uppercase tracking-widest text-muted-foreground"
+      >
+        Datacenter
+      </label>
+      <select
+        id="mannequin-datacenter"
+        value={value}
+        disabled={!worlds}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <option value="">All</option>
+        {Object.entries(worlds ?? {}).map(([region, dcs]) => (
+          <optgroup key={region} label={region}>
+            {Object.keys(dcs).map((dc) => (
+              <option key={dc} value={dc}>
+                {dc}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
     </div>
   );
 }

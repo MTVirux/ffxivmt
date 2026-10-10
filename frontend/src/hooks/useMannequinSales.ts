@@ -2,15 +2,16 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { apiGetEnvelope } from '../api/client';
 import type { MannequinSalesResponse } from '../api/types';
 
-export type MannequinFilters = { minUnitPrice: number };
+// An empty datacenter means every world.
+export type MannequinFilters = { datacenter: string; minUnitPrice: number };
 
 function fetchPage(
-  location: string,
-  { minUnitPrice }: MannequinFilters,
+  { datacenter, minUnitPrice }: MannequinFilters,
   before: number | null,
   signal: AbortSignal,
 ) {
-  const params = new URLSearchParams({ target_location: location });
+  const params = new URLSearchParams();
+  if (datacenter) params.set('target_location', datacenter);
   if (before !== null) params.set('before', String(before));
   if (minUnitPrice > 0) params.set('min_unit_price', String(minUnitPrice));
   return apiGetEnvelope<MannequinSalesResponse>(`/mannequin_sales?${params}`, { signal });
@@ -18,24 +19,20 @@ function fetchPage(
 
 // Polling an infinite query refetches every loaded page, so only the head is polled
 // and the page merges it over the history.
-export function useMannequinSales(location: string | undefined, filters: MannequinFilters) {
-  const { minUnitPrice } = filters;
-  const enabled = !!location;
+export function useMannequinSales(filters: MannequinFilters) {
+  const { datacenter, minUnitPrice } = filters;
 
   const head = useQuery({
-    queryKey: ['mannequin-sales-head', location, minUnitPrice] as const,
-    queryFn: ({ signal }) => fetchPage(location ?? '', { minUnitPrice }, null, signal),
-    enabled,
+    queryKey: ['mannequin-sales-head', datacenter, minUnitPrice] as const,
+    queryFn: ({ signal }) => fetchPage({ datacenter, minUnitPrice }, null, signal),
     refetchInterval: 30_000,
   });
 
   const history = useInfiniteQuery({
-    queryKey: ['mannequin-sales', location, minUnitPrice] as const,
-    queryFn: ({ pageParam, signal }) =>
-      fetchPage(location ?? '', { minUnitPrice }, pageParam, signal),
+    queryKey: ['mannequin-sales', datacenter, minUnitPrice] as const,
+    queryFn: ({ pageParam, signal }) => fetchPage({ datacenter, minUnitPrice }, pageParam, signal),
     initialPageParam: null as number | null,
     getNextPageParam: (last) => last.next_before,
-    enabled,
   });
 
   return { head, history };

@@ -9,7 +9,7 @@ const DEFAULTS: UserPrefs = {
   tableSort: {},
   toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
   buyerSearchWorld: '',
-  mannequinFilters: { minUnitPrice: 0 },
+  mannequinFilters: { datacenter: '', minUnitPrice: 0 },
 };
 
 describe('parsePrefs', () => {
@@ -36,7 +36,7 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
-      mannequinFilters: { minUnitPrice: 5000 },
+      mannequinFilters: { datacenter: 'Light', minUnitPrice: 5000 },
     });
     expect(parsePrefs(input)).toEqual({
       hiddenTimeframes: ['1h', '3h'],
@@ -47,7 +47,7 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
-      mannequinFilters: { minUnitPrice: 5000 },
+      mannequinFilters: { datacenter: 'Light', minUnitPrice: 5000 },
     });
   });
   it('ignores non-array fields', () => {
@@ -104,14 +104,16 @@ describe('parsePrefs', () => {
   });
   it('falls back to default mannequin filters when they are malformed', () => {
     expect(
-      parsePrefs(JSON.stringify({ mannequinFilters: { minUnitPrice: -5 } })).mannequinFilters,
-    ).toEqual({ minUnitPrice: 0 });
+      parsePrefs(JSON.stringify({ mannequinFilters: { datacenter: 7, minUnitPrice: -5 } }))
+        .mannequinFilters,
+    ).toEqual({ datacenter: '', minUnitPrice: 0 });
   });
   it('drops a min unit price the API cannot accept', () => {
     expect(
-      parsePrefs(JSON.stringify({ mannequinFilters: { minUnitPrice: 3000000000 } }))
-        .mannequinFilters,
-    ).toEqual({ minUnitPrice: 0 });
+      parsePrefs(
+        JSON.stringify({ mannequinFilters: { datacenter: 'Chaos', minUnitPrice: 3000000000 } }),
+      ).mannequinFilters,
+    ).toEqual({ datacenter: 'Chaos', minUnitPrice: 0 });
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');
