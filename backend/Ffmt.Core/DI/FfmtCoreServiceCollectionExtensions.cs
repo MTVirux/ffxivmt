@@ -2,6 +2,7 @@ using Ffmt.Core.Configuration;
 using Ffmt.Core.External;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
+using Ffmt.Core.Mannequin;
 using Ffmt.Core.Quarantine;
 using Ffmt.Core.Storage.Elastic;
 using Ffmt.Core.Storage.S3;
@@ -59,6 +60,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<LocationResolver>();
         services.AddSingleton<GilfluxRankingReader>();
         services.AddSingleton<ItemSalesReader>();
+        services.AddSingleton<MannequinSalesReader>();
 
         // Transient so it does not pin the typed Universalis HttpClient for the process lifetime.
         services.AddTransient<MarketBoardReader>();
