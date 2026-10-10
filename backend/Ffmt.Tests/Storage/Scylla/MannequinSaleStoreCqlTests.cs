@@ -41,16 +41,16 @@ public sealed class MannequinSaleStoreCqlTests
     }
 
     [Fact]
-    public async Task GetByWorldAndDayAsync_reads_one_partition_before_the_cursor()
+    public async Task GetByDayAsync_reads_one_view_partition_before_the_cursor()
     {
         var (store, captured) = NewStore();
 
-        try { await store.GetByWorldAndDayAsync(21, Day, Noon); } catch { }
+        try { await store.GetByDayAsync(Day, Noon); } catch { }
 
         captured.Should().Contain(c =>
-            c.Contains("FROM mannequin_sales") &&
-            c.Contains("world_id = ? AND day = ?") &&
-            c.Contains("sale_time < ?") &&
+            c.Contains("FROM mannequin_sales_by_day") &&
+            c.Contains("WHERE day = ? AND sale_time < ?") &&
+            !c.Contains("world_id = ?") &&
             !c.Contains("ALLOW FILTERING"));
     }
 

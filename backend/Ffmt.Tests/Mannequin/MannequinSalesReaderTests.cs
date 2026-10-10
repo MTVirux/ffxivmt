@@ -16,20 +16,18 @@ public sealed class MannequinSalesReaderTests
 
     private readonly FakeMannequinSaleStore _store = new();
 
-    private MannequinSalesReader NewReader(int maxDays = 7, int maxPartitionReads = 64)
+    private MannequinSalesReader NewReader(int maxDays = 365, World[]? worlds = null)
     {
-        var structure = TestWorlds.Structure(Spriggan, Cerberus, Twintania);
+        var structure = TestWorlds.Structure(worlds ?? [Spriggan, Cerberus, Twintania]);
         return new MannequinSalesReader(
             _store,
             structure,
             new LocationResolver(structure),
             new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new MannequinOptions
-            {
-                MaxDaysPerRequest = maxDays,
-                MaxPartitionReadsPerRequest = maxPartitionReads,
-            }));
+            Options.Create(new MannequinOptions { MaxDaysPerRequest = maxDays }));
     }
+
+    private static DateTimeOffset StartOf(DateTimeOffset time) => new(time.UtcDateTime.Date, TimeSpan.Zero);
 
     private static DateTimeOffset Oct(int day, int hour = 12, int minute = 0) =>
         new(2026, 10, day, hour, minute, 0, TimeSpan.Zero);
@@ -115,14 +113,50 @@ public sealed class MannequinSalesReaderTests
     }
 
     [Fact]
-    public async Task Wide_locations_scan_fewer_days_per_request()
+    public async Task A_sparse_feed_fills_the_page_from_many_days_with_one_read_per_day()
     {
-        await _store.AddAsync([At(85, Oct(10)), At(80, Oct(9)), At(85, Oct(8))]);
+        var worlds = Enumerable.Range(1, 90).Select(i => new World(i, $"World{i}", $"Dc{i % 12}", "Europe")).ToArray();
+        await _store.AddAsync([.. Enumerable.Range(0, 60).Select(d => At(d + 1, Oct(10).AddDays(-d)))]);
 
-        var page = await NewReader(maxPartitionReads: 2).GetAsync(Query("Chaos", Oct(11)));
+        var page = await NewReader(worlds: worlds).GetAsync(Query(null, Oct(11), limit: 50));
 
-        _store.Reads.Should().HaveCount(2, "two worlds x one day fits a budget of two reads");
-        page!.NextBefore.Should().Be(new DateTimeOffset(2026, 10, 10, 0, 0, 0, TimeSpan.Zero));
+        page!.Sales.Should().HaveCount(50);
+        page.Sales.Select(s => s.WorldId).Should().Equal(Enumerable.Range(1, 50));
+        _store.Reads.Should().HaveCount(50, "a day is one read however many worlds there are");
+        page.NextBefore.Should().Be(StartOf(Oct(10).AddDays(-49)));
+    }
+
+    [Fact]
+    public async Task Rows_outside_the_location_do_not_count_toward_the_limit()
+    {
+        await _store.AddAsync([At(86, Oct(10)), At(85, Oct(9)), At(86, Oct(8)), At(80, Oct(7)), At(85, Oct(6))]);
+
+        var page = await NewReader().GetAsync(Query("Chaos", Oct(11), limit: 2));
+
+        page!.Sales.Select(s => (s.WorldId, s.SaleTime)).Should().Equal((85, Oct(9)), (80, Oct(7)));
+        page.NextBefore.Should().Be(StartOf(Oct(7)));
+    }
+
+    [Fact]
+    public async Task No_location_skips_worlds_missing_from_the_world_list()
+    {
+        await _store.AddAsync([At(85, Oct(10, 10)), At(999, Oct(10, 11))]);
+
+        var page = await NewReader().GetAsync(Query(null, Oct(11)));
+
+        page!.Sales.Select(s => s.WorldId).Should().Equal(85);
+    }
+
+    [Fact]
+    public async Task A_filter_that_matches_nothing_stops_at_the_day_budget()
+    {
+        await _store.AddAsync([At(85, Oct(10)), At(80, Oct(9)), At(86, Oct(8)), At(85, Oct(7))]);
+
+        var page = await NewReader(maxDays: 3).GetAsync(Query(null, Oct(11), hq: true));
+
+        page!.Sales.Should().BeEmpty();
+        _store.Reads.Should().Equal(new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 9), new DateOnly(2026, 10, 8));
+        page.NextBefore.Should().Be(StartOf(Oct(8)));
     }
 
     [Fact]
@@ -199,7 +233,7 @@ public sealed class MannequinSalesReaderTests
 
         await NewReader().GetAsync(Query("Spriggan", new DateTimeOffset(2026, 10, 10, 0, 0, 0, TimeSpan.Zero)));
 
-        _store.Reads.Select(r => r.Day).Should().OnlyContain(d => d < new DateOnly(2026, 10, 10));
+        _store.Reads.Should().OnlyContain(d => d < new DateOnly(2026, 10, 10));
     }
 
     [Fact]

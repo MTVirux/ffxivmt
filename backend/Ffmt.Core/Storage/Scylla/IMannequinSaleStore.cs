@@ -7,8 +7,8 @@ public interface IMannequinSaleStore
     /// <summary>Ignores sales that are not on a mannequin.</summary>
     Task AddAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default);
 
-    /// <summary>Every row of one (world, day) partition older than <paramref name="before"/>, newest first.</summary>
-    Task<IReadOnlyList<Sale>> GetByWorldAndDayAsync(int worldId, DateOnly day, DateTimeOffset before, CancellationToken ct = default);
+    /// <summary>Every world's rows for one day older than <paramref name="before"/>, newest first.</summary>
+    Task<IReadOnlyList<Sale>> GetByDayAsync(DateOnly day, DateTimeOffset before, CancellationToken ct = default);
 
     /// <summary>Days that hold rows, oldest first.</summary>
     Task<IReadOnlyList<DateOnly>> GetDaysAsync(CancellationToken ct = default);

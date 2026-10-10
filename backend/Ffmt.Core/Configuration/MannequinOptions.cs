@@ -11,12 +11,10 @@ public sealed class MannequinOptions
 
     public int CleanupIntervalHours { get; init; } = 6;
     public int CountConcurrency { get; init; } = 16;
-    public int MaxDaysPerRequest { get; init; } = 7;
 
-    // Cursor pages are uncached, so this bounds what one request can make Scylla read.
-    // A region spans up to 32 worlds, which gets 2 days per request. A request always reads at
-    // least one day, so the all-worlds feed reads one partition per world and goes past this.
-    public int MaxPartitionReadsPerRequest { get; init; } = 64;
+    // A day is one partition read of mannequin_sales_by_day whatever the location, so this only
+    // bounds a request whose filter matches nothing.
+    public int MaxDaysPerRequest { get; init; } = 365;
 
     public int FeedCacheSeconds { get; init; } = 20;
 }

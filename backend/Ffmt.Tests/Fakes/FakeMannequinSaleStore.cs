@@ -3,15 +3,16 @@ using Ffmt.Core.Storage.Scylla;
 
 namespace Ffmt.Tests.Fakes;
 
-// Partitions like the Scylla table so reader and cap tests exercise real day boundaries. Days is the
-// mannequin_sales_days index: removing from Sales directly simulates a scrub that leaves the index row behind.
+// Partitions like the Scylla table and its by-day view so reader and cap tests exercise real day boundaries.
+// Days is the mannequin_sales_days index: removing from Sales directly simulates a scrub that leaves the
+// index row behind.
 internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
 {
     private readonly object _gate = new();
 
     public List<Sale> Sales { get; } = [];
     public SortedSet<DateOnly> Days { get; } = new();
-    public List<(int WorldId, DateOnly Day)> Reads { get; } = [];
+    public List<DateOnly> Reads { get; } = [];
     public List<(IReadOnlyCollection<int> WorldIds, DateOnly Day)> Deletes { get; } = [];
 
     public Task AddAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
@@ -27,15 +28,17 @@ internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<Sale>> GetByWorldAndDayAsync(
-        int worldId, DateOnly day, DateTimeOffset before, CancellationToken ct = default)
+    public Task<IReadOnlyList<Sale>> GetByDayAsync(DateOnly day, DateTimeOffset before, CancellationToken ct = default)
     {
         lock (_gate)
         {
-            Reads.Add((worldId, day));
+            Reads.Add(day);
             IReadOnlyList<Sale> rows = Sales
-                .Where(s => s.WorldId == worldId && MannequinCql.DayOf(s.SaleTime) == day && s.SaleTime < before)
+                .Where(s => MannequinCql.DayOf(s.SaleTime) == day && s.SaleTime < before)
                 .OrderByDescending(s => s.SaleTime)
+                .ThenBy(s => s.WorldId)
+                .ThenBy(s => s.ItemId)
+                .ThenBy(s => s.BuyerName, StringComparer.Ordinal)
                 .ToList();
             return Task.FromResult(rows);
         }

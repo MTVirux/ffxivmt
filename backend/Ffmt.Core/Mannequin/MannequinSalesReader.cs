@@ -40,7 +40,7 @@ public sealed class MannequinSalesReader(
         }
 
         var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
-        var worldIds = worlds.Where(w => resolution is null || resolution.Matches(w)).Select(w => w.Id).ToList();
+        var worldIds = worlds.Where(w => resolution is null || resolution.Matches(w)).Select(w => w.Id).ToHashSet();
         var days = await store.GetDaysAsync(ct).ConfigureAwait(false);
 
         var page = worldIds.Count == 0 || days.Count == 0
@@ -56,14 +56,13 @@ public sealed class MannequinSalesReader(
     }
 
     private async Task<MannequinFeedPage> WalkAsync(
-        MannequinFeedQuery query, List<int> worldIds, IReadOnlyList<DateOnly> days, CancellationToken ct)
+        MannequinFeedQuery query, HashSet<int> worldIds, IReadOnlyList<DateOnly> days, CancellationToken ct)
     {
         // A minute of slack on the first page: Universalis timestamps can run slightly ahead of our clock.
         var before = query.Before ?? DateTimeOffset.UtcNow.AddMinutes(1);
         var newestDay = MannequinCql.DayOf(before.AddTicks(-1));
         var candidates = days.Where(d => d <= newestDay).OrderDescending().ToList();
-        var opts = options.Value;
-        var maxDays = Math.Max(1, Math.Min(opts.MaxDaysPerRequest, opts.MaxPartitionReadsPerRequest / worldIds.Count));
+        var maxDays = Math.Max(1, options.Value.MaxDaysPerRequest);
 
         var collected = new List<Sale>();
         var scanned = 0;
@@ -74,11 +73,11 @@ public sealed class MannequinSalesReader(
                 break;
             }
 
-            var perWorld = await Task.WhenAll(worldIds.Select(w => store.GetByWorldAndDayAsync(w, day, before, ct)))
-                .ConfigureAwait(false);
-            collected.AddRange(perWorld
-                .SelectMany(rows => rows)
-                .Where(s => (query.Hq is null || s.Hq == query.Hq) && s.UnitPrice >= query.MinUnitPrice));
+            var rows = await store.GetByDayAsync(day, before, ct).ConfigureAwait(false);
+            collected.AddRange(rows.Where(s =>
+                worldIds.Contains(s.WorldId) &&
+                (query.Hq is null || s.Hq == query.Hq) &&
+                s.UnitPrice >= query.MinUnitPrice));
             scanned++;
         }
 

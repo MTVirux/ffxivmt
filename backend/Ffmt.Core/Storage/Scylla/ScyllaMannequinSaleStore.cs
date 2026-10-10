@@ -6,10 +6,10 @@ namespace Ffmt.Core.Storage.Scylla;
 
 public sealed class ScyllaMannequinSaleStore(IScyllaSession scylla) : IMannequinSaleStore
 {
-    private const string CqlGetByWorldAndDay = """
+    private const string CqlGetByDay = """
         SELECT world_id, sale_time, item_id, buyer_name, hq, quantity, unit_price
-        FROM mannequin_sales
-        WHERE world_id = ? AND day = ? AND sale_time < ?
+        FROM mannequin_sales_by_day
+        WHERE day = ? AND sale_time < ?
         """;
 
     private const string CqlGetDays = """
@@ -52,12 +52,11 @@ public sealed class ScyllaMannequinSaleStore(IScyllaSession scylla) : IMannequin
             .ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<Sale>> GetByWorldAndDayAsync(
-        int worldId, DateOnly day, DateTimeOffset before, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Sale>> GetByDayAsync(DateOnly day, DateTimeOffset before, CancellationToken ct = default)
     {
-        var stmt = await scylla.PrepareAsync(CqlGetByWorldAndDay, ct).ConfigureAwait(false);
+        var stmt = await scylla.PrepareAsync(CqlGetByDay, ct).ConfigureAwait(false);
         var rows = await scylla.MeasuredExecuteAsync(
-            stmt.Bind(worldId, MannequinCql.ToLocalDate(day), before), "mannequin_read").ConfigureAwait(false);
+            stmt.Bind(MannequinCql.ToLocalDate(day), before), "mannequin_read").ConfigureAwait(false);
 
         return rows.Select(row => new Sale(
             ItemId: row.GetValue<int>("item_id"),
