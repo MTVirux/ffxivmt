@@ -31,4 +31,10 @@ export const navItems: NavItem[] = [
     to: '/tools/buyer-search',
     description: "Look up a character's market-board purchase history.",
   },
+  {
+    name: 'Mannequin sales',
+    navLabel: 'Mannequin',
+    to: '/tools/mannequin-sales',
+    description: 'Recent purchases made from retainer mannequins - by World, DC, or Region.',
+  },
 ];

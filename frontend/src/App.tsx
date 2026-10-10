@@ -11,6 +11,7 @@ const GilfluxPage = lazy(() => import('./routes/GilfluxPage'));
 const ItemProfitPage = lazy(() => import('./routes/tools/ItemProfitPage'));
 const CurrencyEffPage = lazy(() => import('./routes/tools/CurrencyEffPage'));
 const BuyerSearchPage = lazy(() => import('./routes/tools/BuyerSearchPage'));
+const MannequinSalesPage = lazy(() => import('./routes/tools/MannequinSalesPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/tools/item-product-profit-calculator" element={<ItemProfitPage />} />
             <Route path="/tools/currency-efficiency-calculator" element={<CurrencyEffPage />} />
             <Route path="/tools/buyer-search" element={<BuyerSearchPage />} />
+            <Route path="/tools/mannequin-sales" element={<MannequinSalesPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
