@@ -57,3 +57,10 @@ There is no second copy to keep in sync.
   while the tables are missing. But those sales never reach the feed, the
   `/api/v1/mannequin_sales` endpoint errors and the cap worker logs failed
   passes. Run `ffmt backfill-mannequin` after applying it to recover the gap.
+- **`schema/15_mannequin_sales_by_day.cql` must land before the deploy that
+  reads the view.** `MannequinSalesReader` reads one `mannequin_sales_by_day`
+  partition per day instead of one `mannequin_sales` partition per world, so
+  without the view every `/api/v1/mannequin_sales` request fails. Ingest is
+  unaffected - Scylla keeps the view in step with base-table writes and the cap
+  worker's partition deletes. Existing rows are built into the view in the
+  background, so the feed can look short until that finishes.
