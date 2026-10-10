@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Mannequin;
 
-public sealed record MannequinFeedQuery(string? TargetLocation, DateTimeOffset? Before, int Limit, bool? Hq, int MinUnitPrice);
+public sealed record MannequinFeedQuery(string? TargetLocation, DateTimeOffset? Before, int Limit, bool? Hq, int MinUnitPrice, string? BuyerName);
 
 public sealed record MannequinFeedPage(IReadOnlyList<Sale> Sales, DateTimeOffset? NextBefore);
 
@@ -32,7 +32,7 @@ public sealed class MannequinSalesReader(
         }
 
         var cacheKey = query.Before is null
-            ? $"mannequin:{resolution?.CanonicalName ?? "*"}:{query.Limit}:{query.Hq?.ToString() ?? "*"}:{query.MinUnitPrice}"
+            ? $"mannequin:{resolution?.CanonicalName ?? "*"}:{query.Limit}:{query.Hq?.ToString() ?? "*"}:{query.MinUnitPrice}:{query.BuyerName?.ToLowerInvariant() ?? "*"}"
             : null;
         if (cacheKey is not null && cache.TryGetValue(cacheKey, out MannequinFeedPage? cached) && cached is not null)
         {
@@ -77,7 +77,8 @@ public sealed class MannequinSalesReader(
             collected.AddRange(rows.Where(s =>
                 worldIds.Contains(s.WorldId) &&
                 (query.Hq is null || s.Hq == query.Hq) &&
-                s.UnitPrice >= query.MinUnitPrice));
+                s.UnitPrice >= query.MinUnitPrice &&
+                (query.BuyerName is null || s.BuyerName.Contains(query.BuyerName, StringComparison.OrdinalIgnoreCase))));
             scanned++;
         }
 

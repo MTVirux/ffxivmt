@@ -36,8 +36,8 @@ public sealed class MannequinSalesReaderTests
         new(item, worldId, buyer, hq, true, 1, price, time);
 
     private static MannequinFeedQuery Query(
-        string? location, DateTimeOffset? before, int limit = 50, bool? hq = null, int minPrice = 0) =>
-        new(location, before, limit, hq, minPrice);
+        string? location, DateTimeOffset? before, int limit = 50, bool? hq = null, int minPrice = 0, string? buyer = null) =>
+        new(location, before, limit, hq, minPrice, buyer);
 
     [Fact]
     public async Task Unknown_location_returns_null()
@@ -207,6 +207,49 @@ public sealed class MannequinSalesReaderTests
         var nq = await reader.GetAsync(Query("Spriggan", before: null, hq: false));
 
         nq!.Sales.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(null, new[] { "Aerith Gainsborough", "Tifa Lockhart", "AERITH" })]
+    [InlineData("aerith", new[] { "Aerith Gainsborough", "AERITH" })]
+    [InlineData("LOCK", new[] { "Tifa Lockhart" })]
+    public async Task Buyer_filter_matches_part_of_a_name_ignoring_case(string? buyer, string[] expected)
+    {
+        await _store.AddAsync([
+            At(85, Oct(10, 12), buyer: "Aerith Gainsborough"),
+            At(85, Oct(10, 11), buyer: "Tifa Lockhart"),
+            At(85, Oct(10, 10), buyer: "AERITH"),
+        ]);
+
+        var page = await NewReader().GetAsync(Query("Spriggan", Oct(11), buyer: buyer));
+
+        page!.Sales.Select(s => s.BuyerName).Should().Equal(expected);
+    }
+
+    [Fact]
+    public async Task First_page_cache_is_keyed_by_buyer()
+    {
+        var recent = DateTimeOffset.UtcNow.AddHours(-1);
+        await _store.AddAsync([At(85, recent, buyer: "Aerith"), At(85, recent.AddMinutes(-1), buyer: "Tifa")]);
+        var reader = NewReader();
+
+        await reader.GetAsync(Query("Spriggan", before: null));
+        var filtered = await reader.GetAsync(Query("Spriggan", before: null, buyer: "tifa"));
+
+        filtered!.Sales.Select(s => s.BuyerName).Should().Equal("Tifa");
+    }
+
+    [Fact]
+    public async Task First_page_cache_ignores_buyer_case()
+    {
+        await _store.AddAsync([At(85, DateTimeOffset.UtcNow.AddHours(-1), buyer: "Aerith")]);
+        var reader = NewReader();
+
+        await reader.GetAsync(Query("Spriggan", before: null, buyer: "aerith"));
+        var reads = _store.Reads.Count;
+        await reader.GetAsync(Query("Spriggan", before: null, buyer: "AERITH"));
+
+        _store.Reads.Should().HaveCount(reads);
     }
 
     [Fact]

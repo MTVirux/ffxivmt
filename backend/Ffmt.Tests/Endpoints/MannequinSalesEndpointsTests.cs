@@ -105,6 +105,25 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
         sales.Select(s => s.GetProperty("hq").GetBoolean()).Should().Equal(false);
     }
 
+    [Theory]
+    [InlineData("alis", new[] { "Alisaie" })]
+    [InlineData("%20ALPH%20", new[] { "Alphinaud" })]
+    [InlineData("%20", new[] { "Alphinaud", "Alisaie" })]
+    public async Task Buyer_name_filters_by_part_of_the_name(string buyer, string[] expected)
+    {
+        await _store.AddAsync([
+            new Sale(5057, 85, "Alisaie", true, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero)),
+            new Sale(5057, 86, "Alphinaud", false, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 13, 0, 0, TimeSpan.Zero)),
+        ]);
+
+        var (status, body) = await GetAsync($"?buyer_name={buyer}&before={Oct11Ms}");
+
+        status.Should().Be(StatusCodes.Status200OK);
+        JsonDocument.Parse(body).RootElement.GetProperty("data").EnumerateArray()
+            .Select(s => s.GetProperty("buyer_name").GetString())
+            .Should().Equal(expected);
+    }
+
     [Fact]
     public async Task Unknown_location_is_a_404()
     {
