@@ -97,6 +97,7 @@ app.MapItemEndpoints();
 app.MapGilfluxEndpoints();
 app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
+app.MapMannequinSalesEndpoints();
 app.MapToolsEndpoints();
 app.MapStatusEndpoints();
 app.MapConfigEndpoints();
