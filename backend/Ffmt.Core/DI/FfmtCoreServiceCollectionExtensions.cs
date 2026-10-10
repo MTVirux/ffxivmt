@@ -1,5 +1,6 @@
 using Ffmt.Core.Configuration;
 using Ffmt.Core.External;
+using Ffmt.Core.GcSeals;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Mannequin;
@@ -65,6 +66,7 @@ public static class FfmtCoreServiceCollectionExtensions
 
         // Transient so it does not pin the typed Universalis HttpClient for the process lifetime.
         services.AddTransient<MarketBoardReader>();
+        services.AddTransient<GcSealsCatalogueService>();
 
         services.AddHttpClient<IUniversalisClient, UniversalisClient>(UniversalisClient.HttpClientName, (sp, http) =>
             {
