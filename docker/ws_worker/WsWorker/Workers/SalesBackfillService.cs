@@ -80,9 +80,11 @@ public sealed class SalesBackfillService : BackgroundService
     {
         while (!ct.IsCancellationRequested)
         {
-            _logger.LogInformation("Backfill [{Loop}]: starting pass", loop.Name);
+            var regions = await OrderRegions(loop, ct);
+            _logger.LogInformation("Backfill [{Loop}]: starting pass, regions in order {Regions}",
+                loop.Name, string.Join(", ", regions));
 
-            foreach (var region in _uniOptions.RegionsToImport)
+            foreach (var region in regions)
             {
                 if (ct.IsCancellationRequested)
                     break;
@@ -102,6 +104,23 @@ public sealed class SalesBackfillService : BackgroundService
             }
 
             await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct);
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> OrderRegions(BackfillLoopSpec loop, CancellationToken ct)
+    {
+        var regions = _uniOptions.RegionsToImport;
+        try
+        {
+            var progress = await Task.WhenAll(
+                regions.Select(region => _stateStore.GetBucketProgressAsync(region, loop.Name, ct)));
+
+            return BackfillRegionOrder.StalestFirst(regions.Zip(progress));
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Backfill [{Loop}]: could not read region progress, keeping the configured order", loop.Name);
+            return regions;
         }
     }
 
