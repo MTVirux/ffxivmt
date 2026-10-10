@@ -27,8 +27,9 @@ import type { MannequinSale, WorldStructure } from '../../api/types';
 const HIGHLIGHT_MS = 5_000;
 
 const LABEL_CLASS = 'text-xs uppercase tracking-widest text-muted-foreground';
-const SELECT_CLASS =
-  'rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50';
+const INPUT_CLASS =
+  'rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50';
+const SELECT_CLASS = `${INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-50`;
 
 export default function MannequinSalesPage() {
   const [prefs] = useUserPrefs();
@@ -36,7 +37,7 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const scope = `${filters.datacenter}|${filters.world}|${filters.minUnitPrice}|${filters.quality}`;
+  const scope = `${filters.datacenter}|${filters.world}|${filters.minUnitPrice}|${filters.quality}|${filters.buyer}`;
   const { head, history } = useMannequinSales(filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
   const rows = useMemo(
@@ -80,6 +81,7 @@ export default function MannequinSalesPage() {
           value={filters.minUnitPrice}
           onCommit={(minUnitPrice) => setFilters({ minUnitPrice })}
         />
+        <BuyerInput value={filters.buyer} onCommit={(buyer) => setFilters({ buyer })} />
       </div>
 
       <section className="space-y-3">
@@ -258,7 +260,39 @@ function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: nu
         value={draft}
         onChange={(e) => setDraft(formatMinPrice(parseMinPrice(e.target.value)))}
         onBlur={commit}
-        className="w-36 rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50"
+        className={`w-36 ${INPUT_CLASS}`}
+      />
+    </form>
+  );
+}
+
+function BuyerInput({ value, onCommit }: { value: string; onCommit: (next: string) => void }) {
+  const [draft, setDraft] = useState(value);
+
+  const commit = () => {
+    const next = draft.trim();
+    setDraft(next);
+    if (next !== value) onCommit(next);
+  };
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    commit();
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-1.5">
+      <label htmlFor="mannequin-buyer" className={LABEL_CLASS}>
+        Buyer
+      </label>
+      <input
+        id="mannequin-buyer"
+        type="text"
+        placeholder="Any"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        className={`w-52 ${INPUT_CLASS}`}
       />
     </form>
   );

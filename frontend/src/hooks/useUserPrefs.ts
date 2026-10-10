@@ -55,12 +55,14 @@ const prefsSchema = z.object({
         .max(MAX_MIN_UNIT_PRICE)
         .catch(DEFAULT_MIN_UNIT_PRICE),
       quality: z.enum(['all', 'hq', 'nq']).catch('all'),
+      buyer: z.string().catch(''),
     })
     .catch({
       datacenter: '',
       world: '',
       minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
       quality: 'all',
+      buyer: '',
     }),
 });
 
@@ -83,6 +85,7 @@ function defaults(): UserPrefs {
       world: '',
       minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
       quality: 'all',
+      buyer: '',
     },
   };
 }

@@ -15,6 +15,7 @@ const DEFAULTS: UserPrefs = {
     world: '',
     minUnitPrice: 10_000_000,
     quality: 'all',
+    buyer: '',
   },
 };
 
@@ -42,7 +43,13 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
-      mannequinFilters: { datacenter: 'Light', world: 'Odin', minUnitPrice: 5000, quality: 'hq' },
+      mannequinFilters: {
+        datacenter: 'Light',
+        world: 'Odin',
+        minUnitPrice: 5000,
+        quality: 'hq',
+        buyer: 'Some One',
+      },
     });
     expect(parsePrefs(input)).toEqual({
       hiddenTimeframes: ['1h', '3h'],
@@ -53,7 +60,13 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
-      mannequinFilters: { datacenter: 'Light', world: 'Odin', minUnitPrice: 5000, quality: 'hq' },
+      mannequinFilters: {
+        datacenter: 'Light',
+        world: 'Odin',
+        minUnitPrice: 5000,
+        quality: 'hq',
+        buyer: 'Some One',
+      },
     });
   });
   it('ignores non-array fields', () => {
@@ -112,7 +125,13 @@ describe('parsePrefs', () => {
     expect(
       parsePrefs(JSON.stringify({ mannequinFilters: { datacenter: 7, minUnitPrice: -5 } }))
         .mannequinFilters,
-    ).toEqual({ datacenter: '', world: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' });
+    ).toEqual({
+      datacenter: '',
+      world: '',
+      minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
+      quality: 'all',
+      buyer: '',
+    });
   });
   it('drops a min unit price the API cannot accept', () => {
     expect(
@@ -124,6 +143,7 @@ describe('parsePrefs', () => {
       world: '',
       minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
       quality: 'all',
+      buyer: '',
     });
   });
   it('falls back to all quality when it is missing or unknown', () => {
@@ -134,13 +154,28 @@ describe('parsePrefs', () => {
       world: '',
       minUnitPrice: 5000,
       quality: 'all',
+      buyer: '',
     });
     expect(parse({ datacenter: 'Light', minUnitPrice: 5000, quality: 'shiny' })).toEqual({
       datacenter: 'Light',
       world: '',
       minUnitPrice: 5000,
       quality: 'all',
+      buyer: '',
     });
+  });
+  it('keeps saved mannequin filters written before the buyer field existed', () => {
+    const legacy = { datacenter: 'Light', world: 'Odin', minUnitPrice: 5000, quality: 'hq' };
+    expect(parsePrefs(JSON.stringify({ mannequinFilters: legacy })).mannequinFilters).toEqual({
+      ...legacy,
+      buyer: '',
+    });
+  });
+  it('falls back to no buyer when it is not a string', () => {
+    const saved = { datacenter: 'Light', world: 'Odin', minUnitPrice: 5000, quality: 'hq' };
+    expect(
+      parsePrefs(JSON.stringify({ mannequinFilters: { ...saved, buyer: 42 } })).mannequinFilters,
+    ).toEqual({ ...saved, buyer: '' });
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');
