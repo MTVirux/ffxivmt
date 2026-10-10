@@ -15,7 +15,6 @@ public static class MannequinSalesEndpoints
             string? target_location,
             long? before,
             int? limit,
-            bool? hq_only,
             int? min_unit_price,
             MannequinSalesReader reader,
             CancellationToken ct) =>
@@ -34,7 +33,6 @@ public static class MannequinSalesEndpoints
                 target_location,
                 before is null ? null : DateTimeOffset.FromUnixTimeMilliseconds(before.Value),
                 Math.Clamp(limit ?? 50, 1, 200),
-                hq_only ?? false,
                 Math.Max(0, min_unit_price ?? 0));
 
             var page = await reader.GetAsync(query, ct);

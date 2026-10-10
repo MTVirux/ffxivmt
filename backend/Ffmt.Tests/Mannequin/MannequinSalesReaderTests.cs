@@ -37,8 +37,8 @@ public sealed class MannequinSalesReaderTests
     private static Sale At(int worldId, DateTimeOffset time, bool hq = false, int price = 100, int item = 1, string buyer = "B") =>
         new(item, worldId, buyer, hq, true, 1, price, time);
 
-    private static MannequinFeedQuery Query(string location, DateTimeOffset? before, int limit = 50, bool hqOnly = false, int minPrice = 0) =>
-        new(location, before, limit, hqOnly, minPrice);
+    private static MannequinFeedQuery Query(string location, DateTimeOffset? before, int limit = 50, int minPrice = 0) =>
+        new(location, before, limit, minPrice);
 
     [Fact]
     public async Task Unknown_location_returns_null()
@@ -126,7 +126,7 @@ public sealed class MannequinSalesReaderTests
     }
 
     [Fact]
-    public async Task Hq_and_min_price_filters_apply()
+    public async Task Min_price_filter_applies()
     {
         await _store.AddAsync([
             At(85, Oct(10, 10), hq: true, price: 500),
@@ -134,9 +134,9 @@ public sealed class MannequinSalesReaderTests
             At(85, Oct(10, 12), hq: true, price: 50),
         ]);
 
-        var page = await NewReader().GetAsync(Query("Spriggan", Oct(11), hqOnly: true, minPrice: 100));
+        var page = await NewReader().GetAsync(Query("Spriggan", Oct(11), minPrice: 100));
 
-        page!.Sales.Select(s => s.SaleTime).Should().Equal(Oct(10, 10));
+        page!.Sales.Select(s => s.SaleTime).Should().Equal(Oct(10, 11), Oct(10, 10));
     }
 
     [Fact]
