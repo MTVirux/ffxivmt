@@ -26,18 +26,23 @@ export type Fill = { cost: number; byWorld: WorldPurchase[] };
 
 /**
  * Walks listings cheapest first and charges the last one only for the units needed - whole-stack
- * purchases are not modelled. Null when the board can't cover `qty`.
+ * purchases are not modelled. The cheapest `skip` units are taken as already bought elsewhere in
+ * the plan. Null when the board can't cover `skip + qty`.
  */
-export function fill(listings: readonly Listing[] | undefined, qty: number): Fill | null {
+export function fill(listings: readonly Listing[] | undefined, qty: number, skip = 0): Fill | null {
   if (qty <= 0) return { cost: 0, byWorld: [] };
   if (!listings) return null;
 
+  let toSkip = skip;
   let remaining = qty;
   let cost = 0;
   const byWorld = new Map<number, WorldPurchase>();
   for (const listing of listings) {
     if (remaining <= 0) break;
-    const take = Math.min(remaining, listing.quantity);
+    if (listing.quantity <= 0) continue;
+    const skipped = Math.min(toSkip, listing.quantity);
+    toSkip -= skipped;
+    const take = Math.min(remaining, listing.quantity - skipped);
     if (take <= 0) continue;
     remaining -= take;
     cost += take * listing.price;
@@ -53,7 +58,7 @@ export type PlanNode = {
   id: number;
   quantity: number;
   method: 'buy' | 'craft';
-  /** This node priced on its own; pricePlan re-prices the tree's purchases together. */
+  /** Priced after the listings earlier parts of the plan bought, so a tree's costs add up to its joint price. */
   cost: number;
   /** Set when method is 'craft'. */
   crafts?: number;
@@ -66,6 +71,10 @@ export type Planner = {
   best(id: number, qty: number): PlanNode | null;
 };
 
+/** Units of each item id the plan has bought so far. */
+type Used = ReadonlyMap<number, number>;
+type Choice = { node: PlanNode; used: Used };
+
 export function createPlanner(recipes: readonly GcSealsRecipe[], board: Board): Planner {
   const byItem = new Map<number, GcSealsRecipe[]>();
   for (const recipe of recipes) {
@@ -73,56 +82,63 @@ export function createPlanner(recipes: readonly GcSealsRecipe[], board: Board): 
     list.push(recipe);
     byItem.set(recipe.item_id, list);
   }
-  const memo = new Map<string, PlanNode | null>();
+  const offset = (used: Used, id: number) => used.get(id) ?? 0;
 
-  const buy = (id: number, qty: number): PlanNode | null => {
-    const filled = fill(board.get(id), qty);
-    return filled ? { id, quantity: qty, method: 'buy', cost: filled.cost, children: [] } : null;
+  const buy = (id: number, qty: number, used: Used): Choice | null => {
+    const filled = fill(board.get(id), qty, offset(used, id));
+    if (!filled) return null;
+    return {
+      node: { id, quantity: qty, method: 'buy', cost: filled.cost, children: [] },
+      used: new Map(used).set(id, offset(used, id) + qty),
+    };
   };
 
-  const craft = (id: number, qty: number, path: Set<number>): PlanNode | null => {
+  const craftWith = (recipe: GcSealsRecipe, qty: number, used: Used, path: Set<number>): Choice | null => {
+    const crafts = Math.ceil(qty / recipe.yield);
+    const wants = recipe.ingredients.map((ingredient) => ({ id: ingredient.id, qty: ingredient.amount * crafts }));
+    const buyable = wants.map((want) => fill(board.get(want.id), want.qty, offset(used, want.id)) !== null);
+    // Ingredients that can only be crafted get first claim on shared materials.
+    const order = [...wants.keys()].sort((a, b) => Number(buyable[a]) - Number(buyable[b]));
+
+    const children: PlanNode[] = [];
+    let current = used;
+    let cost = 0;
+    for (const i of order) {
+      const child = path.has(wants[i].id) ? null : best(wants[i].id, wants[i].qty, current, path);
+      if (!child) return null;
+      children[i] = child.node;
+      cost += child.node.cost;
+      current = child.used;
+    }
+    return { node: { id: recipe.item_id, quantity: qty, method: 'craft', cost, crafts, children }, used: current };
+  };
+
+  const craft = (id: number, qty: number, used: Used, path: Set<number>): Choice | null => {
     const options = byItem.get(id);
     if (!options || path.size >= MAX_DEPTH) return null;
 
     path.add(id);
-    let cheapest: PlanNode | null = null;
+    let cheapest: Choice | null = null;
     for (const recipe of options) {
-      const crafts = Math.ceil(qty / recipe.yield);
-      const children: PlanNode[] = [];
-      let cost = 0;
-      for (const ingredient of recipe.ingredients) {
-        const child = path.has(ingredient.id) ? null : best(ingredient.id, ingredient.amount * crafts, path);
-        if (!child) {
-          cost = Number.POSITIVE_INFINITY;
-          break;
-        }
-        children.push(child);
-        cost += child.cost;
-      }
-      if (Number.isFinite(cost) && (!cheapest || cost < cheapest.cost)) {
-        cheapest = { id, quantity: qty, method: 'craft', cost, crafts, children };
-      }
+      const option = craftWith(recipe, qty, used, path);
+      if (option && (!cheapest || option.node.cost < cheapest.node.cost)) cheapest = option;
     }
     path.delete(id);
     return cheapest;
   };
 
-  const best = (id: number, qty: number, path: Set<number>): PlanNode | null => {
-    const key = `${id}:${qty}`;
-    const cached = memo.get(key);
-    if (cached !== undefined) return cached;
-
-    const bought = buy(id, qty);
-    const crafted = craft(id, qty, path);
-    const result = !bought ? crafted : !crafted ? bought : crafted.cost < bought.cost ? crafted : bought;
-    memo.set(key, result);
-    return result;
+  const best = (id: number, qty: number, used: Used, path: Set<number>): Choice | null => {
+    const bought = buy(id, qty, used);
+    const crafted = craft(id, qty, used, path);
+    if (!bought) return crafted;
+    if (!crafted) return bought;
+    return crafted.node.cost < bought.node.cost ? crafted : bought;
   };
 
   return {
-    buy,
-    craft: (id, qty) => craft(id, qty, new Set()),
-    best: (id, qty) => best(id, qty, new Set()),
+    buy: (id, qty) => buy(id, qty, new Map())?.node ?? null,
+    craft: (id, qty) => craft(id, qty, new Map(), new Set())?.node ?? null,
+    best: (id, qty) => best(id, qty, new Map(), new Set())?.node ?? null,
   };
 }
 
@@ -180,8 +196,7 @@ export function computeRows(
     const count = itemCount(mode, item.seals);
     const totalSeals = count * item.seals;
     const buyCost = fill(board.get(item.id), count)?.cost ?? null;
-    const craftNode = planner.craft(item.id, count);
-    const craftCost = craftNode ? (pricePlan(craftNode, board)?.total ?? null) : null;
+    const craftCost = planner.craft(item.id, count)?.cost ?? null;
     const bestCost = buyCost === null ? craftCost : craftCost === null ? buyCost : Math.min(buyCost, craftCost);
     return {
       id: item.id,

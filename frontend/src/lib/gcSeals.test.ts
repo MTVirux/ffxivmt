@@ -44,6 +44,13 @@ describe('fill', () => {
       { worldId: 34, quantity: 1, cost: 6 },
     ]);
   });
+  it('skips units already bought', () => {
+    expect(fill([L(1, 1, 33), L(50, 10, 34)], 2, 1)).toEqual({
+      cost: 100,
+      byWorld: [{ worldId: 34, quantity: 2, cost: 100 }],
+    });
+    expect(fill([L(5, 2)], 1, 2)).toBeNull();
+  });
 });
 
 describe('createPlanner', () => {
@@ -113,17 +120,25 @@ describe('pricePlan', () => {
   it('prices a shared ingredient once across the tree', () => {
     const b = board({ [SHARD]: [L(1, 1), L(50, 10)] });
     const node = createPlanner(recipes, b).craft(SWORD, 1)!;
-    expect(node.cost).toBe(2);
+    expect(node.cost).toBe(1 + 50);
     const priced = pricePlan(node, b);
-    expect(priced?.total).toBe(1 + 50);
+    expect(priced?.total).toBe(node.cost);
     expect(priced?.purchases).toEqual([
       { id: SHARD, quantity: 2, cost: 51, byWorld: [{ worldId: 1, quantity: 2, cost: 51 }] },
     ]);
   });
-  it('is null when the summed quantity outruns the board', () => {
-    const b = board({ [SHARD]: [L(1, 1)] });
-    const node = createPlanner(recipes, b).craft(SWORD, 1)!;
-    expect(pricePlan(node, b)).toBeNull();
+  it('buys what it can so a scarce ingredient goes where it must', () => {
+    const b = board({ [SHARD]: [L(1, 1)], [INGOT]: [L(100, 5)] });
+    const node = createPlanner(recipes, b).craft(SWORD, 1);
+    expect(node?.cost).toBe(101);
+    expect(node?.children.map((c) => c.method)).toEqual(['buy', 'craft']);
+    expect(pricePlan(node!, b)?.total).toBe(101);
+  });
+  it('switches a later sibling to buy once a shared ingredient runs out', () => {
+    const b = board({ [SHARD]: [L(1, 1), L(500, 10)], [PLATE]: [L(20, 5)] });
+    const node = createPlanner(recipes, b).craft(SWORD, 1);
+    expect(node?.cost).toBe(21);
+    expect(node?.children.map((c) => c.method)).toEqual(['craft', 'buy']);
   });
 });
 
@@ -174,6 +189,22 @@ describe('computeRows', () => {
     });
     expect(sword.method).toBe('buy');
   });
+  it('prices a craft whose ingredients compete for a scarce material', () => {
+    const [sword] = computeRows(
+      {
+        items: [{ id: SWORD, name: 'Sword', item_level: 55, seals: 300 }],
+        recipes: [
+          { item_id: SWORD, yield: 1, ingredients: [{ id: INGOT, amount: 1 }, { id: PLATE, amount: 1 }] },
+          { item_id: INGOT, yield: 1, ingredients: [{ id: SHARD, amount: 1 }] },
+          { item_id: PLATE, yield: 1, ingredients: [{ id: SHARD, amount: 1 }] },
+        ],
+        names: {},
+      },
+      board({ [SHARD]: [L(1, 1)], [INGOT]: [L(100, 5)] }),
+      { kind: 'quantity', quantity: 1 },
+    );
+    expect(sword).toMatchObject({ buy_cost: null, craft_cost: 101, best_cost: 101, method: 'craft' });
+  });
 });
 
 describe('buildBreakdown', () => {
@@ -185,6 +216,17 @@ describe('buildBreakdown', () => {
     expect(breakdown?.method).toBe('craft');
     expect(breakdown?.total).toBe(200);
     expect(breakdown?.purchases.map((p) => [p.id, p.quantity])).toEqual([[INGOT, 2]]);
+  });
+  it('returns a single buy node for a bought row', () => {
+    const b = board({ [SWORD]: [L(150, 5)], [INGOT]: [L(100, 10)] });
+    const planner = createPlanner(catalogue.recipes, b);
+    const [sword] = computeRows(catalogue, b, { kind: 'quantity', quantity: 1 }, planner);
+    expect(buildBreakdown(sword, planner, b)).toEqual({
+      method: 'buy',
+      tree: { id: SWORD, quantity: 1, method: 'buy', cost: 150, children: [] },
+      total: 150,
+      purchases: [{ id: SWORD, quantity: 1, cost: 150, byWorld: [{ worldId: 1, quantity: 1, cost: 150 }] }],
+    });
   });
   it('is null for an unpriceable row', () => {
     const b = board({});
