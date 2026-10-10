@@ -101,6 +101,7 @@ app.MapUpdatedbEndpoints();
 app.MapSearchBuyerEndpoints();
 app.MapMannequinSalesEndpoints();
 app.MapToolsEndpoints();
+app.MapGcSealsEndpoints();
 app.MapStatusEndpoints();
 app.MapConfigEndpoints();
 

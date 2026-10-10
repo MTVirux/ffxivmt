@@ -1,5 +1,6 @@
 using Ffmt.Core.Configuration;
 using Ffmt.Core.External;
+using Ffmt.Core.GcSeals;
 using Ffmt.Core.Gilflux;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Mannequin;
@@ -23,6 +24,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddOptions<ElasticOptions>().Bind(configuration.GetSection(ElasticOptions.SectionName)).ValidateOnStart();
         services.AddOptions<UniversalisOptions>().Bind(configuration.GetSection(UniversalisOptions.SectionName)).ValidateOnStart();
         services.AddOptions<GarlandOptions>().Bind(configuration.GetSection(GarlandOptions.SectionName)).ValidateOnStart();
+        services.AddOptions<XivapiOptions>().Bind(configuration.GetSection(XivapiOptions.SectionName)).ValidateOnStart();
         services.AddOptions<GilfluxOptions>().Bind(configuration.GetSection(GilfluxOptions.SectionName)).ValidateOnStart();
         services.AddOptions<LoggingOptions>().Bind(configuration.GetSection(LoggingOptions.SectionName)).ValidateOnStart();
         services.AddOptions<UpdatedbOptions>().Bind(configuration.GetSection(UpdatedbOptions.SectionName)).ValidateOnStart();
@@ -64,6 +66,7 @@ public static class FfmtCoreServiceCollectionExtensions
 
         // Transient so it does not pin the typed Universalis HttpClient for the process lifetime.
         services.AddTransient<MarketBoardReader>();
+        services.AddTransient<GcSealsCatalogueService>();
 
         services.AddHttpClient<IUniversalisClient, UniversalisClient>(UniversalisClient.HttpClientName, (sp, http) =>
             {
@@ -86,6 +89,18 @@ public static class FfmtCoreServiceCollectionExtensions
             .AddPolicyHandler((sp, _) =>
             {
                 var opts = sp.GetRequiredService<IOptions<GarlandOptions>>().Value;
+                return HttpRetryPolicy.Build(opts.MaxRetries, opts.InitialBackoffSeconds, opts.MaxBackoffSeconds);
+            });
+
+        services.AddHttpClient<IXivapiClient, XivapiClient>(XivapiClient.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<XivapiOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(opts.RequestTimeoutSeconds);
+            })
+            .AddPolicyHandler((sp, _) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<XivapiOptions>>().Value;
                 return HttpRetryPolicy.Build(opts.MaxRetries, opts.InitialBackoffSeconds, opts.MaxBackoffSeconds);
             });
 
