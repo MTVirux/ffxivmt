@@ -10,6 +10,7 @@ const DEFAULTS: UserPrefs = {
   tableSort: {},
   toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
   buyerSearchWorld: '',
+  buyerSearchMinUnitPrice: 0,
   mannequinFilters: {
     datacenter: '',
     world: '',
@@ -43,6 +44,7 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
+      buyerSearchMinUnitPrice: 250000,
       mannequinFilters: {
         datacenter: 'Light',
         world: 'Odin',
@@ -60,6 +62,7 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
+      buyerSearchMinUnitPrice: 250000,
       mannequinFilters: {
         datacenter: 'Light',
         world: 'Odin',
@@ -120,6 +123,11 @@ describe('parsePrefs', () => {
       ...DEFAULTS,
       tableSort: { ranking: [{ id: '1h', desc: true }], itemProfit: [] },
     });
+  });
+  it('falls back to no buyer search min price when it is malformed or too large', () => {
+    expect(parsePrefs('{"buyerSearchMinUnitPrice":-5}').buyerSearchMinUnitPrice).toBe(0);
+    expect(parsePrefs('{"buyerSearchMinUnitPrice":"10"}').buyerSearchMinUnitPrice).toBe(0);
+    expect(parsePrefs('{"buyerSearchMinUnitPrice":3000000000}').buyerSearchMinUnitPrice).toBe(0);
   });
   it('falls back to default mannequin filters when they are malformed', () => {
     expect(

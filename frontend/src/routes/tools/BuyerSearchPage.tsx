@@ -11,7 +11,9 @@ import { useBuyerSearch } from '../../hooks/useBuyerSearch';
 import { useItemNames } from '../../hooks/useItemNames';
 import { useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
+import { filterByMinUnitPrice } from '../../lib/buyerSearch';
 import { formatGilExact, formatNumber } from '../../lib/format';
+import { formatMinPrice, parseMinPrice } from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
 import type { BuyerSearchRow, WorldStructure } from '../../api/types';
@@ -31,6 +33,7 @@ export default function BuyerSearchPage() {
   // tiered Location type can't express.
   const world = prefs.buyerSearchWorld;
   const setWorld = (next: string) => patchPrefs({ buyerSearchWorld: next });
+  const minUnitPrice = prefs.buyerSearchMinUnitPrice;
 
   const {
     register,
@@ -56,6 +59,11 @@ export default function BuyerSearchPage() {
     [query.data],
   );
   const itemNameMap = useItemNames(itemIds);
+
+  const shownRows = useMemo(
+    () => filterByMinUnitPrice(query.data ?? [], minUnitPrice),
+    [query.data, minUnitPrice],
+  );
 
   const onSubmit = handleSubmit((values) => {
     patchPrefs((prev) => ({
@@ -100,6 +108,17 @@ export default function BuyerSearchPage() {
           />
         </div>
 
+        <TextField
+          label="Min unit price"
+          id="buyer-min-price"
+          inputMode="numeric"
+          placeholder="0"
+          autoComplete="off"
+          className="w-36"
+          value={formatMinPrice(minUnitPrice)}
+          onChange={(e) => patchPrefs({ buyerSearchMinUnitPrice: parseMinPrice(e.target.value) })}
+        />
+
         <button
           type="submit"
           disabled={query.isFetching}
@@ -120,9 +139,11 @@ export default function BuyerSearchPage() {
             {(rows) =>
               rows.length === 0 ? (
                 <EmptyState>No purchases found.</EmptyState>
+              ) : shownRows.length === 0 ? (
+                <EmptyState>No purchases at or above that price.</EmptyState>
               ) : (
                 <ResultsTable
-                  rows={rows}
+                  rows={shownRows}
                   worldNameMap={worldNameMap}
                   itemNameMap={itemNameMap}
                 />
@@ -233,4 +254,3 @@ function ResultsTable({
     </div>
   );
 }
-
