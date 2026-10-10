@@ -118,3 +118,24 @@ export type BuyerSearchRow = {
   /** quantity * unit_price. Null whenever quantity is. */
   total_price: number | null;
 };
+
+/** GET /api/v1/mannequin_sales - one mannequin sale. */
+export type MannequinSale = {
+  item_id: number;
+  world_id: number;
+  buyer_name: string;
+  /** ISO 8601 with timezone offset. */
+  sale_time: string;
+  hq: boolean;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+};
+
+export type MannequinSalesResponse = {
+  status: true;
+  message: string;
+  data: MannequinSale[];
+  /** Unix ms cursor for the next older page; null once history runs out. */
+  next_before: number | null;
+};
