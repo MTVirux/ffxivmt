@@ -8,6 +8,10 @@ public sealed class ScyllaBackfillStateStore(IScyllaSession scylla) : IBackfillS
         "SELECT bucket, last_import_at, earliest_import_at, crawl_complete " +
         "FROM ffmt.backfill_bucket_state WHERE region = ? AND loop = ?";
 
+    private const string SelectBucketProgressCql =
+        "SELECT bucket, earliest_import_at, crawl_complete, WRITETIME(earliest_import_at) AS pointer_written_at " +
+        "FROM ffmt.backfill_bucket_state WHERE region = ? AND loop = ?";
+
     private const string UpsertBucketCql =
         "INSERT INTO ffmt.backfill_bucket_state " +
         "(region, loop, bucket, last_import_at, earliest_import_at, crawl_complete) " +
@@ -35,6 +39,25 @@ public sealed class ScyllaBackfillStateStore(IScyllaSession scylla) : IBackfillS
         }
 
         return states;
+    }
+
+    public async Task<IReadOnlyList<BackfillBucketProgress>> GetBucketProgressAsync(
+        string region, string loop, CancellationToken ct = default)
+    {
+        var prepared = await scylla.PrepareAsync(SelectBucketProgressCql, ct).ConfigureAwait(false);
+        var rows = await scylla.Session.ExecuteAsync(prepared.Bind(region, loop)).ConfigureAwait(false);
+
+        var buckets = new List<BackfillBucketProgress>();
+        foreach (var row in rows)
+        {
+            buckets.Add(new BackfillBucketProgress(
+                row.GetValue<int>("bucket"),
+                row.SafeTimestamp("earliest_import_at"),
+                row.SafeBool("crawl_complete"),
+                row.SafeWriteTime("pointer_written_at")));
+        }
+
+        return buckets;
     }
 
     public async Task UpsertBucketAsync(BackfillBucketState state, CancellationToken ct = default)

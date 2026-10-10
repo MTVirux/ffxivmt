@@ -16,4 +16,8 @@ internal static class RowExtensions
 
     public static long? SafeEpochMs(this Row row, string column) =>
         row.IsNull(column) ? null : row.GetValue<DateTimeOffset>(column).ToUnixTimeMilliseconds();
+
+    /// <summary>Reads a WRITETIME(...) column, which is microseconds since the epoch.</summary>
+    public static DateTimeOffset? SafeWriteTime(this Row row, string column) =>
+        row.IsNull(column) ? null : DateTimeOffset.UnixEpoch.AddTicks(row.GetValue<long>(column) * TimeSpan.TicksPerMicrosecond);
 }

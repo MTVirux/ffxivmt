@@ -28,6 +28,21 @@ public sealed class BackfillStateStoreCqlTests
     }
 
     [Fact]
+    public async Task GetBucketProgressAsync_reads_the_pointer_write_time_from_a_single_partition()
+    {
+        var (store, captured) = NewStore();
+
+        try { await store.GetBucketProgressAsync("Europe", "historical"); } catch { }
+
+        captured.Should().ContainSingle(c =>
+            c.Contains("FROM ffmt.backfill_bucket_state") &&
+            c.Contains("WRITETIME(earliest_import_at)") &&
+            c.Contains("region = ?") &&
+            c.Contains("loop = ?"));
+        captured.Should().NotContain(c => c.Contains("ALLOW FILTERING"));
+    }
+
+    [Fact]
     public async Task UpsertBucketAsync_targets_the_full_primary_key()
     {
         var (store, captured) = NewStore();
