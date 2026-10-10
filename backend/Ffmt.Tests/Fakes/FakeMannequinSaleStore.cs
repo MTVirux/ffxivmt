@@ -14,6 +14,7 @@ internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
     public SortedSet<DateOnly> Days { get; } = new();
     public List<DateOnly> Reads { get; } = [];
     public List<int> AllReads { get; } = [];
+    public Task? AllGate { get; set; }
     public List<(IReadOnlyCollection<int> WorldIds, DateOnly Day)> Deletes { get; } = [];
 
     public Task AddAsync(IReadOnlyList<Sale> sales, CancellationToken ct = default)
@@ -45,13 +46,21 @@ internal sealed class FakeMannequinSaleStore : IMannequinSaleStore
         }
     }
 
-    public Task<IReadOnlyList<Sale>> GetAllAsync(int limit, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Sale>> GetAllAsync(int limit, CancellationToken ct = default)
     {
         lock (_gate)
         {
             AllReads.Add(limit);
-            IReadOnlyList<Sale> rows = Sales.Take(limit).ToList();
-            return Task.FromResult(rows);
+        }
+
+        if (AllGate is not null)
+        {
+            await AllGate;
+        }
+
+        lock (_gate)
+        {
+            return Sales.Take(limit).ToList();
         }
     }
 

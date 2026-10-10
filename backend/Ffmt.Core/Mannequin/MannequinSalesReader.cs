@@ -21,6 +21,8 @@ public sealed class MannequinSalesReader(
 {
     private const string AllCacheKey = "mannequin:all";
 
+    private readonly SemaphoreSlim _allLoadLock = new(1, 1);
+
     private TimeSpan CacheTtl => TimeSpan.FromSeconds(Math.Max(1, options.Value.FeedCacheSeconds));
 
     public async Task<MannequinFeedPage?> GetAsync(MannequinFeedQuery query, CancellationToken ct = default)
@@ -67,19 +69,33 @@ public sealed class MannequinSalesReader(
             return cached;
         }
 
-        var maxRows = Math.Clamp(options.Value.FullLoadMaxRows, 1, int.MaxValue - 1);
-        var rows = await store.GetAllAsync(maxRows + 1, ct).ConfigureAwait(false);
-
-        List<Sale>? sales = null;
-        if (rows.Count <= maxRows)
+        // One full scan per cache expiry, however many requests miss at once.
+        await _allLoadLock.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
-            var worldIds = worlds.Select(w => w.Id).ToHashSet();
-            sales = NewestFirst(rows.Where(s => worldIds.Contains(s.WorldId)));
-        }
+            if (cache.TryGetValue(AllCacheKey, out cached))
+            {
+                return cached;
+            }
 
-        cache.Set(AllCacheKey, sales, CacheTtl);
-        return sales;
+            var maxRows = Math.Clamp(options.Value.FullLoadMaxRows, 1, int.MaxValue - 1);
+            var rows = await store.GetAllAsync(maxRows + 1, ct).ConfigureAwait(false);
+
+            List<Sale>? sales = null;
+            if (rows.Count <= maxRows)
+            {
+                var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
+                var worldIds = worlds.Select(w => w.Id).ToHashSet();
+                sales = NewestFirst(rows.Where(s => worldIds.Contains(s.WorldId)));
+            }
+
+            cache.Set(AllCacheKey, sales, CacheTtl);
+            return sales;
+        }
+        finally
+        {
+            _allLoadLock.Release();
+        }
     }
 
     private async Task<MannequinFeedPage> WalkAsync(

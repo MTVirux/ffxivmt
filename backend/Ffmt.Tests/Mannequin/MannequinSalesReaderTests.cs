@@ -355,4 +355,21 @@ public sealed class MannequinSalesReaderTests
         second.Should().BeEquivalentTo(first);
         _store.AllReads.Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task GetAllAsync_shares_one_read_between_concurrent_callers()
+    {
+        await _store.AddAsync([At(85, Oct(10))]);
+        var release = new TaskCompletionSource();
+        _store.AllGate = release.Task;
+        var reader = NewReader();
+
+        var first = reader.GetAllAsync();
+        var second = reader.GetAllAsync();
+        release.SetResult();
+        await Task.WhenAll(first, second);
+
+        _store.AllReads.Should().HaveCount(1);
+        (await second).Should().HaveCount(1);
+    }
 }
