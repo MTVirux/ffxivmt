@@ -1,3 +1,4 @@
+using System.Net;
 using Cassandra;
 using Ffmt.Core.Models;
 using Ffmt.Core.Storage.Scylla;
@@ -14,6 +15,22 @@ public sealed class SaleStoreMannequinCqlTests
 
     private static ScyllaSaleStore NewStore(IScyllaSession session) =>
         new(session, NullLogger<ScyllaSaleStore>.Instance);
+
+    // Every mannequin prepare throws `failure`; the rest return a null PreparedStatement, so reaching
+    // a sales bind surfaces as a NullReferenceException.
+    private static IScyllaSession MannequinFailingSession(Exception failure, List<string> captured)
+    {
+        var session = Substitute.For<IScyllaSession>();
+        session.PrepareAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ci =>
+        {
+            var cql = ci.Arg<string>();
+            captured.Add(cql);
+            return cql.Contains("mannequin_sales", StringComparison.Ordinal)
+                ? Task.FromException<PreparedStatement>(failure)
+                : Task.FromResult<PreparedStatement>(null!);
+        });
+        return session;
+    }
 
     [Fact]
     public async Task AddBatchAsync_prepares_mannequin_inserts_only_for_a_batch_that_has_one()
@@ -32,19 +49,10 @@ public sealed class SaleStoreMannequinCqlTests
     [Fact]
     public async Task AddBatchAsync_keeps_writing_sales_when_the_mannequin_tables_are_missing()
     {
-        var session = Substitute.For<IScyllaSession>();
         var captured = new List<string>();
-        session.PrepareAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ci =>
-        {
-            var cql = ci.Arg<string>();
-            captured.Add(cql);
-            return cql.Contains("mannequin_sales", StringComparison.Ordinal)
-                ? Task.FromException<PreparedStatement>(new InvalidQueryException("unconfigured table mannequin_sales"))
-                : Task.FromResult<PreparedStatement>(null!);
-        });
-        var store = NewStore(session);
+        var store = NewStore(MannequinFailingSession(
+            new InvalidQueryException("unconfigured table mannequin_sales"), captured));
 
-        // The null PreparedStatement fails the sales bind - reaching it proves the mannequin failure was swallowed.
         await store.Invoking(s => s.AddBatchAsync([NewSale(onMannequin: true)]))
             .Should().ThrowAsync<NullReferenceException>();
         var attempts = captured.Count(c => c.Contains("INSERT INTO mannequin_sales", StringComparison.Ordinal));
@@ -55,6 +63,38 @@ public sealed class SaleStoreMannequinCqlTests
         attempts.Should().Be(1);
         captured.Count(c => c.Contains("INSERT INTO mannequin_sales", StringComparison.Ordinal))
             .Should().Be(attempts, "a missing table is retried after a back-off, not on every batch");
+    }
+
+    [Fact]
+    public async Task AddBatchAsync_swallows_any_driver_failure_preparing_the_mannequin_inserts()
+    {
+        var store = NewStore(MannequinFailingSession(
+            new OperationTimedOutException(new IPEndPoint(IPAddress.Loopback, 9042), 12000), []));
+
+        await store.Invoking(s => s.AddBatchAsync([NewSale(onMannequin: true)]))
+            .Should().ThrowAsync<NullReferenceException>();
+    }
+
+    [Fact]
+    public async Task AddBatchAsync_prepares_the_mannequin_statements_once_per_store()
+    {
+        var (session, captured) = CapturingScyllaSession.New();
+        var store = NewStore(session);
+
+        try { await store.AddBatchAsync([NewSale(onMannequin: true)]); } catch { }
+        try { await store.AddBatchAsync([NewSale(onMannequin: true)]); } catch { }
+
+        captured.Count(c => c.Contains("INSERT INTO mannequin_sales_days")).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DeleteExactAsync_keeps_scrubbing_sales_when_the_mannequin_table_is_missing()
+    {
+        var store = NewStore(MannequinFailingSession(
+            new InvalidQueryException("unconfigured table mannequin_sales"), []));
+
+        await store.Invoking(s => s.DeleteExactAsync([NewSale(onMannequin: true)]))
+            .Should().ThrowAsync<NullReferenceException>();
     }
 
     [Fact]
