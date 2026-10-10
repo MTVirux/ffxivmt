@@ -74,6 +74,7 @@ export function useUniversalisStream() {
           queryKey: ['item', itemId] as const,
           queryFn: () => apiGet<Item>(`/item/${itemId}`),
           staleTime: Infinity,
+          gcTime: Infinity,
           retry: false,
         });
         return item.name;
