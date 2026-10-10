@@ -1,5 +1,21 @@
-import type { MannequinSale } from '../api/types';
+import type { MannequinSale, WorldStructure } from '../api/types';
 import { formatNumber } from './format';
+
+export type MannequinQuality = 'all' | 'hq' | 'nq';
+
+// An empty world means the whole datacenter, an empty datacenter every world.
+export type MannequinFilters = {
+  datacenter: string;
+  world: string;
+  minUnitPrice: number;
+  quality: MannequinQuality;
+  buyer: string;
+};
+
+/** One key per filter combination, for state that starts over when the filters change. */
+export function mannequinScope(f: MannequinFilters): string {
+  return `${f.datacenter}|${f.world}|${f.minUnitPrice}|${f.quality}|${f.buyer}`;
+}
 
 // The API binds min_unit_price as an int32.
 export const MAX_MIN_UNIT_PRICE = 999_999_999;
@@ -12,6 +28,42 @@ export function parseMinPrice(text: string): number {
 
 export function formatMinPrice(n: number): string {
   return n > 0 ? formatNumber(n) : '';
+}
+
+/**
+ * The server's feed filter, applied in the browser. Undefined while a location filter
+ * still needs the world tree, so callers can keep showing a loading state.
+ */
+export function filterMannequinSales(
+  rows: MannequinSale[],
+  { datacenter, world, minUnitPrice, quality, buyer }: MannequinFilters,
+  worlds: WorldStructure | undefined,
+): MannequinSale[] | undefined {
+  let worldIds: Set<number> | null = null;
+  if (world || datacenter) {
+    if (!worlds) return undefined;
+    worldIds = worldIdsAt(worlds, datacenter, world);
+  }
+  const buyerText = buyer.trim().toLowerCase();
+  return rows.filter(
+    (s) =>
+      (worldIds === null || worldIds.has(s.world_id)) &&
+      (quality === 'all' || s.hq === (quality === 'hq')) &&
+      s.unit_price >= minUnitPrice &&
+      s.buyer_name.toLowerCase().includes(buyerText),
+  );
+}
+
+function worldIdsAt(tree: WorldStructure, datacenter: string, world: string): Set<number> {
+  const ids = new Set<number>();
+  for (const dcs of Object.values(tree)) {
+    for (const [dc, members] of Object.entries(dcs)) {
+      for (const [id, name] of Object.entries(members)) {
+        if (world ? name === world : dc === datacenter) ids.add(Number(id));
+      }
+    }
+  }
+  return ids;
 }
 
 export function mannequinSaleKey(s: MannequinSale): string {

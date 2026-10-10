@@ -4,21 +4,18 @@ import { Td, Th } from '../../components/data/TableCells';
 import EmptyState from '../../components/layout/EmptyState';
 import { QUERY_SKELETON_CLASS } from '../../components/layout/QueryBoundary';
 import { useItemNames } from '../../hooks/useItemNames';
-import {
-  useMannequinSales,
-  type MannequinFilters,
-  type MannequinQuality,
-} from '../../hooks/useMannequinSales';
+import { useMannequinSales } from '../../hooks/useMannequinSales';
 import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact } from '../../lib/format';
 import {
-  accumulateHead,
   formatMinPrice,
   mannequinSaleKey,
-  mergeSales,
+  mannequinScope,
   newSaleKeys,
   parseMinPrice,
+  type MannequinFilters,
+  type MannequinQuality,
 } from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
@@ -37,16 +34,8 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const scope = `${filters.datacenter}|${filters.world}|${filters.minUnitPrice}|${filters.quality}|${filters.buyer}`;
-  const { head, history } = useMannequinSales(filters);
-  const headRows = useAccumulatedHead(head.data?.data, scope);
-  const rows = useMemo(
-    () => mergeSales(headRows, history.data?.pages.flatMap((p) => p.data) ?? []),
-    [headRows, history.data],
-  );
-  const highlighted = useNewRowHighlight(rows, scope);
-  const isError = head.isError || history.isError;
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = history;
+  const { rows, hasMore, loadMore, isLoadingMore, isLoading, isError } = useMannequinSales(filters);
+  const highlighted = useNewRowHighlight(rows, mannequinScope(filters));
 
   const worlds = useWorlds();
   const worldNameMap = useMemo(() => buildWorldNameMap(worlds.data), [worlds.data]);
@@ -85,7 +74,7 @@ export default function MannequinSalesPage() {
       </div>
 
       <section className="space-y-3">
-        {history.isLoading ? (
+        {isLoading ? (
           <div className={QUERY_SKELETON_CLASS} />
         ) : (
           <>
@@ -99,21 +88,19 @@ export default function MannequinSalesPage() {
             ) : (
               !isError && (
                 <EmptyState>
-                  {hasNextPage
-                    ? 'No mannequin sales in recent history.'
-                    : 'No mannequin sales found.'}
+                  {hasMore ? 'No mannequin sales in recent history.' : 'No mannequin sales found.'}
                 </EmptyState>
               )
             )}
             {isError && <LoadError />}
-            {hasNextPage && (
+            {hasMore && (
               <button
                 type="button"
-                onClick={() => void fetchNextPage()}
-                disabled={isFetchingNextPage}
+                onClick={loadMore}
+                disabled={isLoadingMore}
                 className="rounded-md border border-border/60 bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isFetchingNextPage ? 'Loading…' : 'Load more'}
+                {isLoadingMore ? 'Loading…' : 'Load more'}
               </button>
             )}
           </>
@@ -296,21 +283,6 @@ function BuyerInput({ value, onCommit }: { value: string; onCommit: (next: strin
       />
     </form>
   );
-}
-
-// The history's first page is never refetched, so rows pushed off the head between polls
-// would otherwise vanish. Derived during render; a new scope starts from nothing.
-function useAccumulatedHead(latest: MannequinSale[] | undefined, scope: string): MannequinSale[] {
-  const [acc, setAcc] = useState<{
-    scope: string;
-    latest: MannequinSale[] | undefined;
-    rows: MannequinSale[];
-  }>({ scope, latest: undefined, rows: [] });
-
-  if (acc.scope === scope && acc.latest === latest) return acc.rows;
-  const rows = accumulateHead(acc.scope === scope ? acc.rows : [], latest ?? []);
-  setAcc({ scope, latest, rows });
-  return rows;
 }
 
 function useNewRowHighlight(rows: MannequinSale[], scope: string): Set<string> {

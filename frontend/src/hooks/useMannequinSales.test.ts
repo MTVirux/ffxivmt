@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildMannequinPath, type MannequinFilters } from './useMannequinSales';
+import type { MannequinFilters } from '../lib/mannequin';
+import { buildMannequinPath } from './useMannequinSales';
 
 const ANY: MannequinFilters = {
   datacenter: '',

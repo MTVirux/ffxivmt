@@ -142,6 +142,15 @@ export type MannequinSalesResponse = {
   next_before: number | null;
 };
 
+/** GET /api/v1/mannequin_sales/all - every row, newest first. */
+export type MannequinSalesAllResponse = {
+  status: true;
+  message: string;
+  /** False once the table outgrows the server's row cap; `data` is then empty. */
+  complete: boolean;
+  data: MannequinSale[];
+};
+
 /** GET /api/v1/status/metrics */
 export type StatusState = 'operational' | 'degraded' | 'down' | 'unknown';
 
