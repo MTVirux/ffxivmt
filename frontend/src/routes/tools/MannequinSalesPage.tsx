@@ -229,10 +229,7 @@ function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: nu
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-1.5">
-      <label
-        htmlFor="mannequin-min-price"
-        className="text-xs uppercase tracking-widest text-muted-foreground"
-      >
+      <label htmlFor="mannequin-min-price" className={LABEL_CLASS}>
         Min unit price
       </label>
       <input
