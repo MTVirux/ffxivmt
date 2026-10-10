@@ -37,7 +37,7 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
-  const scope = `${filters.datacenter}|${filters.minUnitPrice}|${filters.quality}`;
+  const scope = `${filters.datacenter}|${filters.world}|${filters.minUnitPrice}|${filters.quality}`;
   const { head, history } = useMannequinSales(filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
   const rows = useMemo(
@@ -93,8 +93,15 @@ export default function MannequinSalesPage() {
         <DatacenterSelect
           worlds={worlds.data}
           value={filters.datacenter}
-          onChange={(datacenter) => setFilters({ datacenter })}
+          onChange={(datacenter) => setFilters({ datacenter, world: '' })}
         />
+        {filters.datacenter && (
+          <WorldSelect
+            worlds={worldsInDatacenter(worlds.data, filters.datacenter)}
+            value={filters.world}
+            onChange={(world) => setFilters({ world })}
+          />
+        )}
         <QualitySelect value={filters.quality} onChange={(quality) => setFilters({ quality })} />
         <MinPriceInput
           value={filters.minUnitPrice}
@@ -185,6 +192,46 @@ function DatacenterSelect({
       </select>
     </div>
   );
+}
+
+function WorldSelect({
+  worlds,
+  value,
+  onChange,
+}: {
+  worlds: string[];
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor="mannequin-world" className={LABEL_CLASS}>
+        World
+      </label>
+      <select
+        id="mannequin-world"
+        value={value}
+        disabled={worlds.length === 0}
+        onChange={(e) => onChange(e.target.value)}
+        className={SELECT_CLASS}
+      >
+        <option value="">All</option>
+        {worlds.map((w) => (
+          <option key={w} value={w}>
+            {w}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function worldsInDatacenter(tree: WorldStructure | undefined, datacenter: string): string[] {
+  for (const dcs of Object.values(tree ?? {})) {
+    const worlds = dcs[datacenter];
+    if (worlds) return Object.values(worlds).sort((a, b) => a.localeCompare(b));
+  }
+  return [];
 }
 
 function QualitySelect({

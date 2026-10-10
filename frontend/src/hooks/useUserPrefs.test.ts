@@ -10,7 +10,12 @@ const DEFAULTS: UserPrefs = {
   tableSort: {},
   toolInputs: { currencyEff: '', itemProfit: '', buyerSearch: '' },
   buyerSearchWorld: '',
-  mannequinFilters: { datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' },
+  mannequinFilters: {
+    datacenter: '',
+    world: '',
+    minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
+    quality: 'all',
+  },
 };
 
 describe('parsePrefs', () => {
@@ -37,7 +42,7 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
-      mannequinFilters: { datacenter: 'Light', minUnitPrice: 5000, quality: 'hq' },
+      mannequinFilters: { datacenter: 'Light', world: 'Odin', minUnitPrice: 5000, quality: 'hq' },
     });
     expect(parsePrefs(input)).toEqual({
       hiddenTimeframes: ['1h', '3h'],
@@ -48,7 +53,7 @@ describe('parsePrefs', () => {
       tableSort: { ranking: [{ id: '6h', desc: false }] },
       toolInputs: { currencyEff: 'Poetics', itemProfit: 'Mythril Ingot', buyerSearch: 'Some One' },
       buyerSearchWorld: 'Cerberus',
-      mannequinFilters: { datacenter: 'Light', minUnitPrice: 5000, quality: 'hq' },
+      mannequinFilters: { datacenter: 'Light', world: 'Odin', minUnitPrice: 5000, quality: 'hq' },
     });
   });
   it('ignores non-array fields', () => {
@@ -107,25 +112,32 @@ describe('parsePrefs', () => {
     expect(
       parsePrefs(JSON.stringify({ mannequinFilters: { datacenter: 7, minUnitPrice: -5 } }))
         .mannequinFilters,
-    ).toEqual({ datacenter: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' });
+    ).toEqual({ datacenter: '', world: '', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' });
   });
   it('drops a min unit price the API cannot accept', () => {
     expect(
       parsePrefs(
         JSON.stringify({ mannequinFilters: { datacenter: 'Chaos', minUnitPrice: 3000000000 } }),
       ).mannequinFilters,
-    ).toEqual({ datacenter: 'Chaos', minUnitPrice: DEFAULT_MIN_UNIT_PRICE, quality: 'all' });
+    ).toEqual({
+      datacenter: 'Chaos',
+      world: '',
+      minUnitPrice: DEFAULT_MIN_UNIT_PRICE,
+      quality: 'all',
+    });
   });
   it('falls back to all quality when it is missing or unknown', () => {
     const parse = (mannequinFilters: unknown) =>
       parsePrefs(JSON.stringify({ mannequinFilters })).mannequinFilters;
     expect(parse({ datacenter: 'Light', minUnitPrice: 5000 })).toEqual({
       datacenter: 'Light',
+      world: '',
       minUnitPrice: 5000,
       quality: 'all',
     });
     expect(parse({ datacenter: 'Light', minUnitPrice: 5000, quality: 'shiny' })).toEqual({
       datacenter: 'Light',
+      world: '',
       minUnitPrice: 5000,
       quality: 'all',
     });
