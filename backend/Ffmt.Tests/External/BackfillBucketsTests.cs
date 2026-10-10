@@ -69,13 +69,29 @@ public sealed class BackfillWindowTests
     }
 
     [Fact]
-    public void Entries_within_is_measured_from_now_not_from_the_window_width()
+    public void Query_is_bounded_by_the_window_not_by_now()
     {
-        // The history endpoint only accepts a window relative to now, so a backwards crawl asks
-        // for everything since the window start; the window's own width would skip the older half.
-        var windowStart = Now.AddDays(-9);
+        var end = Now.AddDays(-60);
+        var window = new BackfillBucketWindow(end.AddDays(-7), end);
 
-        BackfillWindow.EntriesWithinSeconds(windowStart, Now)
-            .Should().Be((long)TimeSpan.FromDays(9).TotalSeconds);
+        var (within, until) = BackfillWindow.ToHistoryQuery(window);
+
+        until.Should().Be(end.ToUnixTimeSeconds() + 1);
+        within.Should().Be((long)TimeSpan.FromDays(7).TotalSeconds + 1,
+            "a deep window costs the same as a recent one");
+    }
+
+    [Fact]
+    public void Adjacent_windows_leave_no_second_uncovered()
+    {
+        var boundary = Now.AddDays(-10).AddMilliseconds(700);
+        var older = BackfillWindow.ToHistoryQuery(new BackfillBucketWindow(boundary.AddDays(-7), boundary));
+        var newer = BackfillWindow.ToHistoryQuery(new BackfillBucketWindow(boundary, boundary.AddDays(7)));
+
+        var olderLastSecond = older.EntriesUntil - 1;
+        var newerFirstSecond = newer.EntriesUntil - newer.EntriesWithin;
+
+        newerFirstSecond.Should().BeLessThanOrEqualTo(olderLastSecond,
+            "rows land idempotently, so overlap is harmless and a gap loses sales");
     }
 }

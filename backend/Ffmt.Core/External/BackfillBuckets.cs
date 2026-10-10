@@ -33,19 +33,20 @@ public static class BackfillBuckets
     }
 }
 
-/// <summary>
-/// Window arithmetic for the Universalis history endpoint, which only accepts a window
-/// relative to now.
-/// </summary>
+/// <summary>Window arithmetic for the Universalis history endpoint.</summary>
 public static class BackfillWindow
 {
     public static DateTimeOffset HistoricalStart(DateTimeOffset earliestImportAt, int chunkDays) =>
         earliestImportAt - TimeSpan.FromDays(chunkDays);
 
     /// <summary>
-    /// Everything since <paramref name="windowStart"/>, not the window's own width - a crawl
-    /// walking backwards has to ask for the whole span and discard the newer part.
+    /// <c>entriesWithin</c> counts back from <c>entriesUntil</c>, both in whole seconds. The bounds are
+    /// widened outwards so a sale on a boundary second lands in at least one window - rows are keyed by
+    /// sale, so overlap is harmless and a gap is not.
     /// </summary>
-    public static long EntriesWithinSeconds(DateTimeOffset windowStart, DateTimeOffset now) =>
-        (long)(now - windowStart).TotalSeconds;
+    public static (long EntriesWithin, long EntriesUntil) ToHistoryQuery(BackfillBucketWindow window)
+    {
+        var until = window.End.ToUnixTimeSeconds() + 1;
+        return (until - window.Start.ToUnixTimeSeconds(), until);
+    }
 }

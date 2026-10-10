@@ -33,6 +33,8 @@ public sealed class SalesBackfillService : BackgroundService
     private const int StateRunning = 1;
     private const int StateError = 3;
 
+    private const int MaxEntriesPerItem = 99999;
+
     private sealed record BucketWork(
         BackfillBucketState State,
         IReadOnlyList<int> Items,
@@ -185,10 +187,10 @@ public sealed class SalesBackfillService : BackgroundService
 
     private Task<List<Sale>?> FetchBucket(string region, BucketWork bucket, CancellationToken ct)
     {
-        var entriesWithinSeconds = BackfillWindow.EntriesWithinSeconds(bucket.Window.Start, bucket.Window.End);
-        var requestTimeout = _backfillOptions.Tuning.RequestTimeoutFor(entriesWithinSeconds);
+        var (entriesWithin, _) = BackfillWindow.ToHistoryQuery(bucket.Window);
+        var requestTimeout = _backfillOptions.Tuning.RequestTimeoutFor(entriesWithin);
 
-        return FetchChunk(region, bucket.Items, entriesWithinSeconds, requestTimeout, ct);
+        return FetchChunk(region, bucket.Items, bucket.Window, MaxEntriesPerItem, requestTimeout, ct);
     }
 
     private async Task<BackfillBucketOutcome> SettleBucket(
@@ -197,18 +199,13 @@ public sealed class SalesBackfillService : BackgroundService
         List<Sale> sales,
         CancellationToken ct)
     {
-        var olderThan = bucket.Window.OlderThan;
-        var toWrite = olderThan is null
-            ? sales
-            : sales.Where(s => s.SaleTime < olderThan.Value).ToList();
-
-        if (toWrite.Count > 0)
+        if (sales.Count > 0)
         {
-            await _saleWriter.AddBatchAsync(toWrite, ct);
-            await EnqueueDirtyPairs(toWrite, ct);
+            await _saleWriter.AddBatchAsync(sales, ct);
+            await EnqueueDirtyPairs(sales, ct);
         }
 
-        var (next, outcome) = loop.Advance(bucket.State, bucket.Window, toWrite.Count > 0);
+        var (next, outcome) = loop.Advance(bucket.State, bucket.Window, sales.Count > 0);
         await _stateStore.UpsertBucketAsync(next, ct);
 
         return outcome;
@@ -283,12 +280,14 @@ public sealed class SalesBackfillService : BackgroundService
     private async Task<List<Sale>?> FetchChunk(
         string region,
         IReadOnlyList<int> itemIds,
-        long entriesWithinSeconds,
+        BackfillBucketWindow window,
+        int entriesPerItem,
         TimeSpan requestTimeout,
         CancellationToken ct)
     {
         var itemIdStr = string.Join(",", itemIds);
-        var url = $"{_uniOptions.BaseUrl.TrimEnd('/')}/history/{region}/{itemIdStr}?entriesWithin={entriesWithinSeconds}&entriesToReturn=99999";
+        var (entriesWithin, entriesUntil) = BackfillWindow.ToHistoryQuery(window);
+        var url = $"{_uniOptions.BaseUrl.TrimEnd('/')}/history/{region}/{itemIdStr}?entriesWithin={entriesWithin}&entriesUntil={entriesUntil}&entriesToReturn={entriesPerItem}";
 
         var client = _httpClientFactory.CreateClient("backfill_universalis");
 

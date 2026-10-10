@@ -29,7 +29,6 @@ public sealed class BackfillLoopSpecTests
         window.Should().NotBeNull();
         window!.Value.Start.Should().Be(last);
         window.Value.End.Should().Be(Now);
-        window.Value.OlderThan.Should().BeNull("the live loop keeps every row the window returns");
     }
 
     [Fact]
@@ -66,8 +65,7 @@ public sealed class BackfillLoopSpecTests
         var window = BackfillLoopSpec.Historical.SelectWindow(Options, State(null, earliest), Now)!.Value;
 
         window.Start.Should().Be(earliest.AddDays(-7));
-        window.End.Should().Be(Now);
-        window.OlderThan.Should().Be(earliest, "rows newer than the previous window were already imported");
+        window.End.Should().Be(earliest, "rows newer than the earliest import are already in");
     }
 
     [Fact]
@@ -76,7 +74,7 @@ public sealed class BackfillLoopSpecTests
         var window = BackfillLoopSpec.Historical.SelectWindow(Options, State(null, null), Now)!.Value;
 
         window.Start.Should().Be(Now.AddDays(-7));
-        window.OlderThan.Should().Be(Now);
+        window.End.Should().Be(Now);
     }
 
     [Fact]

@@ -15,15 +15,8 @@ public enum BackfillBucketOutcome
     Skipped,
 }
 
-/// <summary>
-/// The span a bucket asks Universalis for. The endpoint only takes a window relative to now, so a
-/// crawl walking backwards asks for everything since <paramref name="Start"/> and discards rows at
-/// or after <paramref name="OlderThan"/>, which is where the previous window began.
-/// </summary>
-public readonly record struct BackfillBucketWindow(
-    DateTimeOffset Start,
-    DateTimeOffset End,
-    DateTimeOffset? OlderThan);
+/// <summary>The span a bucket asks Universalis for.</summary>
+public readonly record struct BackfillBucketWindow(DateTimeOffset Start, DateTimeOffset End);
 
 /// <summary>
 /// All that separates the live-gap loop from the historical crawl: which window a bucket asks for
@@ -70,7 +63,7 @@ public sealed class BackfillLoopSpec
             var last = state.LastImportAt ?? now;
             return now - last < TimeSpan.FromMinutes(options.SkipIfGapUnderMinutes)
                 ? null
-                : new BackfillBucketWindow(last, now, OlderThan: null);
+                : new BackfillBucketWindow(last, now);
         },
         (state, window, _) => (state with { LastImportAt = window.End }, BackfillBucketOutcome.Advanced));
 
@@ -82,8 +75,7 @@ public sealed class BackfillLoopSpec
         (options, state, now) =>
         {
             var earliest = state.EarliestImportAt ?? now;
-            return new BackfillBucketWindow(
-                BackfillWindow.HistoricalStart(earliest, options.ChunkDays), now, OlderThan: earliest);
+            return new BackfillBucketWindow(BackfillWindow.HistoricalStart(earliest, options.ChunkDays), earliest);
         },
         (state, window, gotRows) => gotRows
             ? (state with { EarliestImportAt = window.Start }, BackfillBucketOutcome.Advanced)
