@@ -37,6 +37,9 @@ public static class StatusEndpoints
         app.MapGet("/api/v1/status/metrics", async (StatusMetricsService status, CancellationToken ct) =>
             ApiResults.Ok("Status metrics retrieved successfully", await status.GetAsync(ct)));
 
+        app.MapGet("/api/v1/status/backfill", async (BackfillProgressService backfill, CancellationToken ct) =>
+            ApiResults.Ok("Backfill progress retrieved successfully", await backfill.GetAsync(ct)));
+
         return app;
     }
 

@@ -14,6 +14,7 @@ namespace Ffmt.Tests.Fakes;
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
     public IPrometheusClient Prometheus { get; } = Substitute.For<IPrometheusClient>();
+    public IBackfillStateStore BackfillState { get; } = Substitute.For<IBackfillStateStore>();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -31,6 +32,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         {
             services.AddSingleton(worlds);
             services.AddSingleton(Prometheus);
+            services.AddSingleton(BackfillState);
         });
     }
 }

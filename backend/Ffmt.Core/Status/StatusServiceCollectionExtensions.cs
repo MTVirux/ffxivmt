@@ -16,6 +16,7 @@ public static class StatusServiceCollectionExtensions
 
         // Transient so it does not pin the typed Prometheus HttpClient; the cache lives in IMemoryCache.
         services.AddTransient<StatusMetricsService>();
+        services.AddTransient<BackfillProgressService>();
 
         services.AddHttpClient<IPrometheusClient, PrometheusClient>(PrometheusClient.HttpClientName, (sp, http) =>
         {
