@@ -76,18 +76,6 @@ public sealed class SaleStoreMannequinCqlTests
     }
 
     [Fact]
-    public async Task AddBatchAsync_prepares_the_mannequin_statements_once_per_store()
-    {
-        var (session, captured) = CapturingScyllaSession.New();
-        var store = NewStore(session);
-
-        try { await store.AddBatchAsync([NewSale(onMannequin: true)]); } catch { }
-        try { await store.AddBatchAsync([NewSale(onMannequin: true)]); } catch { }
-
-        captured.Count(c => c.Contains("INSERT INTO mannequin_sales_days")).Should().Be(1);
-    }
-
-    [Fact]
     public async Task DeleteExactAsync_keeps_scrubbing_sales_when_the_mannequin_table_is_missing()
     {
         var store = NewStore(MannequinFailingSession(

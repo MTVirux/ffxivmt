@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using Cassandra;
 using Ffmt.Core.Logging;
@@ -89,19 +88,13 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
     private readonly RequestCoalescer<(int ItemId, int WorldId, int Limit), IReadOnlyList<Sale>> _readCoalescer = new();
 
     private static readonly TimeSpan MannequinRetryAfter = TimeSpan.FromMinutes(5);
-    private readonly ConcurrentDictionary<string, PreparedStatement> _mannequinStatements = new();
     private long _mannequinRetryAt;
 
     // The mannequin tables arrive by a hand-applied CQL file and other sessions deploy main, so ingest
     // and quarantine scrubs must keep working without the mannequin copy until the tables exist.
-    // Statements are cached here because the driver sends a PREPARE round trip on every PrepareAsync.
+    // The back-off stops a missing table from costing a failed PREPARE on every batch.
     private async Task<PreparedStatement?> TryPrepareMannequinAsync(string cql, CancellationToken ct)
     {
-        if (_mannequinStatements.TryGetValue(cql, out var cached))
-        {
-            return cached;
-        }
-
         if (Environment.TickCount64 < Interlocked.Read(ref _mannequinRetryAt))
         {
             return null;
@@ -109,9 +102,7 @@ public sealed class ScyllaSaleStore(IScyllaSession scylla, ILogger<ScyllaSaleSto
 
         try
         {
-            var stmt = await scylla.PrepareAsync(cql, ct).ConfigureAwait(false);
-            _mannequinStatements[cql] = stmt;
-            return stmt;
+            return await scylla.PrepareAsync(cql, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
