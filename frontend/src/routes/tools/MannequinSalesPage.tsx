@@ -13,10 +13,12 @@ import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact } from '../../lib/format';
 import {
+  MANNEQUIN_PAGE_ROWS,
   accumulateHead,
   formatMinPrice,
   mannequinSaleKey,
   mergeSales,
+  needsMoreHistory,
   newSaleKeys,
   parseMinPrice,
 } from '../../lib/mannequin';
@@ -25,7 +27,6 @@ import { buildWorldNameMap } from '../../lib/worlds';
 import type { MannequinSale, WorldStructure } from '../../api/types';
 
 const HIGHLIGHT_MS = 5_000;
-const AUTO_CONTINUE_MAX_PAGES = 5;
 
 const LABEL_CLASS = 'text-xs uppercase tracking-widest text-muted-foreground';
 const SELECT_CLASS =
@@ -40,39 +41,42 @@ export default function MannequinSalesPage() {
   const scope = `${filters.datacenter}|${filters.world}|${filters.minUnitPrice}|${filters.quality}`;
   const { head, history } = useMannequinSales(filters);
   const headRows = useAccumulatedHead(head.data?.data, scope);
-  const rows = useMemo(
-    () => mergeSales(headRows, history.data?.pages.flatMap((p) => p.data) ?? []),
-    [headRows, history.data],
+  const pages = history.data?.pages;
+  const pageCount = pages?.length ?? 0;
+  const historyRows = useMemo(() => pages?.flatMap((p) => p.data) ?? [], [pages]);
+
+  // firstPage is where the current load started, for the per-load page cap.
+  const [load, setLoad] = useState({ scope, wanted: MANNEQUIN_PAGE_ROWS, firstPage: 0 });
+  const current =
+    load.scope === scope ? load : { scope, wanted: MANNEQUIN_PAGE_ROWS, firstPage: 0 };
+  const shownHistory = useMemo(
+    () => historyRows.slice(0, current.wanted),
+    [historyRows, current.wanted],
   );
+  const rows = useMemo(() => mergeSales(headRows, shownHistory), [headRows, shownHistory]);
   const highlighted = useNewRowHighlight(rows, scope);
   const isError = head.isError || history.isError;
 
-  // A quiet location can return an empty page that still has older history behind it.
-  // Capped so a location with no mannequin sales doesn't walk the whole day index, and
-  // stops on a failed page so it doesn't retry forever.
-  const lastPage = history.data?.pages.at(-1);
-  const canAutoContinue = (history.data?.pages.length ?? 0) <= AUTO_CONTINUE_MAX_PAGES;
   const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = history;
+  const filling =
+    pageCount > 0 &&
+    hasNextPage &&
+    needsMoreHistory({
+      loaded: historyRows.length,
+      wanted: current.wanted,
+      pagesThisLoad: pageCount - current.firstPage,
+    });
+  // Stops on a failed page so it doesn't retry forever; load older retries it.
   useEffect(() => {
-    if (
-      lastPage &&
-      lastPage.data.length === 0 &&
-      canAutoContinue &&
-      hasNextPage &&
-      !isFetchingNextPage &&
-      !isFetchNextPageError
-    ) {
-      void fetchNextPage();
-    }
-  }, [
-    lastPage,
-    canAutoContinue,
-    hasNextPage,
-    isFetchingNextPage,
-    isFetchNextPageError,
-    fetchNextPage,
-  ]);
-  const searchingOlder = rows.length === 0 && !isError && hasNextPage && canAutoContinue;
+    if (filling && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+  }, [filling, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+
+  const loadOlder = () => {
+    setLoad({ scope, wanted: shownHistory.length + MANNEQUIN_PAGE_ROWS, firstPage: pageCount });
+    if (isFetchNextPageError) void fetchNextPage();
+  };
+  const canLoadOlder = historyRows.length > shownHistory.length || hasNextPage;
+  const searchingOlder = rows.length === 0 && !isError && filling;
 
   const worlds = useWorlds();
   const worldNameMap = useMemo(() => buildWorldNameMap(worlds.data), [worlds.data]);
@@ -133,10 +137,10 @@ export default function MannequinSalesPage() {
               )
             )}
             {isError && <LoadError />}
-            {hasNextPage && !searchingOlder && (
+            {canLoadOlder && !searchingOlder && (
               <button
                 type="button"
-                onClick={() => void fetchNextPage()}
+                onClick={loadOlder}
                 disabled={isFetchingNextPage}
                 className="rounded-md border border-border/60 bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
