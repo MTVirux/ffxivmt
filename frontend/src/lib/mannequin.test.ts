@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { MannequinSale } from '../api/types';
-import { accumulateHead, mannequinSaleKey, mergeSales, newSaleKeys } from './mannequin';
+import {
+  MAX_MIN_UNIT_PRICE,
+  accumulateHead,
+  formatMinPrice,
+  mannequinSaleKey,
+  mergeSales,
+  newSaleKeys,
+  parseMinPrice,
+} from './mannequin';
 
 function sale(sale_time: string, item_id = 1, buyer_name = 'B'): MannequinSale {
   return {
@@ -83,5 +91,21 @@ describe('accumulateHead', () => {
       sale(t1),
       sale(t0),
     ]);
+  });
+});
+
+describe('min price input', () => {
+  it('groups digits with commas', () => {
+    expect(formatMinPrice(1_000_000)).toBe('1,000,000');
+    expect(formatMinPrice(0)).toBe('');
+  });
+
+  it('reads a formatted price back', () => {
+    expect(parseMinPrice('1,000,000')).toBe(1_000_000);
+    expect(parseMinPrice('')).toBe(0);
+  });
+
+  it('caps a price the API cannot accept', () => {
+    expect(parseMinPrice('99999999999')).toBe(MAX_MIN_UNIT_PRICE);
   });
 });

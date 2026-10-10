@@ -1,8 +1,18 @@
 import type { MannequinSale } from '../api/types';
+import { formatNumber } from './format';
 
 // The API binds min_unit_price as an int32.
 export const MAX_MIN_UNIT_PRICE = 999_999_999;
 export const DEFAULT_MIN_UNIT_PRICE = 1_000_000;
+
+/** Reads a typed price, ignoring commas and anything else that isn't a digit. */
+export function parseMinPrice(text: string): number {
+  return Math.min(MAX_MIN_UNIT_PRICE, Number(text.replace(/\D/g, '')) || 0);
+}
+
+export function formatMinPrice(n: number): string {
+  return n > 0 ? formatNumber(n) : '';
+}
 
 export function mannequinSaleKey(s: MannequinSale): string {
   return `${s.world_id}|${s.item_id}|${s.sale_time}|${s.buyer_name}`;

@@ -9,11 +9,12 @@ import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact } from '../../lib/format';
 import {
-  MAX_MIN_UNIT_PRICE,
   accumulateHead,
+  formatMinPrice,
   mannequinSaleKey,
   mergeSales,
   newSaleKeys,
+  parseMinPrice,
 } from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
@@ -182,11 +183,10 @@ function DatacenterSelect({
 
 // Committed on blur or Enter so typing a price doesn't fire a request per keystroke.
 function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: number) => void }) {
-  const [draft, setDraft] = useState(value > 0 ? String(value) : '');
+  const [draft, setDraft] = useState(formatMinPrice(value));
 
   const commit = () => {
-    const next = Math.min(MAX_MIN_UNIT_PRICE, Math.max(0, Math.floor(Number(draft) || 0)));
-    setDraft(next > 0 ? String(next) : '');
+    const next = parseMinPrice(draft);
     if (next !== value) onCommit(next);
   };
 
@@ -205,13 +205,11 @@ function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: nu
       </label>
       <input
         id="mannequin-min-price"
-        type="number"
-        min={0}
-        step={1}
+        type="text"
         inputMode="numeric"
         placeholder="0"
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => setDraft(formatMinPrice(parseMinPrice(e.target.value)))}
         onBlur={commit}
         className="w-36 rounded-md border border-border/60 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50"
       />
