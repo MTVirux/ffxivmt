@@ -19,18 +19,13 @@ public static class MannequinSalesEndpoints
             MannequinSalesReader reader,
             CancellationToken ct) =>
         {
-            if (string.IsNullOrWhiteSpace(target_location))
-            {
-                return ApiResults.Fail("target_location is required", StatusCodes.Status400BadRequest);
-            }
-
             if (before is < 0 || before > MaxUnixMs)
             {
                 return ApiResults.Fail("before must be unix milliseconds", StatusCodes.Status400BadRequest);
             }
 
             var query = new MannequinFeedQuery(
-                target_location,
+                string.IsNullOrWhiteSpace(target_location) ? null : target_location,
                 before is null ? null : DateTimeOffset.FromUnixTimeMilliseconds(before.Value),
                 Math.Clamp(limit ?? 50, 1, 200),
                 Math.Max(0, min_unit_price ?? 0));

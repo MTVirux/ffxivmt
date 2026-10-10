@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace Ffmt.Core.Mannequin;
 
-public sealed record MannequinFeedQuery(string TargetLocation, DateTimeOffset? Before, int Limit, int MinUnitPrice);
+public sealed record MannequinFeedQuery(string? TargetLocation, DateTimeOffset? Before, int Limit, int MinUnitPrice);
 
 public sealed record MannequinFeedPage(IReadOnlyList<Sale> Sales, DateTimeOffset? NextBefore);
 
@@ -21,14 +21,18 @@ public sealed class MannequinSalesReader(
 {
     public async Task<MannequinFeedPage?> GetAsync(MannequinFeedQuery query, CancellationToken ct = default)
     {
-        var resolution = await resolver.ResolveAsync(query.TargetLocation, ct).ConfigureAwait(false);
-        if (resolution is null)
+        LocationResolution? resolution = null;
+        if (query.TargetLocation is not null)
         {
-            return null;
+            resolution = await resolver.ResolveAsync(query.TargetLocation, ct).ConfigureAwait(false);
+            if (resolution is null)
+            {
+                return null;
+            }
         }
 
         var cacheKey = query.Before is null
-            ? $"mannequin:{resolution.CanonicalName}:{query.Limit}:{query.MinUnitPrice}"
+            ? $"mannequin:{resolution?.CanonicalName ?? "*"}:{query.Limit}:{query.MinUnitPrice}"
             : null;
         if (cacheKey is not null && cache.TryGetValue(cacheKey, out MannequinFeedPage? cached) && cached is not null)
         {
@@ -36,7 +40,7 @@ public sealed class MannequinSalesReader(
         }
 
         var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
-        var worldIds = worlds.Where(resolution.Matches).Select(w => w.Id).ToList();
+        var worldIds = worlds.Where(w => resolution is null || resolution.Matches(w)).Select(w => w.Id).ToList();
         var days = await store.GetDaysAsync(ct).ConfigureAwait(false);
 
         var page = worldIds.Count == 0 || days.Count == 0

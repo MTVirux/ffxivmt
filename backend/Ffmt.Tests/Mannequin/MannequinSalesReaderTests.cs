@@ -37,7 +37,7 @@ public sealed class MannequinSalesReaderTests
     private static Sale At(int worldId, DateTimeOffset time, bool hq = false, int price = 100, int item = 1, string buyer = "B") =>
         new(item, worldId, buyer, hq, true, 1, price, time);
 
-    private static MannequinFeedQuery Query(string location, DateTimeOffset? before, int limit = 50, int minPrice = 0) =>
+    private static MannequinFeedQuery Query(string? location, DateTimeOffset? before, int limit = 50, int minPrice = 0) =>
         new(location, before, limit, minPrice);
 
     [Fact]
@@ -64,6 +64,16 @@ public sealed class MannequinSalesReaderTests
         var page = await NewReader().GetAsync(Query("Chaos", Oct(11)));
 
         page!.Sales.Select(s => s.WorldId).Should().Equal(80, 85);
+    }
+
+    [Fact]
+    public async Task No_location_merges_every_world_newest_first()
+    {
+        await _store.AddAsync([At(85, Oct(10, 10)), At(80, Oct(10, 14)), At(86, Oct(10, 16))]);
+
+        var page = await NewReader().GetAsync(Query(null, Oct(11)));
+
+        page!.Sales.Select(s => s.WorldId).Should().Equal(86, 80, 85);
     }
 
     [Fact]

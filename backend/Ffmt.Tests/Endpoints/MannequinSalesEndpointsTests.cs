@@ -24,7 +24,9 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
 
     public MannequinSalesEndpointsTests()
     {
-        var structure = TestWorlds.Structure(new World(85, "Spriggan", "Chaos", "Europe"));
+        var structure = TestWorlds.Structure(
+            new World(85, "Spriggan", "Chaos", "Europe"),
+            new World(86, "Twintania", "Light", "Europe"));
         var reader = new MannequinSalesReader(
             _store, structure, new LocationResolver(structure),
             new MemoryCache(new MemoryCacheOptions()), Options.Create(new MannequinOptions()));
@@ -69,11 +71,22 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
 
     private static readonly long Oct11Ms = new DateTimeOffset(2026, 10, 11, 0, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds();
 
-    [Fact]
-    public async Task Missing_location_is_a_400()
+    [Theory]
+    [InlineData("")]
+    [InlineData("target_location=%20&")]
+    public async Task Missing_location_returns_every_world(string location)
     {
-        var (status, _) = await GetAsync("");
-        status.Should().Be(StatusCodes.Status400BadRequest);
+        await _store.AddAsync([
+            new Sale(5057, 85, "Alisaie", true, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero)),
+            new Sale(5057, 86, "Alphinaud", false, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 13, 0, 0, TimeSpan.Zero)),
+        ]);
+
+        var (status, body) = await GetAsync($"?{location}before={Oct11Ms}");
+
+        status.Should().Be(StatusCodes.Status200OK);
+        JsonDocument.Parse(body).RootElement.GetProperty("data").EnumerateArray()
+            .Select(s => s.GetProperty("world_id").GetInt32())
+            .Should().Equal(86, 85);
     }
 
     [Fact]
