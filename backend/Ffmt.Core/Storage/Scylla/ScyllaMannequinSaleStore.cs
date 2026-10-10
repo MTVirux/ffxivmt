@@ -12,6 +12,12 @@ public sealed class ScyllaMannequinSaleStore(IScyllaSession scylla) : IMannequin
         WHERE day = ? AND sale_time < ?
         """;
 
+    private const string CqlGetAll = """
+        SELECT world_id, sale_time, item_id, buyer_name, hq, quantity, unit_price
+        FROM mannequin_sales
+        LIMIT ?
+        """;
+
     private const string CqlGetDays = """
         SELECT day FROM mannequin_sales_days WHERE bucket = ?
         """;
@@ -58,15 +64,27 @@ public sealed class ScyllaMannequinSaleStore(IScyllaSession scylla) : IMannequin
         var rows = await scylla.MeasuredExecuteAsync(
             stmt.Bind(MannequinCql.ToLocalDate(day), before), "mannequin_read").ConfigureAwait(false);
 
-        return rows.Select(row => new Sale(
-            ItemId: row.GetValue<int>("item_id"),
-            WorldId: row.GetValue<int>("world_id"),
-            BuyerName: row.GetValue<string>("buyer_name") ?? string.Empty,
-            Hq: row.SafeBool("hq"),
-            OnMannequin: true,
-            Quantity: row.SafeInt("quantity"),
-            UnitPrice: row.SafeInt("unit_price"),
-            SaleTime: row.GetValue<DateTimeOffset>("sale_time"))).ToList();
+        return rows.Select(ToSale).ToList();
+    }
+
+    public async Task<IReadOnlyList<Sale>> GetAllAsync(int limit, CancellationToken ct = default)
+    {
+        var stmt = await scylla.PrepareAsync(CqlGetAll, ct).ConfigureAwait(false);
+        var sales = new List<Sale>();
+        byte[]? pagingState = null;
+
+        // Scylla can end a page early by size, so page by hand rather than let enumeration block on a fetch.
+        do
+        {
+            var page = await scylla.MeasuredExecuteAsync(
+                stmt.Bind(limit).SetPageSize(limit).SetAutoPage(false).SetPagingState(pagingState), "mannequin_read_all")
+                .ConfigureAwait(false);
+            sales.AddRange(page.Select(ToSale));
+            pagingState = page.PagingState;
+        }
+        while (pagingState is not null);
+
+        return sales;
     }
 
     public async Task<IReadOnlyList<DateOnly>> GetDaysAsync(CancellationToken ct = default)
@@ -102,4 +120,14 @@ public sealed class ScyllaMannequinSaleStore(IScyllaSession scylla) : IMannequin
         await scylla.MeasuredExecuteAsync(dayStmt.Bind(MannequinCql.DaysBucket, localDate), "mannequin_delete")
             .ConfigureAwait(false);
     }
+
+    private static Sale ToSale(Row row) => new(
+        ItemId: row.GetValue<int>("item_id"),
+        WorldId: row.GetValue<int>("world_id"),
+        BuyerName: row.GetValue<string>("buyer_name") ?? string.Empty,
+        Hq: row.SafeBool("hq"),
+        OnMannequin: true,
+        Quantity: row.SafeInt("quantity"),
+        UnitPrice: row.SafeInt("unit_price"),
+        SaleTime: row.GetValue<DateTimeOffset>("sale_time"));
 }

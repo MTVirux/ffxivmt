@@ -1,4 +1,5 @@
 using Ffmt.Core.Mannequin;
+using Ffmt.Core.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -44,21 +45,31 @@ public static class MannequinSalesEndpoints
             {
                 status = true,
                 message = "Mannequin sales retrieved successfully",
-                data = page.Sales.Select(s => new
-                {
-                    s.ItemId,
-                    s.WorldId,
-                    s.BuyerName,
-                    s.SaleTime,
-                    s.Hq,
-                    s.Quantity,
-                    s.UnitPrice,
-                    TotalPrice = (long)s.Quantity * s.UnitPrice,
-                }),
+                data = page.Sales.Select(SaleRow.From),
                 next_before = page.NextBefore?.ToUnixTimeMilliseconds(),
             });
         });
 
+        app.MapGet("/api/v1/mannequin_sales/all", async (MannequinSalesReader reader, CancellationToken ct) =>
+        {
+            var sales = await reader.GetAllAsync(ct);
+
+            return Results.Ok(new
+            {
+                status = true,
+                message = "Mannequin sales retrieved successfully",
+                complete = sales is not null,
+                data = (sales ?? []).Select(SaleRow.From),
+            });
+        });
+
         return app;
+    }
+
+    private sealed record SaleRow(
+        int ItemId, int WorldId, string BuyerName, DateTimeOffset SaleTime, bool Hq, int Quantity, int UnitPrice, long TotalPrice)
+    {
+        public static SaleRow From(Sale s) =>
+            new(s.ItemId, s.WorldId, s.BuyerName, s.SaleTime, s.Hq, s.Quantity, s.UnitPrice, (long)s.Quantity * s.UnitPrice);
     }
 }

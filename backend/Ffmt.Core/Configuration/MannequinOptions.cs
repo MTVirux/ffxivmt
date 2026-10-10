@@ -17,4 +17,7 @@ public sealed class MannequinOptions
     public int MaxDaysPerRequest { get; init; } = 90;
 
     public int FeedCacheSeconds { get; init; } = 20;
+
+    // Above this many rows /mannequin_sales/all returns none and the SPA falls back to the paged feed.
+    public int FullLoadMaxRows { get; init; } = 20_000;
 }

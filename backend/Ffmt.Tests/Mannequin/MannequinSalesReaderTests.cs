@@ -16,7 +16,7 @@ public sealed class MannequinSalesReaderTests
 
     private readonly FakeMannequinSaleStore _store = new();
 
-    private MannequinSalesReader NewReader(int maxDays = 365, World[]? worlds = null)
+    private MannequinSalesReader NewReader(int maxDays = 365, World[]? worlds = null, int fullLoadMaxRows = 20_000)
     {
         var structure = TestWorlds.Structure(worlds ?? [Spriggan, Cerberus, Twintania]);
         return new MannequinSalesReader(
@@ -24,7 +24,7 @@ public sealed class MannequinSalesReaderTests
             structure,
             new LocationResolver(structure),
             new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new MannequinOptions { MaxDaysPerRequest = maxDays }));
+            Options.Create(new MannequinOptions { MaxDaysPerRequest = maxDays, FullLoadMaxRows = fullLoadMaxRows }));
     }
 
     private static DateTimeOffset StartOf(DateTimeOffset time) => new(time.UtcDateTime.Date, TimeSpan.Zero);
@@ -291,5 +291,68 @@ public sealed class MannequinSalesReaderTests
 
         reads.Should().BeGreaterThan(0);
         _store.Reads.Should().HaveCount(reads);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_returns_every_row_newest_first()
+    {
+        await _store.AddAsync([
+            At(85, Oct(8)),
+            At(86, Oct(10), item: 2),
+            At(80, Oct(10), item: 1, buyer: "b"),
+            At(85, Oct(10), item: 1, buyer: "B"),
+            At(80, Oct(9, 18)),
+        ]);
+
+        var sales = await NewReader().GetAllAsync();
+
+        sales!.Select(s => (s.WorldId, s.SaleTime)).Should().Equal(
+            (85, Oct(10)), (80, Oct(10)), (86, Oct(10)), (80, Oct(9, 18)), (85, Oct(8)));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_skips_worlds_missing_from_the_world_list()
+    {
+        await _store.AddAsync([At(85, Oct(10, 10)), At(999, Oct(10, 11))]);
+
+        var sales = await NewReader().GetAllAsync();
+
+        sales!.Select(s => s.WorldId).Should().Equal(85);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_returns_null_over_the_cap()
+    {
+        await _store.AddAsync([At(85, Oct(10)), At(85, Oct(9)), At(85, Oct(8))]);
+
+        var sales = await NewReader(fullLoadMaxRows: 2).GetAllAsync();
+
+        sales.Should().BeNull();
+        _store.AllReads.Should().Equal(3);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_returns_every_row_at_the_cap()
+    {
+        await _store.AddAsync([At(85, Oct(10)), At(85, Oct(9))]);
+
+        var sales = await NewReader(fullLoadMaxRows: 2).GetAllAsync();
+
+        sales.Should().HaveCount(2);
+    }
+
+    [Theory]
+    [InlineData(20_000)]
+    [InlineData(1)]
+    public async Task GetAllAsync_is_cached(int fullLoadMaxRows)
+    {
+        await _store.AddAsync([At(85, Oct(10)), At(85, Oct(9))]);
+        var reader = NewReader(fullLoadMaxRows: fullLoadMaxRows);
+
+        var first = await reader.GetAllAsync();
+        var second = await reader.GetAllAsync();
+
+        second.Should().BeEquivalentTo(first);
+        _store.AllReads.Should().HaveCount(1);
     }
 }

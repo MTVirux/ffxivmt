@@ -19,6 +19,10 @@ public sealed class MannequinSalesReader(
     IMemoryCache cache,
     IOptions<MannequinOptions> options)
 {
+    private const string AllCacheKey = "mannequin:all";
+
+    private TimeSpan CacheTtl => TimeSpan.FromSeconds(Math.Max(1, options.Value.FeedCacheSeconds));
+
     public async Task<MannequinFeedPage?> GetAsync(MannequinFeedQuery query, CancellationToken ct = default)
     {
         LocationResolution? resolution = null;
@@ -49,10 +53,33 @@ public sealed class MannequinSalesReader(
 
         if (cacheKey is not null)
         {
-            cache.Set(cacheKey, page, TimeSpan.FromSeconds(Math.Max(1, options.Value.FeedCacheSeconds)));
+            cache.Set(cacheKey, page, CacheTtl);
         }
 
         return page;
+    }
+
+    /// <summary>Every row in a known world, newest first, or null when the table holds more than FullLoadMaxRows.</summary>
+    public async Task<IReadOnlyList<Sale>?> GetAllAsync(CancellationToken ct = default)
+    {
+        if (cache.TryGetValue(AllCacheKey, out IReadOnlyList<Sale>? cached))
+        {
+            return cached;
+        }
+
+        var maxRows = Math.Clamp(options.Value.FullLoadMaxRows, 1, int.MaxValue - 1);
+        var rows = await store.GetAllAsync(maxRows + 1, ct).ConfigureAwait(false);
+
+        List<Sale>? sales = null;
+        if (rows.Count <= maxRows)
+        {
+            var worlds = await worldStructure.GetWorldsAsync(ct).ConfigureAwait(false);
+            var worldIds = worlds.Select(w => w.Id).ToHashSet();
+            sales = NewestFirst(rows.Where(s => worldIds.Contains(s.WorldId)));
+        }
+
+        cache.Set(AllCacheKey, sales, CacheTtl);
+        return sales;
     }
 
     private async Task<MannequinFeedPage> WalkAsync(
@@ -82,11 +109,7 @@ public sealed class MannequinSalesReader(
             scanned++;
         }
 
-        var ordered = collected
-            .OrderByDescending(s => s.SaleTime)
-            .ThenBy(s => s.ItemId)
-            .ThenBy(s => s.BuyerName, StringComparer.Ordinal)
-            .ToList();
+        var ordered = NewestFirst(collected);
         var page = TakeWithTies(ordered, query.Limit);
 
         DateTimeOffset? next = null;
@@ -101,6 +124,12 @@ public sealed class MannequinSalesReader(
 
         return new MannequinFeedPage(page, next);
     }
+
+    private static List<Sale> NewestFirst(IEnumerable<Sale> sales) => sales
+        .OrderByDescending(s => s.SaleTime)
+        .ThenBy(s => s.ItemId)
+        .ThenBy(s => s.BuyerName, StringComparer.Ordinal)
+        .ToList();
 
     // The cursor is exclusive, so a page must never end partway through a run of equal timestamps.
     private static List<Sale> TakeWithTies(List<Sale> ordered, int limit)

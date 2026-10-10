@@ -55,6 +55,21 @@ public sealed class MannequinSaleStoreCqlTests
     }
 
     [Fact]
+    public async Task GetAllAsync_reads_the_base_table_up_to_a_limit()
+    {
+        var (store, captured) = NewStore();
+
+        try { await store.GetAllAsync(100); } catch { }
+
+        captured.Should().Contain(c =>
+            c.Contains("SELECT world_id, sale_time, item_id, buyer_name, hq, quantity, unit_price") &&
+            c.Contains("FROM mannequin_sales") &&
+            !c.Contains("mannequin_sales_by_day") &&
+            !c.Contains("WHERE") &&
+            c.Contains("LIMIT ?"));
+    }
+
+    [Fact]
     public async Task GetDaysAsync_reads_the_day_index()
     {
         var (store, captured) = NewStore();

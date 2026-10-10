@@ -10,6 +10,9 @@ public interface IMannequinSaleStore
     /// <summary>Every world's rows for one day older than <paramref name="before"/>, newest first.</summary>
     Task<IReadOnlyList<Sale>> GetByDayAsync(DateOnly day, DateTimeOffset before, CancellationToken ct = default);
 
+    /// <summary>Up to <paramref name="limit"/> rows across every world and day, in no particular order.</summary>
+    Task<IReadOnlyList<Sale>> GetAllAsync(int limit, CancellationToken ct = default);
+
     /// <summary>Days that hold rows, oldest first.</summary>
     Task<IReadOnlyList<DateOnly>> GetDaysAsync(CancellationToken ct = default);
 

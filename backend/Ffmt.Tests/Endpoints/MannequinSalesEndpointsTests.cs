@@ -20,7 +20,8 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
 {
     private readonly FakeMannequinSaleStore _store = new();
     private readonly ServiceProvider _services;
-    private readonly RouteEndpoint _endpoint;
+    private readonly RouteEndpoint _feed;
+    private readonly RouteEndpoint _all;
 
     public MannequinSalesEndpointsTests()
     {
@@ -29,7 +30,7 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
             new World(86, "Twintania", "Light", "Europe"));
         var reader = new MannequinSalesReader(
             _store, structure, new LocationResolver(structure),
-            new MemoryCache(new MemoryCacheOptions()), Options.Create(new MannequinOptions()));
+            new MemoryCache(new MemoryCacheOptions()), Options.Create(new MannequinOptions { FullLoadMaxRows = 2 }));
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -44,7 +45,9 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
 
         var builder = new TestRouteBuilder(_services);
         builder.MapMannequinSalesEndpoints();
-        _endpoint = builder.DataSources.SelectMany(d => d.Endpoints).OfType<RouteEndpoint>().Single();
+        var endpoints = builder.DataSources.SelectMany(d => d.Endpoints).OfType<RouteEndpoint>().ToList();
+        _feed = endpoints.Single(e => e.RoutePattern.RawText == "/api/v1/mannequin_sales");
+        _all = endpoints.Single(e => e.RoutePattern.RawText == "/api/v1/mannequin_sales/all");
     }
 
     public void Dispose() => _services.Dispose();
@@ -56,7 +59,11 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
         public IApplicationBuilder CreateApplicationBuilder() => new ApplicationBuilder(ServiceProvider);
     }
 
-    private async Task<(int StatusCode, string Body)> GetAsync(string query)
+    private Task<(int StatusCode, string Body)> GetAsync(string query) => InvokeAsync(_feed, query);
+
+    private Task<(int StatusCode, string Body)> GetAllAsync() => InvokeAsync(_all, "");
+
+    private async Task<(int StatusCode, string Body)> InvokeAsync(RouteEndpoint endpoint, string query)
     {
         var body = new MemoryStream();
         var context = new DefaultHttpContext { RequestServices = _services };
@@ -64,7 +71,7 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
         context.Request.QueryString = new QueryString(query);
         context.Response.Body = body;
 
-        await _endpoint.RequestDelegate!(context);
+        await endpoint.RequestDelegate!(context);
 
         return (context.Response.StatusCode, Encoding.UTF8.GetString(body.ToArray()));
     }
@@ -151,5 +158,35 @@ public sealed class MannequinSalesEndpointsTests : IDisposable
         status.Should().Be(StatusCodes.Status200OK);
         body.Should().Be(
             """{"status":true,"message":"Mannequin sales retrieved successfully","data":[{"item_id":5057,"world_id":85,"buyer_name":"Alisaie","sale_time":"2026-10-10T12:00:00+00:00","hq":true,"quantity":2,"unit_price":1000,"total_price":2000}],"next_before":null}""");
+    }
+
+    [Fact]
+    public async Task All_returns_every_sale_as_complete()
+    {
+        await _store.AddAsync([
+            new Sale(5057, 85, "Alisaie", true, true, 2, 1000, new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero)),
+            new Sale(5057, 999, "Alphinaud", false, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 13, 0, 0, TimeSpan.Zero)),
+        ]);
+
+        var (status, body) = await GetAllAsync();
+
+        status.Should().Be(StatusCodes.Status200OK);
+        body.Should().Be(
+            """{"status":true,"message":"Mannequin sales retrieved successfully","complete":true,"data":[{"item_id":5057,"world_id":85,"buyer_name":"Alisaie","sale_time":"2026-10-10T12:00:00+00:00","hq":true,"quantity":2,"unit_price":1000,"total_price":2000}]}""");
+    }
+
+    [Fact]
+    public async Task All_over_the_cap_returns_no_rows_as_incomplete()
+    {
+        await _store.AddAsync([
+            new Sale(5057, 85, "Alisaie", true, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero)),
+            new Sale(5057, 86, "Alphinaud", false, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 13, 0, 0, TimeSpan.Zero)),
+            new Sale(5057, 85, "Alphinaud", false, true, 1, 1000, new DateTimeOffset(2026, 10, 10, 14, 0, 0, TimeSpan.Zero)),
+        ]);
+
+        var (status, body) = await GetAllAsync();
+
+        status.Should().Be(StatusCodes.Status200OK);
+        body.Should().Be("""{"status":true,"message":"Mannequin sales retrieved successfully","complete":false,"data":[]}""");
     }
 }
