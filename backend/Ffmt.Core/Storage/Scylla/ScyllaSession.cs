@@ -7,7 +7,7 @@ namespace Ffmt.Core.Storage.Scylla;
 
 public sealed class ScyllaSession : IScyllaSession, IDisposable
 {
-    private readonly Lazy<(Cluster Cluster, ISession Session)> _state;
+    private readonly RetryingLazy<(Cluster Cluster, ISession Session)> _state;
     private readonly PreparedStatementCache _prepared;
 
     public ScyllaSession(IOptions<ScyllaOptions> options, ILogger<ScyllaSession> logger)
@@ -15,7 +15,7 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
         var opts = options.Value;
         _prepared = new PreparedStatementCache(cql => Session.PrepareAsync(cql));
 
-        _state = new Lazy<(Cluster, ISession)>(
+        _state = new RetryingLazy<(Cluster, ISession)>(
             () =>
             {
                 var builder = Cluster.Builder()
@@ -33,15 +33,23 @@ public sealed class ScyllaSession : IScyllaSession, IDisposable
                 }
 
                 var cluster = builder.Build();
-                var session = cluster.Connect(opts.Keyspace);
+                ISession session;
+                try
+                {
+                    session = cluster.Connect(opts.Keyspace);
+                }
+                catch
+                {
+                    cluster.Dispose();
+                    throw;
+                }
 
                 logger.LogInformation(
                     "Connected to Scylla {Hosts}:{Port} keyspace={Keyspace}",
                     string.Join(",", opts.ContactPoints), opts.Port, opts.Keyspace);
 
                 return (cluster, session);
-            },
-            LazyThreadSafetyMode.ExecutionAndPublication);
+            });
     }
 
     public ISession Session => _state.Value.Session;
