@@ -1,4 +1,5 @@
 using Ffmt.Core.HealthChecks;
+using Ffmt.Core.Status;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -32,6 +33,9 @@ public static class StatusEndpoints
             cache.Set(CacheKey, response, CacheTtl);
             return Results.Json(response, statusCode: response.Code);
         });
+
+        app.MapGet("/api/v1/status/metrics", async (StatusMetricsService status, CancellationToken ct) =>
+            ApiResults.Ok("Status metrics retrieved successfully", await status.GetAsync(ct)));
 
         return app;
     }

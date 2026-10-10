@@ -5,6 +5,7 @@ using Ffmt.Core.DI;
 using Ffmt.Core.Metrics;
 using Ffmt.Core.HealthChecks;
 using Ffmt.Core.Logging;
+using Ffmt.Core.Status;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -26,6 +27,7 @@ builder.Host.UseSerilog((context, services, logger) =>
 
 builder.Services.AddFfmtCore(builder.Configuration);
 builder.Services.AddFfmtMetrics();
+builder.Services.AddFfmtStatus(builder.Configuration);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
