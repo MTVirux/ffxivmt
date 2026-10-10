@@ -51,9 +51,15 @@ public static class ApplicationBuilderExtensions
         }).Use(async (context, next) =>
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
+            var threw = false;
             try
             {
                 await next();
+            }
+            catch
+            {
+                threw = true;
+                throw;
             }
             finally
             {
@@ -62,7 +68,12 @@ public static class ApplicationBuilderExtensions
                             ?? context.Request.Path.Value
                             ?? "unknown";
                 var method = context.Request.Method;
-                var status = context.Response.StatusCode.ToString();
+
+                // UseExceptionHandler sets the real status only after this unwinds, so a throw still
+                // reads 200 here. 499 matches how ASP.NET reports a caller that hung up.
+                var status = !threw ? context.Response.StatusCode.ToString()
+                    : context.RequestAborted.IsCancellationRequested ? "499"
+                    : "500";
 
                 MetricsCatalog.HttpRequestsTotal
                     .WithLabels(endpoint, method, status)
