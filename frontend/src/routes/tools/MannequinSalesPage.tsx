@@ -82,14 +82,14 @@ export default function MannequinSalesPage() {
           <EmptyState>Pick a world, datacenter or region.</EmptyState>
         ) : query.isLoading ? (
           <div className={QUERY_SKELETON_CLASS} />
-        ) : query.isError ? (
-          <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
-            Failed to load mannequin sales.
-          </div>
         ) : rows.length === 0 ? (
-          <EmptyState>
-            {hasNextPage ? 'Searching older history…' : 'No mannequin sales found.'}
-          </EmptyState>
+          query.isError ? (
+            <LoadError />
+          ) : (
+            <EmptyState>
+              {hasNextPage ? 'Searching older history…' : 'No mannequin sales found.'}
+            </EmptyState>
+          )
         ) : (
           <>
             <ResultsTable
@@ -98,6 +98,7 @@ export default function MannequinSalesPage() {
               worldNameMap={worldNameMap}
               itemNameMap={itemNameMap}
             />
+            {query.isError && <LoadError />}
             {hasNextPage && (
               <button
                 type="button"
@@ -111,6 +112,14 @@ export default function MannequinSalesPage() {
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function LoadError() {
+  return (
+    <div className="rounded-lg border border-destructive/50 bg-card p-4 text-sm text-destructive">
+      Failed to load mannequin sales.
     </div>
   );
 }
