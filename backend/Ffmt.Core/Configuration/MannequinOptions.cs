@@ -14,7 +14,8 @@ public sealed class MannequinOptions
     public int MaxDaysPerRequest { get; init; } = 7;
 
     // Cursor pages are uncached, so this bounds what one request can make Scylla read.
-    // A region spans up to 32 worlds, which gets 2 days per request.
+    // A region spans up to 32 worlds, which gets 2 days per request. A request always reads at
+    // least one day, so the all-worlds feed reads one partition per world and goes past this.
     public int MaxPartitionReadsPerRequest { get; init; } = 64;
 
     public int FeedCacheSeconds { get; init; } = 20;
