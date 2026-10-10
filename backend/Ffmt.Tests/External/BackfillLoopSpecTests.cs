@@ -98,13 +98,38 @@ public sealed class BackfillLoopSpecTests
     }
 
     [Fact]
-    public void Historical_marks_the_crawl_complete_when_the_window_held_nothing()
+    public void Historical_jumps_past_a_quiet_stretch_to_the_newest_older_sale()
+    {
+        var state = State(null, Now.AddDays(-30));
+        var window = BackfillLoopSpec.Historical.SelectWindow(Options, state, Now)!.Value;
+        var olderSale = Now.AddDays(-90);
+
+        var (next, outcome) = BackfillLoopSpec.Historical.Advance(state, window, gotRows: false, olderSale);
+
+        next.EarliestImportAt.Should().Be(olderSale);
+        next.CrawlComplete.Should().BeFalse("a week without sales is not the end of the history");
+        outcome.Should().Be(BackfillBucketOutcome.Advanced);
+    }
+
+    [Fact]
+    public void Historical_window_after_a_jump_still_covers_the_sale_it_jumped_to()
+    {
+        var olderSale = Now.AddDays(-90);
+        var window = BackfillLoopSpec.Historical.SelectWindow(Options, State(null, olderSale), Now)!.Value;
+
+        var (within, until) = BackfillWindow.ToHistoryQuery(window);
+
+        olderSale.ToUnixTimeSeconds().Should().BeInRange(until - within, until - 1);
+    }
+
+    [Fact]
+    public void Historical_marks_the_crawl_complete_when_nothing_older_exists()
     {
         var earliest = Now.AddDays(-30);
         var state = State(null, earliest);
         var window = BackfillLoopSpec.Historical.SelectWindow(Options, state, Now)!.Value;
 
-        var (next, outcome) = BackfillLoopSpec.Historical.Advance(state, window, gotRows: false);
+        var (next, outcome) = BackfillLoopSpec.Historical.Advance(state, window, gotRows: false, newestOlderSale: null);
 
         next.CrawlComplete.Should().BeTrue();
         next.EarliestImportAt.Should().Be(earliest, "a finished bucket leaves its pointer where it is");
@@ -116,6 +141,8 @@ public sealed class BackfillLoopSpecTests
     {
         BackfillLoopSpec.Historical.TracksHistoryDepth.Should().BeTrue();
         BackfillLoopSpec.Live.TracksHistoryDepth.Should().BeFalse();
+        BackfillLoopSpec.Historical.LooksPastEmptyWindows.Should().BeTrue();
+        BackfillLoopSpec.Live.LooksPastEmptyWindows.Should().BeFalse();
         BackfillLoopSpec.Historical.Name.Should().Be(BackfillLoops.Historical);
         BackfillLoopSpec.Live.Name.Should().Be(BackfillLoops.Live);
     }

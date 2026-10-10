@@ -150,7 +150,17 @@ public sealed class SalesBackfillService : BackgroundService
                     if (sales is null)
                         return false;
 
-                    outcomes.Add(await SettleBucket(loop, bucket, sales, token));
+                    DateTimeOffset? newestOlderSale = null;
+                    if (sales.Count == 0 && loop.LooksPastEmptyWindows)
+                    {
+                        var older = await FetchNewestBefore(region, bucket, token);
+                        if (older is null)
+                            return false;
+
+                        newestOlderSale = older.Count > 0 ? older.Max(s => s.SaleTime) : null;
+                    }
+
+                    outcomes.Add(await SettleBucket(loop, bucket, sales, newestOlderSale, token));
                     return true;
                 },
                 tuning.RetryRounds,
@@ -193,10 +203,23 @@ public sealed class SalesBackfillService : BackgroundService
         return FetchChunk(region, bucket.Items, bucket.Window, MaxEntriesPerItem, requestTimeout, ct);
     }
 
+    /// <summary>The newest sale of each item from before the window, to tell a quiet stretch from the
+    /// end of the bucket's history.</summary>
+    private async Task<List<Sale>?> FetchNewestBefore(string region, BucketWork bucket, CancellationToken ct)
+    {
+        await _rateLimiter.ConsumeAsync(ct);
+
+        var everythingBefore = new BackfillBucketWindow(DateTimeOffset.UnixEpoch, bucket.Window.Start);
+        var requestTimeout = TimeSpan.FromSeconds(_backfillOptions.Tuning.BaseRequestTimeoutSeconds);
+
+        return await FetchChunk(region, bucket.Items, everythingBefore, entriesPerItem: 1, requestTimeout, ct);
+    }
+
     private async Task<BackfillBucketOutcome> SettleBucket(
         BackfillLoopSpec loop,
         BucketWork bucket,
         List<Sale> sales,
+        DateTimeOffset? newestOlderSale,
         CancellationToken ct)
     {
         if (sales.Count > 0)
@@ -205,7 +228,7 @@ public sealed class SalesBackfillService : BackgroundService
             await EnqueueDirtyPairs(sales, ct);
         }
 
-        var (next, outcome) = loop.Advance(bucket.State, bucket.Window, sales.Count > 0);
+        var (next, outcome) = loop.Advance(bucket.State, bucket.Window, sales.Count > 0, newestOlderSale);
         await _stateStore.UpsertBucketAsync(next, ct);
 
         return outcome;
