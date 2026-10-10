@@ -22,6 +22,7 @@ public sealed class XivapiClient(HttpClient http, ILogger<XivapiClient> logger) 
 
         var result = new List<XivapiEquipmentCandidate>();
         var path = $"search?sheets=Recipe&query={Escape(CandidateQuery)}&fields={Escape(CandidateFields)}&limit={PageSize}";
+        string? cursor = null;
         while (true)
         {
             using var doc = await GetJsonAsync(path, ct).ConfigureAwait(false);
@@ -39,13 +40,14 @@ public sealed class XivapiClient(HttpClient http, ILogger<XivapiClient> logger) 
                 }
             }
 
-            if (!root.TryGetProperty("next", out var next) || next.ValueKind != JsonValueKind.String)
+            if (!root.TryGetProperty("next", out var next) || next.ValueKind != JsonValueKind.String || next.GetString() == cursor)
             {
                 break;
             }
 
+            cursor = next.GetString()!;
             // Later pages come back without the requested fields unless they are sent again.
-            path = $"search?cursor={Escape(next.GetString()!)}&fields={Escape(CandidateFields)}&limit={PageSize}";
+            path = $"search?cursor={Escape(cursor)}&fields={Escape(CandidateFields)}&limit={PageSize}";
         }
 
         logger.LogInformation("XIVAPI: {Count} equipment recipe candidates.", result.Count);
@@ -110,9 +112,13 @@ public sealed class XivapiClient(HttpClient http, ILogger<XivapiClient> logger) 
         }
     }
 
+    // Buffering the body keeps the whole read inside HttpClient.Timeout, which is the only bound
+    // on a catalogue build that no request token can cancel.
     private async Task<JsonDocument> GetJsonAsync(string path, CancellationToken ct)
     {
-        await using var stream = await http.GetStreamAsync(path, ct).ConfigureAwait(false);
+        using var response = await http.GetAsync(path, HttpCompletionOption.ResponseContentRead, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         return await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
     }
 

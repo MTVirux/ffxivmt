@@ -94,4 +94,33 @@ public sealed class XivapiClientTests
         seals.Should().BeEmpty();
         handler.Requests.Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task A_repeated_cursor_stops_the_search()
+    {
+        const string page = """{"next":"abc","results":[{"row_id":1214,"fields":{"ItemResult":{"row_id":1670,"fields":{"Rarity":2}}}}]}""";
+        var (client, handler) = Create(page, page, page);
+
+        var candidates = await client.GetEquipmentCandidatesAsync();
+
+        candidates.Should().HaveCount(2);
+        handler.Requests.Should().HaveCount(2);
+    }
+
+    private sealed class StatusHandler(HttpStatusCode status) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent("""{"rows":[]}""") });
+    }
+
+    [Fact]
+    public async Task A_non_success_response_throws()
+    {
+        var http = new HttpClient(new StatusHandler(HttpStatusCode.InternalServerError)) { BaseAddress = new Uri("https://v2.xivapi.com/api/") };
+        var client = new XivapiClient(http, NullLogger<XivapiClient>.Instance);
+
+        var act = () => client.GetAllRecipesAsync();
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+    }
 }
