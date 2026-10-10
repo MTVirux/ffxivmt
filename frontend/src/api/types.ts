@@ -172,3 +172,18 @@ export type StatusMetrics = {
   generated_at: number;
   metrics: Partial<Record<StatusMetricKey, StatusMetric>>;
 };
+
+export type BackfillRegionProgress = {
+  region: string;
+  buckets_total: number;
+  buckets_complete: number;
+  reached_back_to: number | null;
+  slowest_bucket_at: number | null;
+  last_advanced_at: number | null;
+};
+
+export type BackfillProgress = {
+  available: boolean;
+  generated_at: number;
+  regions: BackfillRegionProgress[];
+};

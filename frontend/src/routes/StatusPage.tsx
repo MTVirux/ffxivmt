@@ -1,4 +1,5 @@
 import type { StatusMetric, StatusMetricKey } from '../api/types';
+import BackfillProgress from '../components/status/BackfillProgress';
 import MetricCard from '../components/status/MetricCard';
 import StatusBanner from '../components/status/StatusBanner';
 import QueryBoundary from '../components/layout/QueryBoundary';
@@ -80,6 +81,7 @@ export default function StatusPage() {
           </div>
         )}
       </QueryBoundary>
+      <BackfillProgress />
     </div>
   );
 }
