@@ -16,7 +16,7 @@ public sealed class MannequinSalesReaderTests
 
     private readonly FakeMannequinSaleStore _store = new();
 
-    private MannequinSalesReader NewReader(int maxDays = 7)
+    private MannequinSalesReader NewReader(int maxDays = 7, int maxPartitionReads = 64)
     {
         var structure = TestWorlds.Structure(Spriggan, Cerberus, Twintania);
         return new MannequinSalesReader(
@@ -24,7 +24,11 @@ public sealed class MannequinSalesReaderTests
             structure,
             new LocationResolver(structure),
             new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(new MannequinOptions { MaxDaysPerRequest = maxDays }));
+            Options.Create(new MannequinOptions
+            {
+                MaxDaysPerRequest = maxDays,
+                MaxPartitionReadsPerRequest = maxPartitionReads,
+            }));
     }
 
     private static DateTimeOffset Oct(int day, int hour = 12, int minute = 0) =>
@@ -97,6 +101,17 @@ public sealed class MannequinSalesReaderTests
 
         page!.Sales.Should().BeEmpty();
         page.NextBefore.Should().NotBeNull("Spriggan has a sale on an older indexed day");
+    }
+
+    [Fact]
+    public async Task Wide_locations_scan_fewer_days_per_request()
+    {
+        await _store.AddAsync([At(85, Oct(10)), At(80, Oct(9)), At(85, Oct(8))]);
+
+        var page = await NewReader(maxPartitionReads: 2).GetAsync(Query("Chaos", Oct(11)));
+
+        _store.Reads.Should().HaveCount(2, "two worlds x one day fits a budget of two reads");
+        page!.NextBefore.Should().Be(new DateTimeOffset(2026, 10, 10, 0, 0, 0, TimeSpan.Zero));
     }
 
     [Fact]

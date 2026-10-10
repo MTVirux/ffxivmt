@@ -58,7 +58,8 @@ public sealed class MannequinSalesReader(
         var before = query.Before ?? DateTimeOffset.UtcNow.AddMinutes(1);
         var newestDay = MannequinCql.DayOf(before.AddTicks(-1));
         var candidates = days.Where(d => d <= newestDay).OrderDescending().ToList();
-        var maxDays = Math.Max(1, options.Value.MaxDaysPerRequest);
+        var opts = options.Value;
+        var maxDays = Math.Max(1, Math.Min(opts.MaxDaysPerRequest, opts.MaxPartitionReadsPerRequest / worldIds.Count));
 
         var collected = new List<Sale>();
         var scanned = 0;
