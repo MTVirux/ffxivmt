@@ -27,16 +27,16 @@ export default function Shell() {
         </Suspense>
       </main>
       <footer className="border-t border-border/60 py-6">
-        <div className="mx-auto grid w-full lg:w-[70%] grid-cols-3 items-center gap-6 px-6 text-sm text-muted-foreground">
+        <div className="mx-auto grid w-full lg:w-[70%] grid-cols-1 justify-items-center items-center gap-6 px-6 text-center text-sm text-muted-foreground sm:grid-cols-[1fr_auto_1fr] sm:justify-items-stretch sm:text-left">
           <span>FFXIV Market Tools - Not affiliated with Square Enix.</span>
-          <Link to="/status" className="justify-self-center transition-colors hover:text-foreground">
+          <Link to="/status" className="transition-colors hover:text-foreground sm:justify-self-center">
             Status
           </Link>
           <a
             href="https://github.com/MTVirux/ffxivmt"
             target="_blank"
             rel="noreferrer noopener"
-            className="flex items-center gap-2 justify-self-end transition-colors hover:text-foreground"
+            className="flex items-center gap-2 transition-colors hover:text-foreground sm:justify-self-end"
             aria-label="FFXIV Market Tools on GitHub"
           >
             <GithubIcon />
