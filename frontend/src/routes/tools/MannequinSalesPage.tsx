@@ -10,7 +10,13 @@ import { useMannequinSales, type MannequinFilters } from '../../hooks/useMannequ
 import { patchPrefs, useUserPrefs } from '../../hooks/useUserPrefs';
 import { useWorlds } from '../../hooks/useWorlds';
 import { formatGilExact, formatNumber } from '../../lib/format';
-import { MAX_MIN_UNIT_PRICE, mannequinSaleKey, mergeSales, newSaleKeys } from '../../lib/mannequin';
+import {
+  MAX_MIN_UNIT_PRICE,
+  accumulateHead,
+  mannequinSaleKey,
+  mergeSales,
+  newSaleKeys,
+} from '../../lib/mannequin';
 import { relativeTime } from '../../lib/time';
 import { buildWorldNameMap } from '../../lib/worlds';
 import type { Location, MannequinSale } from '../../api/types';
@@ -27,15 +33,14 @@ export default function MannequinSalesPage() {
   const setFilters = (patch: Partial<MannequinFilters>) =>
     patchPrefs((prev) => ({ mannequinFilters: { ...prev.mannequinFilters, ...patch } }));
 
+  const scope = `${location?.name}|${filters.hqOnly}|${filters.minUnitPrice}`;
   const { head, history } = useMannequinSales(location?.name, filters);
+  const headRows = useAccumulatedHead(head.data?.data, scope);
   const rows = useMemo(
-    () => mergeSales(head.data?.data ?? [], history.data?.pages.flatMap((p) => p.data) ?? []),
-    [head.data, history.data],
+    () => mergeSales(headRows, history.data?.pages.flatMap((p) => p.data) ?? []),
+    [headRows, history.data],
   );
-  const highlighted = useNewRowHighlight(
-    rows,
-    `${location?.name}|${filters.hqOnly}|${filters.minUnitPrice}`,
-  );
+  const highlighted = useNewRowHighlight(rows, scope);
   const isError = head.isError || history.isError;
 
   // A quiet location can return an empty page that still has older history behind it.
@@ -181,6 +186,21 @@ function MinPriceInput({ value, onCommit }: { value: number; onCommit: (next: nu
       />
     </form>
   );
+}
+
+// The history's first page is never refetched, so rows pushed off the head between polls
+// would otherwise vanish. Derived during render; a new scope starts from nothing.
+function useAccumulatedHead(latest: MannequinSale[] | undefined, scope: string): MannequinSale[] {
+  const [acc, setAcc] = useState<{
+    scope: string;
+    latest: MannequinSale[] | undefined;
+    rows: MannequinSale[];
+  }>({ scope, latest: undefined, rows: [] });
+
+  if (acc.scope === scope && acc.latest === latest) return acc.rows;
+  const rows = accumulateHead(acc.scope === scope ? acc.rows : [], latest ?? []);
+  setAcc({ scope, latest, rows });
+  return rows;
 }
 
 function useNewRowHighlight(rows: MannequinSale[], scope: string): Set<string> {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MannequinSale } from '../api/types';
-import { mannequinSaleKey, mergeSales, newSaleKeys } from './mannequin';
+import { accumulateHead, mannequinSaleKey, mergeSales, newSaleKeys } from './mannequin';
 
 function sale(sale_time: string, item_id = 1, buyer_name = 'B'): MannequinSale {
   return {
@@ -69,5 +69,19 @@ describe('mergeSales', () => {
     const b = sale(t1, 2);
     const c = sale(t1, 3);
     expect(mergeSales([b, a], [a, c, b])).toEqual([b, a, c]);
+  });
+});
+
+describe('accumulateHead', () => {
+  it('keeps rows from an earlier poll that a later poll no longer returns', () => {
+    expect(accumulateHead([sale(t1)], [sale(t2)])).toEqual([sale(t2), sale(t1)]);
+  });
+
+  it('collapses rows returned by both polls', () => {
+    expect(accumulateHead([sale(t1), sale(t0)], [sale(t2), sale(t1)])).toEqual([
+      sale(t2),
+      sale(t1),
+      sale(t0),
+    ]);
   });
 });

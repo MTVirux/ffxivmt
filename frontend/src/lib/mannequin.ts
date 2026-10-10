@@ -19,6 +19,11 @@ export function mergeSales(head: MannequinSale[], history: MannequinSale[]): Man
   return merged.sort((a, b) => Date.parse(b.sale_time) - Date.parse(a.sale_time));
 }
 
+/** Every head row seen so far, so rows pushed off the head between polls stay listed. */
+export function accumulateHead(seen: MannequinSale[], latest: MannequinSale[]): MannequinSale[] {
+  return mergeSales(latest, seen);
+}
+
 /** Rows that arrived on top since `prev`. Empty on a first load so the table doesn't flash. */
 export function newSaleKeys(prev: MannequinSale[] | undefined, next: MannequinSale[]): Set<string> {
   if (!prev || prev.length === 0) return new Set();
