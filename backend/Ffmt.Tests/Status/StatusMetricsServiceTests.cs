@@ -69,6 +69,21 @@ public sealed class StatusMetricsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Passes_each_query_to_the_matching_rule()
+    {
+        // Distinct values chosen so swapping any two Evaluate arguments changes the verdict.
+        PrometheusReturns(2, worldsTotal: 80, storedBatchesLast10m: 3);
+        _prometheus.QueryAsync(StatusMetricsService.Queries["error_rate"], Arg.Any<CancellationToken>()).Returns(0.2);
+        _prometheus.QueryAsync(StatusMetricsService.ServerErrorsLast5mQuery, Arg.Any<CancellationToken>()).Returns(12);
+        _prometheus.QueryAsync(StatusMetricsService.Queries["worlds_connected"], Arg.Any<CancellationToken>()).Returns(10);
+
+        var response = await CreateService().GetAsync(CancellationToken.None);
+
+        response.State.Should().Be("degraded");
+        response.Reasons.Should().Equal("5xx error rate 20.0% (above 5%)", "10 of 80 worlds connected");
+    }
+
+    [Fact]
     public async Task Prometheus_failure_reports_unavailable()
     {
         _prometheus.QueryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).ThrowsAsync(new HttpRequestException("refused"));
@@ -100,6 +115,19 @@ public sealed class StatusMetricsServiceTests : IDisposable
         await service.GetAsync(CancellationToken.None);
 
         await _prometheus.Received(1).QueryAsync(StatusMetricsService.WorldsTotalQuery, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Caches_the_unavailable_response()
+    {
+        _prometheus.QueryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).ThrowsAsync(new HttpRequestException("refused"));
+        var service = CreateService();
+
+        (await service.GetAsync(CancellationToken.None)).Available.Should().BeFalse();
+        _prometheus.ClearReceivedCalls();
+        (await service.GetAsync(CancellationToken.None)).Available.Should().BeFalse();
+
+        _prometheus.ReceivedCalls().Should().BeEmpty();
     }
 
     [Fact]
