@@ -28,6 +28,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddOptions<ArchiveOptions>().Bind(configuration.GetSection(ArchiveOptions.SectionName)).ValidateOnStart();
         services.AddOptions<QuarantineOptions>().Bind(configuration.GetSection(QuarantineOptions.SectionName)).ValidateOnStart();
         services.AddOptions<BackfillOptions>().Bind(configuration.GetSection(BackfillOptions.SectionName)).ValidateOnStart();
+        services.AddOptions<MannequinOptions>().Bind(configuration.GetSection(MannequinOptions.SectionName)).ValidateOnStart();
 
         services.AddMemoryCache();
 
@@ -51,6 +52,7 @@ public static class FfmtCoreServiceCollectionExtensions
         services.AddSingleton<IS3ArchiveUploader, S3ArchiveUploader>();
         services.AddSingleton<IPriceBaselineProvider, PriceBaselineProvider>();
         services.AddSingleton<IQuarantineStore, ScyllaQuarantineStore>();
+        services.AddSingleton<IMannequinSaleStore, ScyllaMannequinSaleStore>();
         services.AddSingleton<ISaleAnomalyFilter, SaleAnomalyFilter>();
 
         services.AddSingleton<WorldStructureService>();

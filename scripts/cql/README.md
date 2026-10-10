@@ -51,3 +51,9 @@ There is no second copy to keep in sync.
   has been live longer than the sales retention window - roughly 8 days, the
   widest Gilflux timeframe plus a day - so that no surviving row still carries
   only the old column.
+- **`schema/14_mannequin_sales.cql` should land before deploying the mannequin
+  feed.** Unlike the sales migrations above this is not an ingestion outage:
+  `ScyllaSaleStore` skips the mannequin rows (warning at most every 5 minutes)
+  while the tables are missing. But those sales never reach the feed, the
+  `/api/v1/mannequin_sales` endpoint errors and the cap worker logs failed
+  passes. Run `ffmt backfill-mannequin` after applying it to recover the gap.
