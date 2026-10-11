@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   boardItemIds,
   buildBreakdown,
+  combinedPlan,
   computeRows,
   createPlanner,
   fill,
@@ -237,6 +238,69 @@ describe('buildBreakdown', () => {
     const planner = createPlanner(catalogue.recipes, b);
     const [, plate] = computeRows(catalogue, b, { kind: 'quantity', quantity: 1 }, planner);
     expect(buildBreakdown(plate, planner, b)).toBeNull();
+  });
+});
+
+describe('combinedPlan', () => {
+  const sword = catalogue.items[0];
+  const plate = catalogue.items[1];
+  const plan = (b: Board, target: number, directOnly = true, items = catalogue.items) =>
+    combinedPlan(items, target, createPlanner(catalogue.recipes, b), b, directOnly);
+
+  it('mixes the cheapest gil per seal across items', () => {
+    const p = plan(board({ [SWORD]: [L(300, 2)], [PLATE]: [L(800, 5)] }), 1000);
+    expect(p).toMatchObject({ target: 1000, seals: 1000, total: 1400, short: false });
+    expect(p.entries).toEqual([
+      { id: PLATE, quantity: 1, seals: 400, cost: 800, bought: 1, crafted: 0 },
+      { id: SWORD, quantity: 2, seals: 600, cost: 600, bought: 2, crafted: 0 },
+    ]);
+    expect(p.purchases.map((x) => [x.id, x.quantity, x.cost])).toEqual([
+      [SWORD, 2, 600],
+      [PLATE, 1, 800],
+    ]);
+  });
+  it('takes part of a stack and may overshoot the target', () => {
+    const p = plan(board({ [SWORD]: [L(300, 10)] }), 700);
+    expect(p).toMatchObject({ seals: 900, total: 900, short: false });
+    expect(p.entries).toEqual([{ id: SWORD, quantity: 3, seals: 900, cost: 900, bought: 3, crafted: 0 }]);
+  });
+  it('reprices an item once its cheap listings are gone', () => {
+    const p = plan(board({ [SWORD]: [L(300, 1), L(3000, 5)], [PLATE]: [L(800, 5)] }), 1100);
+    expect(p.total).toBe(300 + 2 * 800);
+    expect(p.entries.map((e) => [e.id, e.quantity])).toEqual([
+      [PLATE, 2],
+      [SWORD, 1],
+    ]);
+  });
+  it('is short when the whole board cannot reach the target', () => {
+    const p = plan(board({ [SWORD]: [L(300, 1)] }), 1000);
+    expect(p).toMatchObject({ seals: 300, total: 300, short: true });
+  });
+  it('is empty when nothing can be priced', () => {
+    expect(plan(board({}), 1000)).toEqual({
+      target: 1000,
+      seals: 0,
+      total: 0,
+      short: true,
+      entries: [],
+      purchases: [],
+    });
+  });
+  it('only uses the items it is given', () => {
+    const p = plan(board({ [SWORD]: [L(1, 9)], [PLATE]: [L(800, 5)] }), 400, true, [plate]);
+    expect(p.entries.map((e) => e.id)).toEqual([PLATE]);
+  });
+  it('crafts copies when crafting is allowed and cheaper', () => {
+    const b = board({ [SWORD]: [L(900, 5)], [INGOT]: [L(100, 10)] });
+    const p = plan(b, 600, false, [sword]);
+    expect(p.entries).toEqual([{ id: SWORD, quantity: 2, seals: 600, cost: 400, bought: 0, crafted: 2 }]);
+    expect(p.purchases.map((x) => [x.id, x.quantity, x.cost])).toEqual([[INGOT, 4, 400]]);
+    expect(plan(b, 600, true, [sword]).total).toBe(1800);
+  });
+  it('buys finished copies once crafting materials run out', () => {
+    const p = plan(board({ [SWORD]: [L(900, 5)], [INGOT]: [L(100, 2)] }), 600, false, [sword]);
+    expect(p.total).toBe(200 + 900);
+    expect(p.entries).toEqual([{ id: SWORD, quantity: 2, seals: 600, cost: 1100, bought: 1, crafted: 1 }]);
   });
 });
 

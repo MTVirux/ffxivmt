@@ -62,15 +62,17 @@ export type PlanNode = {
   children: PlanNode[];
 };
 
+/** Units of each item id the plan has bought so far. */
+export type Used = ReadonlyMap<number, number>;
+export type Choice = { node: PlanNode; used: Used };
+
 export type Planner = {
   buy(id: number, qty: number): PlanNode | null;
   craft(id: number, qty: number): PlanNode | null;
   best(id: number, qty: number): PlanNode | null;
+  /** Prices `qty` more of `id` after the units in `used` are gone. */
+  next(id: number, qty: number, used: Used, buyOnly: boolean): Choice | null;
 };
-
-/** Units of each item id the plan has bought so far. */
-type Used = ReadonlyMap<number, number>;
-type Choice = { node: PlanNode; used: Used };
 
 export function createPlanner(recipes: readonly GcSealsRecipe[], board: Board): Planner {
   const byItem = new Map<number, GcSealsRecipe[]>();
@@ -136,6 +138,7 @@ export function createPlanner(recipes: readonly GcSealsRecipe[], board: Board): 
     buy: (id, qty) => buy(id, qty, new Map())?.node ?? null,
     craft: (id, qty) => craft(id, qty, new Map(), new Set())?.node ?? null,
     best: (id, qty) => best(id, qty, new Map(), new Set())?.node ?? null,
+    next: (id, qty, used, buyOnly) => (buyOnly ? buy(id, qty, used) : best(id, qty, used, new Set())),
   };
 }
 
@@ -153,9 +156,15 @@ function collectPurchases(node: PlanNode, into: Map<number, number>): Map<number
 
 /** Re-prices the plan's purchases summed per item, so one cheap listing is never counted twice. */
 export function pricePlan(node: PlanNode, board: Board): PricedPlan | null {
+  return pricePurchases([node], board);
+}
+
+function pricePurchases(nodes: readonly PlanNode[], board: Board): PricedPlan | null {
+  const counts = new Map<number, number>();
+  for (const node of nodes) collectPurchases(node, counts);
   const purchases: PricedPurchase[] = [];
   let total = 0;
-  for (const [id, quantity] of collectPurchases(node, new Map())) {
+  for (const [id, quantity] of counts) {
     const filled = fill(board.get(id), quantity);
     if (!filled) return null;
     purchases.push({ id, quantity, cost: filled.cost, byWorld: filled.byWorld });
@@ -225,6 +234,101 @@ export function buildBreakdown(row: GcSealsRow, planner: Planner, board: Board):
   if (!tree) return null;
   const priced = pricePlan(tree, board);
   return priced ? { method: row.method, tree, total: priced.total, purchases: priced.purchases } : null;
+}
+
+export type CombinedEntry = {
+  id: number;
+  /** Copies turned in. */
+  quantity: number;
+  /** Seals from all copies. */
+  seals: number;
+  cost: number;
+  bought: number;
+  crafted: number;
+};
+
+export type CombinedPlan = {
+  target: number;
+  /** Seals reached; may overshoot the target by part of one item. */
+  seals: number;
+  total: number;
+  /** True when the whole board can't reach the target. */
+  short: boolean;
+  /** Most expensive first. */
+  entries: CombinedEntry[];
+  purchases: PricedPurchase[];
+};
+
+type Offer = { item: GcSealsItem; step: Choice; rate: number };
+
+function insertByRate(queue: Offer[], offer: Offer) {
+  let lo = 0;
+  let hi = queue.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (queue[mid].rate <= offer.rate) lo = mid + 1;
+    else hi = mid;
+  }
+  queue.splice(lo, 0, offer);
+}
+
+/**
+ * Reaches the seal target by repeatedly turning in whichever item's next copy is cheapest per
+ * seal. Copies are priced after the listings earlier copies used up.
+ */
+export function combinedPlan(
+  items: readonly GcSealsItem[],
+  sealTarget: number,
+  planner: Planner,
+  board: Board,
+  directOnly: boolean,
+): CombinedPlan {
+  let used: Used = new Map();
+  const price = (item: GcSealsItem): Offer | null => {
+    const step = planner.next(item.id, 1, used, directOnly);
+    return step && { item, step, rate: step.node.cost / item.seals };
+  };
+
+  const queue = items
+    .map(price)
+    .filter((offer) => offer !== null)
+    .sort((a, b) => a.rate - b.rate);
+  const entries = new Map<number, CombinedEntry>();
+  const nodes: PlanNode[] = [];
+  let seals = 0;
+  let total = 0;
+  while (seals < sealTarget && queue.length > 0) {
+    const offer = price(queue.shift()!.item);
+    if (!offer) continue;
+    // Using up listings only makes copies dearer, so every queued rate is a lower bound.
+    if (queue.length > 0 && offer.rate > queue[0].rate) {
+      insertByRate(queue, offer);
+      continue;
+    }
+
+    const { item, step } = offer;
+    used = step.used;
+    nodes.push(step.node);
+    seals += item.seals;
+    total += step.node.cost;
+    const entry = entries.get(item.id) ?? { id: item.id, quantity: 0, seals: 0, cost: 0, bought: 0, crafted: 0 };
+    entry.quantity += 1;
+    entry.seals += item.seals;
+    entry.cost += step.node.cost;
+    if (step.node.method === 'buy') entry.bought += 1;
+    else entry.crafted += 1;
+    entries.set(item.id, entry);
+    insertByRate(queue, offer);
+  }
+
+  return {
+    target: sealTarget,
+    seals,
+    total,
+    short: seals < sealTarget,
+    entries: [...entries.values()].sort((a, b) => b.cost - a.cost),
+    purchases: pricePurchases(nodes, board)?.purchases ?? [],
+  };
 }
 
 /** Every id the market board needs to be asked about. */
