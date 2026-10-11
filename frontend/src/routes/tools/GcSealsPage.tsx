@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 import GcSealsBreakdownView from '../../components/data/GcSealsBreakdown';
+import GcSealsCombinedPlan from '../../components/data/GcSealsCombinedPlan';
 import GcSealsTable from '../../components/data/GcSealsTable';
 import CheckboxToggle from '../../components/form/CheckboxToggle';
 import TieredLocationSelect from '../../components/form/TieredLocationSelect';
@@ -13,6 +14,7 @@ import { useWorlds } from '../../hooks/useWorlds';
 import {
   boardItemIds,
   buildBreakdown,
+  combinedPlan,
   computeRows,
   createPlanner,
   parsePositiveInt,
@@ -69,6 +71,23 @@ export default function GcSealsPage() {
     () => (showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.id))),
     [rows, showHidden, ignoredItemIds],
   );
+
+  const combined = useMemo(() => {
+    if (mode !== 'seals' || !planner || !catalogue.data || !listings.data) return null;
+    const items = showHidden
+      ? catalogue.data.items
+      : catalogue.data.items.filter((item) => !ignoredItemIds.includes(item.id));
+    return combinedPlan(items, sealTarget, planner, listings.data.board, directOnly);
+  }, [
+    mode,
+    planner,
+    catalogue.data,
+    listings.data,
+    showHidden,
+    ignoredItemIds,
+    sealTarget,
+    directOnly,
+  ]);
   // Plain consts so the narrowing below carries into the breakdown closure.
   const result = listings.data;
   const names = catalogue.data?.names;
@@ -131,7 +150,8 @@ export default function GcSealsPage() {
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           The cheapest Grand Company seals: every Expert Delivery item, priced by buying the
           finished item or crafting it, whichever is cheaper at each step of the recipe. Click a row
-          for the plan and shopping list. Prices are per unit from the cheapest listings.
+          for the plan and shopping list. In seal target mode, a combined plan also mixes the
+          cheapest items to reach the target. Prices are per unit from the cheapest listings.
         </p>
       </header>
 
@@ -243,6 +263,9 @@ export default function GcSealsPage() {
                 {result.failedChunks} of {result.totalChunks} Universalis requests failed - some
                 items may show as short. Reload to try again.
               </p>
+            )}
+            {combined && (
+              <GcSealsCombinedPlan plan={combined} names={names} worldNames={worldNames} />
             )}
             <GcSealsTable
               rows={visibleRows}
