@@ -15,8 +15,7 @@ import {
   buildBreakdown,
   computeRows,
   createPlanner,
-  MAX_GC_QUANTITY,
-  parseBoundedInt,
+  parsePositiveInt,
   type GcSealsMode,
 } from '../../lib/gcSeals';
 import { buildWorldNameMap } from '../../lib/worlds';
@@ -70,7 +69,6 @@ export default function GcSealsPage() {
     () => (showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.id))),
     [rows, showHidden, ignoredItemIds],
   );
-  const max = mode === 'quantity' ? MAX_GC_QUANTITY : undefined;
   // Plain consts so the narrowing below carries into the breakdown closure.
   const result = listings.data;
   const names = catalogue.data?.names;
@@ -82,7 +80,7 @@ export default function GcSealsPage() {
 
   const commitAmount = () => {
     const current = mode === 'quantity' ? quantity : sealTarget;
-    const next = parseBoundedInt(amountDraft, max) ?? current;
+    const next = parsePositiveInt(amountDraft) ?? current;
     setAmountDraft(String(next));
     if (next === current) return;
     patchPrefs((prev) => ({
@@ -178,7 +176,6 @@ export default function GcSealsPage() {
             type="number"
             inputMode="numeric"
             min={1}
-            max={max}
             value={amountDraft}
             onChange={(e) => setAmountDraft(e.target.value)}
             onBlur={commitAmount}

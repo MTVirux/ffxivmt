@@ -194,8 +194,10 @@ describe('parsePrefs', () => {
       DEFAULTS,
     );
   });
-  it('keeps a seal target above the in-game cap', () => {
-    expect(parsePrefs('{"gcSeals":{"sealTarget":500000}}').gcSeals.sealTarget).toBe(500000);
+  it('keeps large gcSeals amounts', () => {
+    const { gcSeals } = parsePrefs('{"gcSeals":{"quantity":5000,"sealTarget":500000}}');
+    expect(gcSeals.quantity).toBe(5000);
+    expect(gcSeals.sealTarget).toBe(500000);
   });
   it('keeps an empty sort distinct from an absent one', () => {
     const parsed = parsePrefs('{"tableSort":{"ranking":[]}}');

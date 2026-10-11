@@ -5,7 +5,7 @@ import {
   computeRows,
   createPlanner,
   fill,
-  parseBoundedInt,
+  parsePositiveInt,
   pricePlan,
   type Board,
   type GcSealsCatalogue,
@@ -242,18 +242,15 @@ describe('boardItemIds', () => {
   });
 });
 
-describe('parseBoundedInt', () => {
+describe('parsePositiveInt', () => {
   it.each([
     ['5', 5],
     [' 12 ', 12],
-    ['5000', 999],
+    ['500000', 500000],
   ])('%j -> %i', (raw, expected) => {
-    expect(parseBoundedInt(raw, 999)).toBe(expected);
+    expect(parsePositiveInt(raw)).toBe(expected);
   });
-  it.each(['', '0', '-3', '2.5', 'abc'])('rejects %j', (raw) => {
-    expect(parseBoundedInt(raw, 999)).toBeNull();
-  });
-  it('does not clamp without a max', () => {
-    expect(parseBoundedInt('500000')).toBe(500000);
+  it.each(['', '0', '-3', '2.5', 'abc', '1e20'])('rejects %j', (raw) => {
+    expect(parsePositiveInt(raw)).toBeNull();
   });
 });

@@ -14,7 +14,6 @@ export type GcSealsCatalogue = {
 
 export type GcSealsMode = { kind: 'quantity'; quantity: number } | { kind: 'seals'; sealTarget: number };
 
-export const MAX_GC_QUANTITY = 999;
 export const DEFAULT_SEAL_TARGET = 10_000;
 
 const MAX_DEPTH = 8;
@@ -237,10 +236,9 @@ export function boardItemIds(catalogue: GcSealsCatalogue): number[] {
   return [...ids].sort((a, b) => a - b);
 }
 
-export function parseBoundedInt(raw: string, max = Number.MAX_SAFE_INTEGER): number | null {
+export function parsePositiveInt(raw: string): number | null {
   const trimmed = raw.trim();
   if (trimmed === '') return null;
   const n = Number(trimmed);
-  if (!Number.isInteger(n) || n < 1) return null;
-  return Math.min(n, max);
+  return Number.isSafeInteger(n) && n >= 1 ? n : null;
 }
