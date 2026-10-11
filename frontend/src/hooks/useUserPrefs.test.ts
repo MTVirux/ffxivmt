@@ -19,7 +19,7 @@ const DEFAULTS: UserPrefs = {
     quality: 'all',
     buyer: '',
   },
-  gcSeals: { mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET },
+  gcSeals: { mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET, directOnly: false },
 };
 
 describe('parsePrefs', () => {
@@ -54,7 +54,7 @@ describe('parsePrefs', () => {
         quality: 'hq',
         buyer: 'Some One',
       },
-      gcSeals: { mode: 'seals', quantity: 3, sealTarget: 25000 },
+      gcSeals: { mode: 'seals', quantity: 3, sealTarget: 25000, directOnly: true },
     });
     expect(parsePrefs(input)).toEqual({
       hiddenTimeframes: ['1h', '3h'],
@@ -73,7 +73,7 @@ describe('parsePrefs', () => {
         quality: 'hq',
         buyer: 'Some One',
       },
-      gcSeals: { mode: 'seals', quantity: 3, sealTarget: 25000 },
+      gcSeals: { mode: 'seals', quantity: 3, sealTarget: 25000, directOnly: true },
     });
   });
   it('ignores non-array fields', () => {

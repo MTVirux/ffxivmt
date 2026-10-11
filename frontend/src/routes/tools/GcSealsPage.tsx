@@ -32,7 +32,7 @@ const ERROR_CLASS = 'rounded-lg border border-destructive/50 bg-card p-4 text-sm
 
 export default function GcSealsPage() {
   const [prefs] = useUserPrefs();
-  const { mode, quantity, sealTarget } = prefs.gcSeals;
+  const { mode, quantity, sealTarget, directOnly } = prefs.gcSeals;
   const location = prefs.lastLocation;
   const setLocation = useCallback((next: Location) => patchPrefs({ lastLocation: next }), []);
   const showHidden = prefs.showHidden;
@@ -62,8 +62,8 @@ export default function GcSealsPage() {
     if (!planner || !catalogue.data || !listings.data) return [];
     const current: GcSealsMode =
       mode === 'quantity' ? { kind: 'quantity', quantity } : { kind: 'seals', sealTarget };
-    return computeRows(catalogue.data, listings.data.board, current, planner);
-  }, [planner, catalogue.data, listings.data, mode, quantity, sealTarget]);
+    return computeRows(catalogue.data, listings.data.board, current, planner, directOnly);
+  }, [planner, catalogue.data, listings.data, mode, quantity, sealTarget, directOnly]);
 
   const visibleRows = useMemo(
     () => (showHidden ? rows : rows.filter((r) => !ignoredItemIds.includes(r.id))),
@@ -184,6 +184,16 @@ export default function GcSealsPage() {
           />
         </div>
 
+        <div className="py-2">
+          <CheckboxToggle
+            label="Direct purchases only"
+            checked={directOnly}
+            onChange={(v) =>
+              patchPrefs((prev) => ({ gcSeals: { ...prev.gcSeals, directOnly: v } }))
+            }
+          />
+        </div>
+
         <button
           type="submit"
           disabled={listings.isFetching || !catalogue.data}
@@ -236,6 +246,7 @@ export default function GcSealsPage() {
             )}
             <GcSealsTable
               rows={visibleRows}
+              directOnly={directOnly}
               emptyMessage={
                 rows.length > 0
                   ? 'Every item is hidden. Tick Show hidden items to see them.'

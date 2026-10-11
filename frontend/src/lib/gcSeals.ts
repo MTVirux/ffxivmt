@@ -188,12 +188,13 @@ export function computeRows(
   board: Board,
   mode: GcSealsMode,
   planner: Planner = createPlanner(catalogue.recipes, board),
+  directOnly = false,
 ): GcSealsRow[] {
   return catalogue.items.map((item) => {
     const count = itemCount(mode, item.seals);
     const totalSeals = count * item.seals;
     const buyCost = fill(board.get(item.id), count)?.cost ?? null;
-    const craftCost = planner.craft(item.id, count)?.cost ?? null;
+    const craftCost = directOnly ? null : (planner.craft(item.id, count)?.cost ?? null);
     const bestCost = buyCost === null ? craftCost : craftCost === null ? buyCost : Math.min(buyCost, craftCost);
     return {
       id: item.id,

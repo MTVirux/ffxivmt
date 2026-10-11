@@ -7,6 +7,7 @@ import DataTable, { makeActionsColumn } from './DataTable';
 
 type Props = {
   rows: GcSealsRow[];
+  directOnly?: boolean;
   renderBreakdown: (row: GcSealsRow) => ReactNode;
   ignoredItemIds?: number[];
   onIgnore?: (id: number) => void;
@@ -39,6 +40,7 @@ function Num({ value }: { value: number }) {
 
 export default function GcSealsTable({
   rows,
+  directOnly = false,
   renderBreakdown,
   ignoredItemIds,
   onIgnore,
@@ -136,8 +138,8 @@ export default function GcSealsTable({
     if (onIgnore || onUnignore) {
       base.push(makeActionsColumn<GcSealsRow>({ ignoredItemIds, onIgnore, onUnignore }));
     }
-    return base;
-  }, [ignoredItemIds, onIgnore, onUnignore]);
+    return directOnly ? base.filter((c) => c.id !== 'craft_cost') : base;
+  }, [directOnly, ignoredItemIds, onIgnore, onUnignore]);
 
   return (
     <DataTable

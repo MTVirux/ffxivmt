@@ -182,6 +182,10 @@ describe('computeRows', () => {
     const [, plate] = computeRows(catalogue, b, { kind: 'seals', sealTarget: 90_000 });
     expect(plate).toMatchObject({ buy_cost: null, craft_cost: null, best_cost: null, method: null, gil_per_seal: null });
   });
+  it('skips crafting for direct purchases only', () => {
+    const [sword] = computeRows(catalogue, b, { kind: 'quantity', quantity: 2 }, undefined, true);
+    expect(sword).toMatchObject({ buy_cost: 1800, craft_cost: null, best_cost: 1800, method: 'buy' });
+  });
   it('prefers buying on a tie', () => {
     const [sword] = computeRows(catalogue, board({ [SWORD]: [L(200, 1)], [INGOT]: [L(100, 10)] }), {
       kind: 'quantity',

@@ -72,8 +72,9 @@ const prefsSchema = z.object({
       mode: z.enum(['quantity', 'seals']).catch('quantity'),
       quantity: z.number().int().min(1).catch(1),
       sealTarget: z.number().int().min(1).catch(DEFAULT_SEAL_TARGET),
+      directOnly: z.boolean().catch(false),
     })
-    .catch({ mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET }),
+    .catch({ mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET, directOnly: false }),
 });
 
 export type UserPrefs = z.infer<typeof prefsSchema>;
@@ -98,7 +99,7 @@ function defaults(): UserPrefs {
       quality: 'all',
       buyer: '',
     },
-    gcSeals: { mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET },
+    gcSeals: { mode: 'quantity', quantity: 1, sealTarget: DEFAULT_SEAL_TARGET, directOnly: false },
   };
 }
 
