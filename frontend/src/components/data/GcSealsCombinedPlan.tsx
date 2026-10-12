@@ -29,6 +29,7 @@ export default function GcSealsCombinedPlan({ plan, names, worldNames }: Props) 
   }
 
   const nameOf = (id: number) => names[String(id)] || `Item ${id}`;
+  const itemCount = plan.entries.reduce((sum, e) => sum + e.quantity, 0);
 
   return (
     <section className={CARD_CLASS}>
@@ -43,6 +44,10 @@ export default function GcSealsCombinedPlan({ plan, names, worldNames }: Props) 
         <span>
           <span className="font-mono tabular-nums text-foreground">{formatNumber(plan.seals)}</span>{' '}
           / {formatNumber(plan.target)} seals
+        </span>
+        <span>
+          <span className="font-mono tabular-nums text-foreground">{formatNumber(itemCount)}</span>{' '}
+          {itemCount === 1 ? 'item' : 'items'} to turn in
         </span>
         {plan.seals > 0 && (
           <span>
